@@ -85,7 +85,6 @@ class TrainingWorker:
 
             dataset_filename = os.path.basename(job.dataset)
 
-            # Commands to execute inside the container
             mkdir_command = "mkdir -p /workspace/axolotl/data/"
             copy_command = (
                 f"cp /workspace/input_data/{dataset_filename} "
