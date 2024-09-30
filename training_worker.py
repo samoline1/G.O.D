@@ -82,21 +82,30 @@ class TrainingWorker:
 
         try:
             logger.info(f"Running Docker container with dataset: {job.dataset}")
-            logger.info(
-                f"Command to be executed: cp /workspace/input_data/{os.path.basename(job.dataset)} "
-                f"/workspace/axolotl/data/{os.path.basename(job.dataset)} && "
+
+            dataset_filename = os.path.basename(job.dataset)
+
+            # Commands to execute inside the container
+            mkdir_command = "mkdir -p /workspace/axolotl/data/"
+            copy_command = (
+                f"cp /workspace/input_data/{dataset_filename} "
+                f"/workspace/axolotl/data/{dataset_filename}"
+            )
+            training_command = (
                 f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml"
             )
 
+            full_command = (
+                f"/bin/bash -c '{mkdir_command} && "
+                f"{copy_command} && echo \"File copied successfully\" && "
+                f"{training_command} || echo \"Training command failed\"'"
+            )
+
+            logger.info(f"Command to be executed: {full_command}")
+
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
-                command=(
-                    f"/bin/bash -c 'cp /workspace/input_data/{os.path.basename(job.dataset)} "
-                    f"/workspace/axolotl/data/{os.path.basename(job.dataset)} && "
-                    f"echo \"File copied successfully\" && "
-                    f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml || "
-                    f"echo \"Training command failed\"'"
-                ),
+                command=full_command,
                 volumes={
                     os.path.dirname(os.path.abspath(job.dataset)): {'bind': '/workspace/input_data', 'mode': 'rw'},
                     os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
