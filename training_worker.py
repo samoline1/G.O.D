@@ -74,7 +74,7 @@ class TrainingWorker:
             "WANDB_API_KEY": WANDB_API_KEY,
             "WANDB_PROJECT": WANDB_PROJECT,
             "WANDB_ENTITY": WANDB_ENTITY,
-            "HUGGINGFACE_TOKEN": self.hf_token
+            "HUGGINGFACE_TOKEN": HUGGINGFACE_TOKEN,
         }
 
         try:
