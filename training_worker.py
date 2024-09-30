@@ -116,8 +116,10 @@ class TrainingWorker:
 
 
     def stream_logs(self, container):
+        out = ""
         for log in container.logs(stream=True, follow=True):
-            logger.info(log.decode().strip())
+            out += log.decode()
+        logger.info(out.strip())
 
     def compute_model_hash(self, model_dir: str) -> str:
         hash_sha256 = hashlib.sha256()
