@@ -6,8 +6,6 @@ import os
 import docker
 from docker.errors import DockerException
 import logging
-from docker.transport.npipesocket import NpipeSocket
-from docker.transport.unixconn import UnixHTTPAdapter
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -35,34 +33,8 @@ class TrainingWorker:
         self.thread.start()
         self.job_status = {}
         self.status_lock = threading.Lock()
-        # Debug logging
-        logger.debug(f"DOCKER_HOST environment variable: {os.environ.get('DOCKER_HOST', 'Not set')}")
-        
-        try:
-            # Try to connect using the default method
-            self.docker_client = docker.from_env()
-            
-            # If the above doesn't raise an exception, test the connection
-            self.docker_client.ping()
-            logger.debug("Docker client initialized successfully using default method")
-        except DockerException as e:
-            logger.warning(f"Failed to connect to Docker using default method: {str(e)}")
-            try:
-                # If default method fails, try explicitly specifying the Unix socket
-                self.docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
-                self.docker_client.ping()
-                logger.debug("Docker client initialized successfully using Unix socket")
-            except DockerException as e:
-                logger.error(f"Failed to connect to Docker using Unix socket: {str(e)}")
-                raise
-
-        # Test the Docker connection
-        try:
-            version = self.docker_client.version()
-            logger.debug(f"Connected to Docker. Version: {version['Version']}")
-        except Exception as e:
-            logger.error(f"Error getting Docker version: {str(e)}")
-            raise
+        self.docker_client = docker.from_env()
+        self.docker_client.ping()
 
         self.hf_token = HUGGINGFACE_TOKEN
 
