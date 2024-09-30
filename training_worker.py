@@ -1,0 +1,157 @@
+# training_worker.py
+import threading
+import queue
+import uuid
+import os
+import docker
+from docker.errors import DockerException
+from huggingface_hub import create_repo, upload_folder
+import hashlib
+import tempfile
+from schemas import DatasetType, FileFormat, JobStatus
+from const import CONFIG_DIR, OUTPUT_DIR, COMPLETED_MODEL_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN, WANDB_API_KEY, WANDB_PROJECT, WANDB_ENTITY, REPO, USR
+from config_handler import load_and_modify_config, save_config
+
+class TrainingJob:
+    def __init__(self, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat):
+        self.dataset = dataset
+        self.model = model
+        self.dataset_type = dataset_type
+        self.file_format = file_format
+        self.job_id = str(uuid.uuid4())
+        self.status = JobStatus.QUEUED
+
+class TrainingWorker:
+    def __init__(self):
+        self.job_queue = queue.Queue()
+        self.thread = threading.Thread(target=self.worker, daemon=True)
+        self.thread.start()
+        self.job_status = {}
+        self.status_lock = threading.Lock()
+        self.docker_client = docker.from_env()
+        self.hf_token = HUGGINGFACE_TOKEN
+
+    def worker(self):
+        while True:
+            job: TrainingJob = self.job_queue.get()
+            if job is None:
+                break
+            self.update_job_status(job, JobStatus.RUNNING)
+            try:
+                self.process_job(job)
+                self.update_job_status(job, JobStatus.COMPLETED)
+            except Exception as e:
+                self.update_job_status(job, JobStatus.FAILED, str(e))
+            finally:
+                self.job_queue.task_done()
+
+    def update_job_status(self, job: TrainingJob, status: JobStatus, error_message: str = None):
+        with self.status_lock:
+            job.status = status
+            self.job_status[job.job_id] = status.value
+            if error_message:
+                self.job_status[job.job_id] += f": {error_message}"
+
+    def process_job(self, job: TrainingJob):
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        config_filename = f"{job.job_id}.yml"
+        config_path = os.path.join(CONFIG_DIR, config_filename)
+
+        config = load_and_modify_config(
+            job.job_id,
+            job.dataset,
+            job.model,
+            job.dataset_type,
+            job.file_format
+        )
+        save_config(config, config_path)
+
+        docker_env = {
+            "WANDB_API_KEY": WANDB_API_KEY,
+            "WANDB_PROJECT": WANDB_PROJECT,
+            "WANDB_ENTITY": WANDB_ENTITY,
+            "HUGGINGFACE_TOKEN": self.hf_token
+        }
+
+        try:
+            container = self.docker_client.containers.run(
+                image=DOCKER_IMAGE,
+                command=f"""
+                accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml &&
+                """,
+                volumes={
+                    os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
+                    os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
+                },
+                environment=docker_env,
+                runtime="nvidia",
+                detach=True,
+                tty=True,
+            )
+
+            for log in container.logs(stream=True):
+                print(log.strip().decode())
+
+            container.wait()
+            exit_code = container.attrs['State']['ExitCode']
+            if exit_code != 0:
+                error = container.attrs['State']['Error']
+                raise DockerException(f"Container exited with code {exit_code}: {error}")
+            
+            self.upload_model_to_hf(job.job_id)
+        
+        except DockerException as e:
+            raise e
+        finally:
+            container.remove(force=True)
+
+    def compute_model_hash(self, model_dir: str) -> str:
+        hash_sha256 = hashlib.sha256()
+        for root, dirs, files in os.walk(model_dir):
+            for file in sorted(files):
+                file_path = os.path.join(root, file)
+                with open(file_path, 'rb') as f:
+                    while True:
+                        chunk = f.read(8192)
+                        if not chunk:
+                            break
+                        hash_sha256.update(chunk)
+        return hash_sha256.hexdigest()
+
+    def upload_model_to_hf(self, job_id: str):
+        output_dir = os.path.join(OUTPUT_DIR, COMPLETED_MODEL_DIR)
+        if not os.path.exists(output_dir):
+            raise FileNotFoundError(f"Trained model directory '{output_dir}' does not exist.")
+        
+        model_hash = self.compute_model_hash(output_dir)
+        repo_name = f"{REPO}/{USR}_{model_hash}"
+
+        try:
+            create_repo(repo_id=repo_name, token=self.hf_token, private=True)
+        except Exception as e:
+            print(f"Error creating repository {repo_name}: {e}")
+            raise e
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            upload_folder(
+                folder_path=output_dir,
+                repo_id=repo_name,
+                repo_type="model",
+                token=self.hf_token,
+                ignore_patterns=["*.tmp", "*.bak", ".git*"],
+            )
+
+        print(f"Model successfully uploaded to {repo_name}")
+
+    def enqueue_job(self, job: TrainingJob):
+        self.update_job_status(job, JobStatus.QUEUED)
+        self.job_queue.put(job)
+
+    def get_status(self, job_id: str) -> str:
+        with self.status_lock:
+            return self.job_status.get(job_id, "Not Found")
+
+    def shutdown(self):
+        self.job_queue.put(None)
+        self.thread.join()
+        self.docker_client.close()
