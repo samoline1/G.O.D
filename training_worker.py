@@ -80,10 +80,14 @@ class TrainingWorker:
             "HUGGINGFACE_TOKEN": self.hf_token
         }
         try:
+            logger.info(f"Running Docker container with dataset: {self.dataset}")
+            logger.info(f"Command to be executed: cp /host_path/{os.path.basename(self.dataset)} /workspace/axolotl/data/{os.path.basename(self.dataset)} && accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml")
+           
+
 
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
-                command=f"cp /workspace/input_data/{os.path.basename(self.dataset)} /workspace/axolotl/data/{os.path.basename(self.dataset)} && accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml",
+                command=f"/bin/bash -c 'cp /host_path/{os.path.basename(self.dataset)} /workspace/axolotl/data/{os.path.basename(self.dataset)} && echo \"File copied successfully\" && accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml || echo \"Training command failed\"'"
                 volumes={
                     os.path.dirname(os.path.abspath(self.dataset)): {'bind': '/workspace/input_data', 'mode': 'rw'},
                     os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
