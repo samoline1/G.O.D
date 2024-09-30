@@ -83,7 +83,8 @@ class TrainingWorker:
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
                 command=f"""
-                accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml
+                                cp /workspace/input_data/{dataset_filename} /workspace/axolotl/data/{dataset_filename} &&
+                                                accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml
                 """,
                 volumes={
                     os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
