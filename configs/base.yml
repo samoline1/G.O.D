@@ -29,7 +29,7 @@ lora_target_linear: true
 lora_fan_in_fan_out:
 
 
-wandb_mode: online
+wandb_mode: offline
 wandb_project:
 wandb_entity:
 wandb_watch:
