@@ -1,4 +1,3 @@
-# training_worker.py
 import threading
 import queue
 import uuid
