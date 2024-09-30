@@ -107,6 +107,7 @@ class TrainingWorker:
             #self.upload_model_to_hf(job.job_id)
         
         except DockerException as e:
+            logger.info(e)
             raise e
         finally:
             container.remove(force=True)
