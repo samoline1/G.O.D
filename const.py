@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-
 load_dotenv()
 
 DOCKER_IMAGE = "winglian/axolotl:main-latest"
@@ -14,7 +13,6 @@ HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 WANDB_API_KEY = os.getenv("WANDB_API_KEY", "")
 WANDB_PROJECT = os.getenv("WANDB_PROJECT", "default_project")
 WANDB_ENTITY = os.getenv("WANDB_ENTITY", "default_entity")
-
 
 # Used for huggingface uploads
 REPO = 'tau-vision'
