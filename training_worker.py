@@ -35,8 +35,6 @@ class TrainingWorker:
         self.docker_client = docker.from_env()
         self.docker_client.ping()
 
-        self.hf_token = HUGGINGFACE_TOKEN
-
     def worker(self):
         while True:
             job: TrainingJob = self.job_queue.get()
@@ -172,7 +170,7 @@ class TrainingWorker:
                 folder_path=output_dir,
                 repo_id=repo_name,
                 repo_type="model",
-                token=self.hf_token,
+                token=HUGGINGFACE_TOKEN,
                 ignore_patterns=["*.tmp", "*.bak", ".git*"],
             )
 
