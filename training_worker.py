@@ -134,10 +134,13 @@ class TrainingWorker:
             container.remove(force=True)
 
     def stream_logs(self, container):
-        out = ""
-        for log in container.logs(stream=True, follow=True):
-            out += log.decode()
-        logger.info(out.strip())
+            out = ""
+            for log_chunk in container.logs(stream=True, follow=True):
+                try:
+                   out += log_chunk.decode('utf-8', errors='replace').strip()
+                except Exception as e:
+                    logger.error(f"Error decoding log chunk: {e}")
+            logger.info(out)
 
     def compute_model_hash(self, model_dir: str) -> str:
         hash_sha256 = hashlib.sha256()
