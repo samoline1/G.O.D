@@ -28,7 +28,17 @@ class TrainingWorker:
         self.thread.start()
         self.job_status = {}
         self.status_lock = threading.Lock()
-        self.docker_client = docker.from_env()
+        logger.debug(f"DOCKER_HOST environment variable: {os.environ.get('DOCKER_HOST', 'Not set')}")
+        
+        try:
+            self.docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+            logger.debug("Docker client initialized successfully")
+            version = self.docker_client.version()
+            logger.debug(f"Connected to Docker. Version: {version['Version']}")
+        except Exception as e:
+            logger.error(f"Error initializing Docker client: {str(e)}")
+            raise
+
         self.hf_token = HUGGINGFACE_TOKEN
 
     def worker(self):
