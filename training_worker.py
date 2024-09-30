@@ -82,10 +82,7 @@ class TrainingWorker:
         try:
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
-                command=f"""
-                                cp /workspace/input_data/{dataset_filename} /workspace/axolotl/data/{dataset_filename} &&
-                                                accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml
-                """,
+                command=f"""cp /workspace/input_data/{dataset_filename} /workspace/axolotl/data/{dataset_filename} && accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml""",
                 volumes={
                     os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
                     os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
@@ -96,14 +93,11 @@ class TrainingWorker:
                 tty=True,
             )
 
-            # Start a separate thread to stream logs
             log_thread = threading.Thread(target=self.stream_logs, args=(container,))
             log_thread.start()
 
-            # Wait for the container to finish
             result = container.wait()
             
-            # Join the log thread to ensure all logs are printed
             log_thread.join()
 
             if result['StatusCode'] != 0:
