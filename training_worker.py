@@ -5,6 +5,13 @@ import uuid
 import os
 import docker
 from docker.errors import DockerException
+import logging
+from docker.transport.npipesocket import NpipeSocket
+from docker.transport.unixconn import UnixHTTPAdapter
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 from huggingface_hub import create_repo, upload_folder
 import hashlib
 import tempfile
