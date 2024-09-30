@@ -79,12 +79,11 @@ class TrainingWorker:
             "WANDB_ENTITY": WANDB_ENTITY,
             "HUGGINGFACE_TOKEN": self.hf_token
         }
-
         try:
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
                 command=f"""
-                accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml &&
+                accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml
                 """,
                 volumes={
                     os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
@@ -96,21 +95,29 @@ class TrainingWorker:
                 tty=True,
             )
 
-            logger.info(container.logs())
+            # Start a separate thread to stream logs
+            log_thread = threading.Thread(target=self.stream_logs, args=(container,))
+            log_thread.start()
 
-            container.wait()
-            exit_code = container.attrs['State']['ExitCode']
-            if exit_code != 0:
-                error = container.attrs['State']['Error']
-                raise DockerException(f"Container exited with code {exit_code}: {error}")
+            # Wait for the container to finish
+            result = container.wait()
             
-            #self.upload_model_to_hf(job.job_id)
-        
+            # Join the log thread to ensure all logs are printed
+            log_thread.join()
+
+            if result['StatusCode'] != 0:
+                raise DockerException(f"Container exited with non-zero status code: {result['StatusCode']}")
+
         except DockerException as e:
             logger.info(e)
             raise e
         finally:
             container.remove(force=True)
+
+
+    def stream_logs(self, container):
+        for log in container.logs(stream=True, follow=True):
+            logger.info(log.decode().strip())
 
     def compute_model_hash(self, model_dir: str) -> str:
         hash_sha256 = hashlib.sha256()
