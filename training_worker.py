@@ -79,17 +79,26 @@ class TrainingWorker:
             "WANDB_ENTITY": WANDB_ENTITY,
             "HUGGINGFACE_TOKEN": self.hf_token
         }
-        try:
-            logger.info(f"Running Docker container with dataset: {self.dataset}")
-            logger.info(f"Command to be executed: cp /host_path/{os.path.basename(self.dataset)} /workspace/axolotl/data/{os.path.basename(self.dataset)} && accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml")
-           
 
+        try:
+            logger.info(f"Running Docker container with dataset: {job.dataset}")
+            logger.info(
+                f"Command to be executed: cp /workspace/input_data/{os.path.basename(job.dataset)} "
+                f"/workspace/axolotl/data/{os.path.basename(job.dataset)} && "
+                f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml"
+            )
 
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
-                command=f"/bin/bash -c 'cp /host_path/{os.path.basename(self.dataset)} /workspace/axolotl/data/{os.path.basename(self.dataset)} && echo \"File copied successfully\" && accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml || echo \"Training command failed\"'"
+                command=(
+                    f"/bin/bash -c 'cp /workspace/input_data/{os.path.basename(job.dataset)} "
+                    f"/workspace/axolotl/data/{os.path.basename(job.dataset)} && "
+                    f"echo \"File copied successfully\" && "
+                    f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml || "
+                    f"echo \"Training command failed\"'"
+                ),
                 volumes={
-                    os.path.dirname(os.path.abspath(self.dataset)): {'bind': '/workspace/input_data', 'mode': 'rw'},
+                    os.path.dirname(os.path.abspath(job.dataset)): {'bind': '/workspace/input_data', 'mode': 'rw'},
                     os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
                     os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
                 },
@@ -99,24 +108,21 @@ class TrainingWorker:
                 tty=True,
             )
 
-
-
             log_thread = threading.Thread(target=self.stream_logs, args=(container,))
             log_thread.start()
 
             result = container.wait()
-            
             log_thread.join()
 
             if result['StatusCode'] != 0:
                 raise DockerException(f"Container exited with non-zero status code: {result['StatusCode']}")
 
         except DockerException as e:
-            logger.info(e)
+            logger.error(f"Docker exception occurred: {e}")
+            self.update_job_status(job, JobStatus.FAILED, str(e))
             raise e
         finally:
             container.remove(force=True)
-
 
     def stream_logs(self, container):
         out = ""
