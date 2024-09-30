@@ -96,8 +96,7 @@ class TrainingWorker:
                 tty=True,
             )
 
-            for log in container.logs(stream=True):
-                print(log.strip().decode())
+            logger.info(container.logs())
 
             container.wait()
             exit_code = container.attrs['State']['ExitCode']
@@ -105,7 +104,7 @@ class TrainingWorker:
                 error = container.attrs['State']['Error']
                 raise DockerException(f"Container exited with code {exit_code}: {error}")
             
-            self.upload_model_to_hf(job.job_id)
+            #self.upload_model_to_hf(job.job_id)
         
         except DockerException as e:
             raise e
