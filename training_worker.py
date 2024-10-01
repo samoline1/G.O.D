@@ -75,8 +75,6 @@ class TrainingWorker:
             "WANDB_PROJECT": WANDB_PROJECT,
             "WANDB_ENTITY": WANDB_ENTITY,
             "HUGGINGFACE_TOKEN": HUGGINGFACE_TOKEN,
-            "WANDB_LOGIN_MODE": "silent",
-
         }
 
         try:
