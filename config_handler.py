@@ -1,5 +1,5 @@
 import yaml
-from const import WANDB_PROJECT, WANDB_ENTITY, CONFIG_TEMPLATE_PATH, WANDB_API_KEY
+from const import CONFIG_TEMPLATE_PATH, HUGGINGFACE_TOKEN
 from schemas import DatasetType, FileFormat
 
 def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat) -> dict:
@@ -11,6 +11,7 @@ def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: 
     config['base_model_config'] = model
     config['dataset_type'] = dataset_type.value
     config['file_format'] = file_format.value
+    config['hub_token'] = HUGGINGFACE_TOKEN
 #    config['wandb_project'] = WANDB_PROJECT
 #    config['wandb_entity'] = WANDB_ENTITY
 #    config['wandb_name'] = job_id
