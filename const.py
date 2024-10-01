@@ -11,8 +11,8 @@ CONFIG_TEMPLATE_PATH = CONFIG_DIR + 'base.yml'
 
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 WANDB_API_KEY = os.getenv("WANDB_API_KEY", "")
-WANDB_PROJECT = os.getenv("WANDB_PROJECT", "default_project")
-WANDB_ENTITY = os.getenv("WANDB_ENTITY", "default_entity")
+WANDB_PROJECT = os.getenv("WANDB_PROJECT", "Tuning")
+WANDB_ENTITY = os.getenv("WANDB_ENTITY", "rayonlabs-rayon-labs")
 
 # Used for huggingface uploads
 REPO = 'tau-vision'
