@@ -56,7 +56,7 @@ s2_attention:
 
 hub_model_id: cwaud/test
 hub_strategy: checkpoint
-hub_token: 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
+hub_token: 
 
   
 save_steps: 1
