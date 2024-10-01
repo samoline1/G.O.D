@@ -15,7 +15,7 @@ def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: 
     config['base_model_config'] = model
     config['dataset_type'] = dataset_type.value
     config['file_format'] = file_format.value
-    config['hub_token'] = HUGGINGFACE_TOKEN
+#    config['hub_token'] = HUGGINGFACE_TOKEN
 
 #    config['wandb_project'] = WANDB_PROJECT
 #    config['wandb_entity'] = WANDB_ENTITY
