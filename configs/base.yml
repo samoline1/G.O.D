@@ -28,9 +28,9 @@ lora_dropout: 0.05
 lora_target_linear: true
 lora_fan_in_fan_out:
 
-ml_flow_tracking_uri: http://94.156.8.49:5000
-ml_flow_experiment_name: miner_id
-ml_flow_run_name: test_1
+mlflow_tracking_uri: http://94.156.8.49:5000
+mlflow_experiment_name: miner_id
+mlflow_run_name: test_1
 hf_mlflow_log_artifacts: True
 
 gradient_accumulation_steps: 4
