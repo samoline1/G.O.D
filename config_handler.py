@@ -11,10 +11,10 @@ def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: 
     config['base_model_config'] = model
     config['dataset_type'] = dataset_type.value
     config['file_format'] = file_format.value
-    config['wandb_project'] = WANDB_PROJECT
-    config['wandb_entity'] = WANDB_ENTITY
-    config['wandb_name'] = job_id
-    config['wandb_api_key'] = WANDB_API_KEY
+#    config['wandb_project'] = WANDB_PROJECT
+#    config['wandb_entity'] = WANDB_ENTITY
+#    config['wandb_name'] = job_id
+#    config['wandb_api_key'] = WANDB_API_KEY
 
 
     return config
