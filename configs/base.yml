@@ -29,12 +29,12 @@ lora_target_linear: true
 lora_fan_in_fan_out:
 
 
-wandb_mode: offline
-wandb_project:
+wandb_mode: online
+wandb_project: tuning
 wandb_entity:
 wandb_watch:
 wandb_name:
-wandb_log_model:
+wandb_log_model: checkpoint
 
 gradient_accumulation_steps: 4
 micro_batch_size: 2

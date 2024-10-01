@@ -13,6 +13,7 @@ def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: 
     config['file_format'] = file_format.value
     config['wandb_project'] = WANDB_PROJECT
     config['wandb_entity'] = WANDB_ENTITY
+    config['wandb_name'] = job_id
 
     return config
 
