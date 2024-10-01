@@ -92,8 +92,7 @@ class TrainingWorker:
             )
 
             full_command = (
-                f"/bin/bash -c 'wandb login {WANDB_API_KEY} && "
-                f"{mkdir_command} && "
+                f"/bin/bash -c '{mkdir_command} && "
                 f"{copy_command} && echo \"File copied successfully\" && "
                 f"{training_command} || echo \"Training command failed\"'"
             )
