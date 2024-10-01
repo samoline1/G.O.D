@@ -2,6 +2,10 @@ import yaml
 from const import CONFIG_TEMPLATE_PATH, HUGGINGFACE_TOKEN
 from schemas import DatasetType, FileFormat
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat) -> dict:
     with open(CONFIG_TEMPLATE_PATH, 'r') as file:
         config = yaml.safe_load(file)
