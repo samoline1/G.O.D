@@ -89,6 +89,7 @@ class TrainingWorker:
                 f"cp /workspace/input_data/{dataset_filename} "
                 f"/workspace/axolotl/data/{dataset_filename}"
             )
+            install_mlflow_command = "pip install mlflow"
             training_command = (
                 f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml"
             )
@@ -96,6 +97,7 @@ class TrainingWorker:
             full_command = (
                 f"/bin/bash -c '{mkdir_command} && "
                 f"{copy_command} && echo \"File copied successfully\" && "
+                f"{install_mlflow_command} && echo \"MLflow installed successfully\" && "
                 f"{training_command} || echo \"Training command failed\"'"
             )
 
