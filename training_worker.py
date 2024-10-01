@@ -99,6 +99,8 @@ class TrainingWorker:
                 f"{copy_command} && echo \"File copied successfully\" && "
                 f"ls -la /workspace/axolotl/data/ && "
                 f"{install_mlflow_command} && echo \"MLflow installed successfully\" && "
+                f"echo \"Logging into Hugging Face registry\" && "
+                f"huggingface-cli login --token $HUGGINGFACE_TOKEN && "
                 f"echo \"Starting training command\" && "
                 f"{training_command} || echo \"Training command failed with exit code $?\"'"
             )
