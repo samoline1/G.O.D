@@ -95,10 +95,14 @@ class TrainingWorker:
             )
 
             full_command = (
-                f"/bin/bash -c '{mkdir_command} && "
+                f"/bin/bash -c 'set -x && "
+                f"env | grep -E \"HUGGINGFACE_TOKEN|WANDB\" && "
+                f"{mkdir_command} && echo \"Directory created\" && "
                 f"{copy_command} && echo \"File copied successfully\" && "
+                f"ls -la /workspace/axolotl/data/ && "
                 f"{install_mlflow_command} && echo \"MLflow installed successfully\" && "
-                f"{training_command} || echo \"Training command failed\"'"
+                f"echo \"Starting training command\" && "
+                f"{training_command} || echo \"Training command failed with exit code $?\"'"
             )
 
             logger.info(f"Command to be executed: {full_command}")
