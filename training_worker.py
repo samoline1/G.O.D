@@ -89,15 +89,17 @@ class TrainingWorker:
                 temp_script.write(f"""#!/bin/bash
 set -ex
 env | grep -E 'HUGGINGFACE_TOKEN|WANDB'
+echo "HUGGINGFACE_TOKEN inside container: $HUGGINGFACE_TOKEN"
 mkdir -p /workspace/axolotl/data/
 cp /workspace/input_data/{shlex.quote(os.path.basename(job.dataset))} /workspace/axolotl/data/{shlex.quote(os.path.basename(job.dataset))}
 echo 'Data copied successfully'
 pip install mlflow
-echo 'MLflow installed successfully'
+pip install --upgrade huggingface_hub
+echo 'MLflow and huggingface_hub installed successfully'
 echo 'Logging into Hugging Face registry'
 if [ -n "$HUGGINGFACE_TOKEN" ]; then
     echo "Attempting to log in to Hugging Face"
-    echo "$HUGGINGFACE_TOKEN" | huggingface-cli login --token-stdin
+    huggingface-cli login --token "$HUGGINGFACE_TOKEN" --add-to-git-credential
 else
     echo "HUGGINGFACE_TOKEN is not set. Skipping login."
 fi
