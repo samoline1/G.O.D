@@ -93,7 +93,12 @@ echo 'Data copied successfully'
 pip install mlflow
 echo 'MLflow installed successfully'
 echo 'Logging into Hugging Face registry'
-huggingface-cli login --token "$HUGGINGFACE_TOKEN"
+if [ -n "$HUGGINGFACE_TOKEN" ]; then
+    echo "Attempting to log in to Hugging Face"
+    echo "$HUGGINGFACE_TOKEN" | huggingface-cli login --token-stdin
+else
+    echo "HUGGINGFACE_TOKEN is not set. Skipping login."
+fi
 echo 'Starting training command'
 accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{shlex.quote(job.job_id)}.yml
 """)
