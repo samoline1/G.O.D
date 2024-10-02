@@ -79,49 +79,28 @@ class TrainingWorker:
 
         try:
             logger.info(f"Running Docker container with dataset: {job.dataset}")
+            if job.file_format == FileFormat.HF:
+                script_template_path = 'scripts/run_script_hf.sh'
+            else:
+                script_template_path = 'scripts/run_script_non_hf.sh'
+            with open(script_template_path, 'r') as f:
+                script_content = f.read()
 
-            # Create a temporary shell script
-            with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.sh') as temp_script:
-                temp_script.write("#!/bin/bash\n")
-                temp_script.write("set -ex\n")
-                temp_script.write("env | grep -E 'HUGGINGFACE_TOKEN|WANDB'\n")
-                temp_script.write("echo 'Preparing data...'\n")
-                temp_script.write("pip install mlflow\n")
-                temp_script.write("pip install --upgrade huggingface_hub\n")
-                temp_script.write("if [ -n \"$HUGGINGFACE_TOKEN\" ]; then\n")
-                temp_script.write("    echo \"Attempting to log in to Hugging Face\"\n")
-                temp_script.write("    huggingface-cli login --token \"$HUGGINGFACE_TOKEN\" --add-to-git-credential\n")
-                temp_script.write("else\n")
-                temp_script.write("    echo \"HUGGINGFACE_TOKEN is not set. Skipping login.\"\n")
-                temp_script.write("fi\n")
+            script_content = script_content.replace('{{JOB_ID}}', job.job_id)
+            script_content = script_content.replace('{{DATASET_FILENAME}}', os.path.basename(job.dataset))
 
-                # If the file format is not 'hf', copy the dataset
-                if job.file_format != FileFormat.HF:
-                    dataset_filename = shlex.quote(os.path.basename(job.dataset))
-                    temp_script.write("mkdir -p /workspace/axolotl/data/\n")
-                    temp_script.write(f"cp /workspace/input_data/{dataset_filename} /workspace/axolotl/data/{dataset_filename}\n")
-
-                temp_script.write("echo 'Starting training command'\n")
-                temp_script.write(f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{shlex.quote(job.job_id)}.yml\n")
-                temp_script_path = temp_script.name
-
-            os.chmod(temp_script_path, 0o755)
-
-            # Define volume bindings
             volume_bindings = {
                 os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
                 os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
-                temp_script_path: {'bind': '/tmp/run_script.sh', 'mode': 'ro'},
             }
 
-            # If the dataset is local, mount the dataset directory
             if job.file_format != FileFormat.HF:
                 dataset_dir = os.path.dirname(os.path.abspath(job.dataset))
-                volume_bindings[dataset_dir] = {'bind': '/workspace/input_data', 'mode': 'rw'}
+                volume_bindings[dataset_dir] = {'bind': '/workspace/input_data', 'mode': 'ro'}
 
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
-                command=["/bin/bash", "/tmp/run_script.sh"],
+                command=["/bin/bash", "-c", script_content],
                 volumes=volume_bindings,
                 environment=docker_env,
                 runtime="nvidia",
@@ -144,7 +123,6 @@ class TrainingWorker:
             raise e
         finally:
             container.remove(force=True)
-            os.unlink(temp_script_path)  # Remove the temporary script
 
     def stream_logs(self, container):
         out = ""
