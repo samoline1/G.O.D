@@ -5,10 +5,10 @@ class DatasetType(str, Enum):
     INSTRUCT = "instruct"
     PRETRAIN = "pretrain"
 
-# atm I only have json support - will update this
 class FileFormat(str, Enum):
     CSV = "csv"
     JSON = "json"
+    HF = "hf"  
 
 class JobStatus(str, Enum):
     QUEUED = "Queued"
@@ -17,7 +17,7 @@ class JobStatus(str, Enum):
     FAILED = "Failed"
 
 class TrainRequest(BaseModel):
-    dataset: str = Field(..., description="Path to the dataset file")
+    dataset: str = Field(..., description="Path to the dataset file or Hugging Face dataset name")
     model: str = Field(..., description="Name or path of the model to be trained")
     dataset_type: DatasetType
     file_format: FileFormat

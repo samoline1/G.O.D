@@ -80,13 +80,17 @@ class TrainingWorker:
         try:
             logger.info(f"Running Docker container with dataset: {job.dataset}")
 
-            dataset_filename = os.path.basename(job.dataset)
+            commands = []
+            if job.file_format != FileFormat.HF:
+                dataset_filename = os.path.basename(job.dataset)
+                commands.extend([
+                    "mkdir -p /workspace/axolotl/data/",
+                    f"cp /workspace/input_data/{dataset_filename} /workspace/axolotl/data/{dataset_filename}",
+                    "echo 'Data copied successfully'",
+                ])
+            else:
+                commands.append("echo 'Using Hugging Face dataset. No data copying needed.'")
 
-            mkdir_command = "mkdir -p /workspace/axolotl/data/"
-            copy_command = (
-                f"cp /workspace/input_data/{dataset_filename} "
-                f"/workspace/axolotl/data/{dataset_filename}"
-            )
             install_mlflow_command = "pip install mlflow"
             training_command = (
                 f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml"
@@ -95,9 +99,7 @@ class TrainingWorker:
             full_command = (
                 f"/bin/bash -c 'set -x && "
                 f"env | grep -E \"HUGGINGFACE_TOKEN|WANDB\" && "
-                f"{mkdir_command} && echo \"Directory created\" && "
-                f"{copy_command} && echo \"File copied successfully\" && "
-                f"ls -la /workspace/axolotl/data/ && "
+                f"{' && '.join(commands)} && "
                 f"{install_mlflow_command} && echo \"MLflow installed successfully\" && "
                 f"echo \"Logging into Hugging Face registry\" && "
                 f"huggingface-cli login --token $HUGGINGFACE_TOKEN && "
@@ -107,14 +109,18 @@ class TrainingWorker:
 
             logger.info(f"Command to be executed: {full_command}")
 
+            volume_bindings = {
+                os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
+                os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
+            }
+
+            if job.file_format != FileFormat.HF:
+                volume_bindings[os.path.dirname(os.path.abspath(job.dataset))] = {'bind': '/workspace/input_data', 'mode': 'rw'}
+
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
                 command=full_command,
-                volumes={
-                    os.path.dirname(os.path.abspath(job.dataset)): {'bind': '/workspace/input_data', 'mode': 'rw'},
-                    os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
-                    os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
-                },
+                volumes=volume_bindings,
                 environment=docker_env,
                 runtime="nvidia",
                 detach=True,
