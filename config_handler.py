@@ -7,7 +7,13 @@ from typing import Union
 
 logger = logging.getLogger(__name__)
 
-def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: Union[DatasetType, CustomDatasetType], file_format: FileFormat) -> dict:
+def load_and_modify_config(
+    job_id: str,
+    dataset: str,
+    model: str,
+    dataset_type: Union[DatasetType, CustomDatasetType],
+    file_format: FileFormat
+) -> dict:
     with open(CONFIG_TEMPLATE_PATH, 'r') as file:
         config = yaml.safe_load(file)
 
@@ -18,17 +24,11 @@ def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: 
     if isinstance(dataset_type, DatasetType):
         dataset_entry['type'] = dataset_type.value
     elif isinstance(dataset_type, CustomDatasetType):
-        dataset_entry['type'] = {
-            'system_prompt': dataset_type.system_prompt or "",
-            'system_format': dataset_type.system_format or "{system}",
-            'field_system': dataset_type.field_system or "",
-            'field_instruction': dataset_type.field_instruction or "",
-            'field_input': dataset_type.field_input or "",
-            'field_output': dataset_type.field_output or "",
-            'format': dataset_type.format or "",
-            'no_input_format': dataset_type.no_input_format or "",
-            'field': dataset_type.field or ""
+        custom_type_dict = {
+            key: value for key, value in dataset_type.dict().items()
+            if value is not None and (key != 'field' or value != "")
         }
+        dataset_entry['type'] = custom_type_dict
     else:
         raise ValueError("Invalid dataset_type provided.")
 
@@ -40,6 +40,7 @@ def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: 
 
     config['datasets'].append(dataset_entry)
     config['base_model'] = model
+    config['mlflow_experiment_name'] = dataset
 
     return config
 
