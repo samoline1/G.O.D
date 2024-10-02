@@ -79,26 +79,34 @@ class TrainingWorker:
 
         try:
             logger.info(f"Running Docker container with dataset: {job.dataset}")
+
+            # Select the appropriate script template based on the file format
             if job.file_format == FileFormat.HF:
                 script_template_path = 'scripts/run_script_hf.sh'
             else:
                 script_template_path = 'scripts/run_script_non_hf.sh'
+
+            # Read the script template
             with open(script_template_path, 'r') as f:
                 script_content = f.read()
 
+            # Replace placeholders in the script with actual values
             script_content = script_content.replace('{{JOB_ID}}', job.job_id)
             script_content = script_content.replace('{{DATASET_FILENAME}}', os.path.basename(job.dataset))
 
+            # Define volume bindings
             volume_bindings = {
                 os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
                 os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
             }
 
+            # If the dataset is local, mount the dataset directory
             if job.file_format != FileFormat.HF:
                 dataset_dir = os.path.dirname(os.path.abspath(job.dataset))
                 volume_bindings[dataset_dir] = {'bind': '/workspace/input_data', 'mode': 'ro'}
 
-            container = self.docker_client.containers.run(
+            # Create and start the container
+            container = self.docker_client.containers.create(
                 image=DOCKER_IMAGE,
                 command=["/bin/bash", "-c", script_content],
                 volumes=volume_bindings,
@@ -107,6 +115,8 @@ class TrainingWorker:
                 detach=True,
                 tty=True,
             )
+
+            container.start()
 
             log_thread = threading.Thread(target=self.stream_logs, args=(container,))
             log_thread.start()
@@ -122,7 +132,8 @@ class TrainingWorker:
             self.update_job_status(job, JobStatus.FAILED, str(e))
             raise e
         finally:
-            container.remove(force=True)
+            if 'container' in locals():
+                container.remove(force=True)
 
     def stream_logs(self, container):
         out = ""
