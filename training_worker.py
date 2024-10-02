@@ -80,49 +80,35 @@ class TrainingWorker:
         try:
             logger.info(f"Running Docker container with dataset: {job.dataset}")
 
-            commands = []
-            if job.file_format != FileFormat.HF:
-                dataset_filename = os.path.basename(job.dataset)
-                commands.extend([
-                    "mkdir -p /workspace/axolotl/data/",
-                    f"cp /workspace/input_data/{dataset_filename} /workspace/axolotl/data/{dataset_filename}",
-                    "echo 'Data copied successfully'",
-                ])
-            else:
-                commands.append("echo 'Using Hugging Face dataset. No data copying needed.'")
+            with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.sh') as temp_script:
+                temp_script.write(f"""#!/bin/bash
+set -ex
+env | grep -E 'HUGGINGFACE_TOKEN|WANDB'
+mkdir -p /workspace/axolotl/data/
+cp /workspace/input_data/{os.path.basename(job.dataset)} /workspace/axolotl/data/{os.path.basename(job.dataset)}
+echo 'Data copied successfully'
+pip install mlflow
+echo 'MLflow installed successfully'
+echo 'Logging into Hugging Face registry'
+huggingface-cli login --token $HUGGINGFACE_TOKEN
+echo 'Starting training command'
+accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml
+""")
+                temp_script_path = temp_script.name
 
-            install_mlflow_command = "pip install mlflow"
-            training_command = (
-                f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml"
-            )
-
-            inner_commands = ' && '.join(commands)
-            full_command = (
-                f"/bin/bash -c \"set -x && "
-                f"env | grep -E 'HUGGINGFACE_TOKEN|WANDB' && "
-                f"{inner_commands} && "
-                f"{install_mlflow_command} && echo 'MLflow installed successfully' && "
-                f"echo 'Logging into Hugging Face registry' && "
-                f"huggingface-cli login --token $HUGGINGFACE_TOKEN && "
-                f"echo 'Starting training command' && "
-                f"{training_command} || echo 'Training command failed with exit code $?'\")"
-            )
-
-            logger.info(f"Command to be executed: {full_command}")
+            # Set execute permissions for the script
+            os.chmod(temp_script_path, 0o755)
 
             volume_bindings = {
                 os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
                 os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
+                os.path.dirname(os.path.abspath(job.dataset)): {'bind': '/workspace/input_data', 'mode': 'rw'},
+                temp_script_path: {'bind': '/tmp/run_script.sh', 'mode': 'ro'},
             }
-
-            if job.file_format != FileFormat.HF:
-                volume_bindings[os.path.dirname(os.path.abspath(job.dataset))] = {
-                    'bind': '/workspace/input_data', 'mode': 'rw'
-                }
 
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
-                command=full_command,
+                command=["/bin/bash", "/tmp/run_script.sh"],
                 volumes=volume_bindings,
                 environment=docker_env,
                 runtime="nvidia",
@@ -145,6 +131,7 @@ class TrainingWorker:
             raise e
         finally:
             container.remove(force=True)
+            os.unlink(temp_script_path)  # Remove the temporary script
 
     def stream_logs(self, container):
         out = ""
