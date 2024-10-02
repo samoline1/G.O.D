@@ -16,6 +16,8 @@ from schemas import DatasetType, FileFormat, JobStatus
 from const import CONFIG_DIR, OUTPUT_DIR, COMPLETED_MODEL_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN, WANDB_API_KEY, WANDB_PROJECT, WANDB_ENTITY, REPO, USR
 from config_handler import load_and_modify_config, save_config
 
+import shlex
+
 class TrainingJob:
     def __init__(self, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat):
         self.dataset = dataset
@@ -80,19 +82,20 @@ class TrainingWorker:
         try:
             logger.info(f"Running Docker container with dataset: {job.dataset}")
 
+            # Create a temporary shell script
             with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.sh') as temp_script:
                 temp_script.write(f"""#!/bin/bash
 set -ex
 env | grep -E 'HUGGINGFACE_TOKEN|WANDB'
 mkdir -p /workspace/axolotl/data/
-cp /workspace/input_data/{os.path.basename(job.dataset)} /workspace/axolotl/data/{os.path.basename(job.dataset)}
+cp /workspace/input_data/{shlex.quote(os.path.basename(job.dataset))} /workspace/axolotl/data/{shlex.quote(os.path.basename(job.dataset))}
 echo 'Data copied successfully'
 pip install mlflow
 echo 'MLflow installed successfully'
 echo 'Logging into Hugging Face registry'
-huggingface-cli login --token $HUGGINGFACE_TOKEN
+huggingface-cli login --token "$HUGGINGFACE_TOKEN"
 echo 'Starting training command'
-accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml
+accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{shlex.quote(job.job_id)}.yml
 """)
                 temp_script_path = temp_script.name
 
