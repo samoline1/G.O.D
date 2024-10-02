@@ -11,20 +11,22 @@ def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: 
     with open(CONFIG_TEMPLATE_PATH, 'r') as file:
         config = yaml.safe_load(file)
 
-    config['datasets'] = [{
+    config['datasets'] = []
+
+    dataset_entry = {
         'path': dataset,
         'type': dataset_type.value
-    }]
+    }
 
     if file_format != FileFormat.HF:
-        config['datasets'][0]['ds_type'] = file_format.value
-        config['datasets'][0]['data_files'] = [os.path.basename(dataset)]
+        dataset_entry['ds_type'] = file_format.value
+        dataset_entry['data_files'] = [os.path.basename(dataset)]
     else:
-        config['datasets'][0].pop('ds_type', None)
-        config['datasets'][0].pop('data_files', None)
+        pass  # No additional keys needed
+
+    config['datasets'].append(dataset_entry)
 
     config['base_model'] = model
-    config['base_model_config'] = model
 
     return config
 

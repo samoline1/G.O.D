@@ -8,8 +8,6 @@ strict: false
 
 chat_template: llama3
 datasets:
-  - path: base.yml
-
 dataset_prepared_path:
 val_set_size: 0.05
 output_dir: attempt_1
