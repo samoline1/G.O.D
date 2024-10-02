@@ -2,9 +2,8 @@ import threading
 import queue
 import logging
 import docker
-from docker.errors import DockerException
 from schemas import Job, JobStatus
-from job_handler import process_job, stream_logs
+from job_handler import process_job
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -44,6 +43,3 @@ class TrainingWorker:
         self.job_queue.put(None)
         self.thread.join()
         self.docker_client.close()
-    
-    if log_buffer:
-        logger.info(log_buffer.strip())
