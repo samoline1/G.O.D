@@ -19,15 +19,15 @@ class JobStatus(str, Enum):
     FAILED = "Failed"
 
 class CustomDatasetType(BaseModel):
-    system_prompt: Optional[str]
-    system_format: Optional[str]
-    field_system: Optional[str]
-    field_instruction: Optional[str]
-    field_input: Optional[str]
-    field_output: Optional[str]
-    format: Optional[str]
-    no_input_format: Optional[str]
-    field: Optional[str]
+    system_prompt: Optional[str] = None
+    system_format: Optional[str] = "{system}"
+    field_system: Optional[str] = None
+    field_instruction: Optional[str] = None
+    field_input: Optional[str] = None
+    field_output: Optional[str] = None
+    format: Optional[str] = None
+    no_input_format: Optional[str] = None
+    field: Optional[str] = None
 
 class TrainRequest(BaseModel):
     dataset: str = Field(..., description="Path to the dataset file or Hugging Face dataset name")
