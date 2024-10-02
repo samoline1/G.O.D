@@ -54,12 +54,12 @@ xformers_attention:
 flash_attention: true
 s2_attention:
 
-hub_model_id: cwaud/test
+hub_model_id: tau-vision/testing_ax
 hub_strategy: checkpoint
 hub_token: 
 
   
-save_steps: 1
+save_steps: 5
 save_strategy: steps
 warmup_steps: 10
 evals_per_epoch: 4
@@ -72,4 +72,4 @@ weight_decay: 0.0
 fsdp:
 fsdp_config:
 special_tokens:
-   pad_token: "<|end_of_text|>"
+   pad_token: " "
