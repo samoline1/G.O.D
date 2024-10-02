@@ -96,15 +96,16 @@ class TrainingWorker:
                 f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{job.job_id}.yml"
             )
 
+            inner_commands = ' && '.join(commands)
             full_command = (
-                f"/bin/bash -c 'set -x && "
-                f"env | grep -E \"HUGGINGFACE_TOKEN|WANDB\" && "
-                f"{' && '.join(commands)} && "
-                f"{install_mlflow_command} && echo \"MLflow installed successfully\" && "
-                f"echo \"Logging into Hugging Face registry\" && "
+                f"/bin/bash -c \"set -x && "
+                f"env | grep -E 'HUGGINGFACE_TOKEN|WANDB' && "
+                f"{inner_commands} && "
+                f"{install_mlflow_command} && echo 'MLflow installed successfully' && "
+                f"echo 'Logging into Hugging Face registry' && "
                 f"huggingface-cli login --token $HUGGINGFACE_TOKEN && "
-                f"echo \"Starting training command\" && "
-                f"{training_command} || echo \"Training command failed with exit code $?\"'"
+                f"echo 'Starting training command' && "
+                f"{training_command} || echo 'Training command failed with exit code $?'\")"
             )
 
             logger.info(f"Command to be executed: {full_command}")
@@ -115,7 +116,9 @@ class TrainingWorker:
             }
 
             if job.file_format != FileFormat.HF:
-                volume_bindings[os.path.dirname(os.path.abspath(job.dataset))] = {'bind': '/workspace/input_data', 'mode': 'rw'}
+                volume_bindings[os.path.dirname(os.path.abspath(job.dataset))] = {
+                    'bind': '/workspace/input_data', 'mode': 'rw'
+                }
 
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
@@ -144,51 +147,13 @@ class TrainingWorker:
             container.remove(force=True)
 
     def stream_logs(self, container):
-            out = ""
-            for log_chunk in container.logs(stream=True, follow=True):
-                try:
-                   out += log_chunk.decode('utf-8', errors='replace').strip()
-                except Exception as e:
-                    logger.error(f"Error decoding log chunk: {e}")
-            logger.info(out)
-
-    def compute_model_hash(self, model_dir: str) -> str:
-        hash_sha256 = hashlib.sha256()
-        for root, dirs, files in os.walk(model_dir):
-            for file in sorted(files):
-                file_path = os.path.join(root, file)
-                with open(file_path, 'rb') as f:
-                    while True:
-                        chunk = f.read(8192)
-                        if not chunk:
-                            break
-                        hash_sha256.update(chunk)
-        return hash_sha256.hexdigest()
-
-    def upload_model_to_hf(self, job_id: str):
-        output_dir = os.path.join(OUTPUT_DIR, COMPLETED_MODEL_DIR)
-        if not os.path.exists(output_dir):
-            raise FileNotFoundError(f"Trained model directory '{output_dir}' does not exist.")
-        
-        model_hash = self.compute_model_hash(output_dir)
-        repo_name = f"{REPO}/{USR}_{model_hash}"
-
-        try:
-            create_repo(repo_id=repo_name, token=self.hf_token, private=True)
-        except Exception as e:
-            print(f"Error creating repository {repo_name}: {e}")
-            raise e
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            upload_folder(
-                folder_path=output_dir,
-                repo_id=repo_name,
-                repo_type="model",
-                token=HUGGINGFACE_TOKEN,
-                ignore_patterns=["*.tmp", "*.bak", ".git*"],
-            )
-
-        print(f"Model successfully uploaded to {repo_name}")
+        out = ""
+        for log_chunk in container.logs(stream=True, follow=True):
+            try:
+                out += log_chunk.decode('utf-8', errors='replace').strip()
+            except Exception as e:
+                logger.error(f"Error decoding log chunk: {e}")
+        logger.info(out)
 
     def enqueue_job(self, job: TrainingJob):
         self.update_job_status(job, JobStatus.QUEUED)
