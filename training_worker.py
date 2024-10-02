@@ -5,18 +5,14 @@ import os
 import docker
 from docker.errors import DockerException
 import logging
+import tempfile
+from schemas import DatasetType, FileFormat, JobStatus
+from const import CONFIG_DIR, OUTPUT_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN, WANDB_API_KEY, WANDB_PROJECT, WANDB_ENTITY
+from config_handler import load_and_modify_config, save_config
+import shlex
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-from huggingface_hub import create_repo, upload_folder
-import hashlib
-import tempfile
-from schemas import DatasetType, FileFormat, JobStatus
-from const import CONFIG_DIR, OUTPUT_DIR, COMPLETED_MODEL_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN, WANDB_API_KEY, WANDB_PROJECT, WANDB_ENTITY, REPO, USR
-from config_handler import load_and_modify_config, save_config
-
-import shlex
 
 class TrainingJob:
     def __init__(self, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat):
@@ -86,32 +82,42 @@ class TrainingWorker:
 
             # Create a temporary shell script
             with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.sh') as temp_script:
-                temp_script.write(f"""#!/bin/bash
-set -ex
-env | grep -E 'HUGGINGFACE_TOKEN|WANDB'
-mkdir -p /workspace/axolotl/data/
-cp /workspace/input_data/{shlex.quote(os.path.basename(job.dataset))} /workspace/axolotl/data/{shlex.quote(os.path.basename(job.dataset))}
-pip install mlflow
-pip install --upgrade huggingface_hub
-if [ -n "$HUGGINGFACE_TOKEN" ]; then
-    echo "Attempting to log in to Hugging Face"
-    huggingface-cli login --token "$HUGGINGFACE_TOKEN" --add-to-git-credential
-else
-    echo "HUGGINGFACE_TOKEN is not set. Skipping login."
-fi
-echo 'Starting training command'
-accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{shlex.quote(job.job_id)}.yml
-""")
+                temp_script.write("#!/bin/bash\n")
+                temp_script.write("set -ex\n")
+                temp_script.write("env | grep -E 'HUGGINGFACE_TOKEN|WANDB'\n")
+                temp_script.write("echo 'Preparing data...'\n")
+                temp_script.write("pip install mlflow\n")
+                temp_script.write("pip install --upgrade huggingface_hub\n")
+                temp_script.write("if [ -n \"$HUGGINGFACE_TOKEN\" ]; then\n")
+                temp_script.write("    echo \"Attempting to log in to Hugging Face\"\n")
+                temp_script.write("    huggingface-cli login --token \"$HUGGINGFACE_TOKEN\" --add-to-git-credential\n")
+                temp_script.write("else\n")
+                temp_script.write("    echo \"HUGGINGFACE_TOKEN is not set. Skipping login.\"\n")
+                temp_script.write("fi\n")
+
+                # If the file format is not 'hf', copy the dataset
+                if job.file_format != FileFormat.HF:
+                    dataset_filename = shlex.quote(os.path.basename(job.dataset))
+                    temp_script.write("mkdir -p /workspace/axolotl/data/\n")
+                    temp_script.write(f"cp /workspace/input_data/{dataset_filename} /workspace/axolotl/data/{dataset_filename}\n")
+
+                temp_script.write("echo 'Starting training command'\n")
+                temp_script.write(f"accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{shlex.quote(job.job_id)}.yml\n")
                 temp_script_path = temp_script.name
 
             os.chmod(temp_script_path, 0o755)
 
+            # Define volume bindings
             volume_bindings = {
                 os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
                 os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
-                os.path.dirname(os.path.abspath(job.dataset)): {'bind': '/workspace/input_data', 'mode': 'rw'},
                 temp_script_path: {'bind': '/tmp/run_script.sh', 'mode': 'ro'},
             }
+
+            # If the dataset is local, mount the dataset directory
+            if job.file_format != FileFormat.HF:
+                dataset_dir = os.path.dirname(os.path.abspath(job.dataset))
+                volume_bindings[dataset_dir] = {'bind': '/workspace/input_data', 'mode': 'rw'}
 
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
