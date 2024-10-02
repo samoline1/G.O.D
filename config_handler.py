@@ -3,6 +3,7 @@ from const import CONFIG_TEMPLATE_PATH, HUGGINGFACE_TOKEN
 from schemas import DatasetType, FileFormat, CustomDatasetType
 import os
 import logging
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
