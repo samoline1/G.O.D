@@ -1,17 +1,18 @@
 import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from training_worker import TrainingWorker
+import queue
 from endpoints import router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    worker = TrainingWorker()
-    router.worker = worker
-    app.state.worker = worker
+    job_queue = queue.Queue()
+    job_store = {}
+    router.job_queue = job_queue
+    router.job_store = job_store
+    app.state.job_queue = job_queue
+    app.state.job_store = job_store
     yield
-    if app.state.worker:
-        app.state.worker.shutdown()
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(router)
