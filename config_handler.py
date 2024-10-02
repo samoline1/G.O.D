@@ -15,9 +15,13 @@ def load_and_modify_config(job_id: str, dataset: str, model: str, dataset_type: 
         'path': dataset,
         'type': dataset_type.value
     }]
-    
+
     if file_format != FileFormat.HF:
         config['datasets'][0]['ds_type'] = file_format.value
+        config['datasets'][0]['data_files'] = [os.path.basename(dataset)]
+    else:
+        config['datasets'][0].pop('ds_type', None)
+        config['datasets'][0].pop('data_files', None)
 
     config['base_model'] = model
     config['base_model_config'] = model
