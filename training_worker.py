@@ -89,14 +89,10 @@ class TrainingWorker:
                 temp_script.write(f"""#!/bin/bash
 set -ex
 env | grep -E 'HUGGINGFACE_TOKEN|WANDB'
-echo "HUGGINGFACE_TOKEN inside container: $HUGGINGFACE_TOKEN"
 mkdir -p /workspace/axolotl/data/
 cp /workspace/input_data/{shlex.quote(os.path.basename(job.dataset))} /workspace/axolotl/data/{shlex.quote(os.path.basename(job.dataset))}
-echo 'Data copied successfully'
 pip install mlflow
 pip install --upgrade huggingface_hub
-echo 'MLflow and huggingface_hub installed successfully'
-echo 'Logging into Hugging Face registry'
 if [ -n "$HUGGINGFACE_TOKEN" ]; then
     echo "Attempting to log in to Hugging Face"
     huggingface-cli login --token "$HUGGINGFACE_TOKEN" --add-to-git-credential
@@ -108,7 +104,6 @@ accelerate launch -m axolotl.cli.train /workspace/axolotl/configs/{shlex.quote(j
 """)
                 temp_script_path = temp_script.name
 
-            # Set execute permissions for the script
             os.chmod(temp_script_path, 0o755)
 
             volume_bindings = {
