@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-DOCKER_IMAGE = "winglian/axolotl:main-latest"
+DOCKER_IMAGE = "winglian/axolotl-cloud:main-latest"
 
 CONFIG_DIR = "./configs/"
 OUTPUT_DIR = "./outputs"

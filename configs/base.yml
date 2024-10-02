@@ -30,7 +30,10 @@ lora_fan_in_fan_out:
 
 mlflow_tracking_uri: http://94.156.8.49:5000
 mlflow_experiment_name: miner_id_24
-hf_mlflow_log_artifacts: true
+hf_mlflow_log_artifacts:  true
+
+
+wandb_mode: disabled
 
 gradient_accumulation_steps: 4
 micro_batch_size: 2
