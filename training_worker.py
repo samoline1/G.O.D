@@ -12,6 +12,42 @@ from config_handler import load_and_modify_config, save_config
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+class TrainingWorker:
+    def __init__(self):
+        self.job_queue = queue.Queue()
+        self.job_store = {}
+        self.thread = threading.Thread(target=self.worker, daemon=True)
+        self.thread.start()
+        self.docker_client = docker.from_env()
+
+    def worker(self):
+        while True:
+            job = self.job_queue.get()
+            if job is None:
+                break
+            try:
+                process_job(job)
+                self.job_store[job['job_id']]['status'] = JobStatus.COMPLETED
+            except Exception as e:
+                logger.error(f"Error processing job {job['job_id']}: {str(e)}")
+                self.job_store[job['job_id']]['status'] = JobStatus.FAILED
+                self.job_store[job['job_id']]['error'] = str(e)
+            finally:
+                self.job_queue.task_done()
+
+    def enqueue_job(self, job):
+        self.job_queue.put(job)
+        self.job_store[job['job_id']] = {'status': JobStatus.QUEUED}
+
+    def get_status(self, job_id):
+        job = self.job_store.get(job_id)
+        return job['status'] if job else "Not Found"
+
+    def shutdown(self):
+        self.job_queue.put(None)
+        self.thread.join()
+        self.docker_client.close()
+
 def create_job(dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat):
     return {
         "job_id": str(uuid.uuid4()),
@@ -78,8 +114,7 @@ def process_job(job):
             tty=True,
         )
 
-        for log in container.logs(stream=True, follow=True):
-            logger.info(log.decode('utf-8').strip())
+        stream_logs(container)
 
         result = container.wait()
 
@@ -94,24 +129,9 @@ def process_job(job):
         if 'container' in locals():
             container.remove(force=True)
 
-def enqueue_job(job_queue, job):
-    job_queue.put(job)
-    return job
-
-def get_job_status(job_store, job_id: str) -> str:
-    job = job_store.get(job_id)
-    return job["status"] if job else "Not Found"
-
 def stream_logs(container):
-    out = ""
-    for log_chunk in container.logs(stream=True, follow=True):
+    for log in container.logs(stream=True, follow=True):
         try:
-            out += log_chunk.decode('utf-8', errors='replace').strip()
+            logger.info(log.decode('utf-8', errors='replace').strip())
         except Exception as e:
-            logger.error(f"Error decoding log chunk: {e}")
-    logger.info(out)
-
-def shutdown(job_queue, thread, docker_client):
-    job_queue.put(None)
-    thread.join()
-    docker_client.close()
+            logger.error(f"Error decoding log: {e}")
