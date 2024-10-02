@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from typing import Union
-from training_worker import TrainingJob
+from training_worker import create_job, enqueue_job
 from dataset_validator import validate_dataset
 from schemas import TrainRequest, TrainResponse, JobStatusResponse, JobStatus, FileFormat, CustomDatasetType
 
@@ -20,20 +19,19 @@ async def train_model(request: TrainRequest):
                     detail=f"Invalid dataset format for {request.dataset_type} dataset type."
                 )
         else:
-            # For 'hf' datasets, we skip validation for now
             pass
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    job = TrainingJob(
+    job = create_job(
         dataset=request.dataset,
         model=request.model,
         dataset_type=request.dataset_type,
         file_format=request.file_format
     )
-    router.worker.enqueue_job(job)
+    enqueue_job(router.job_queue, job)
 
-    return {"message": "Training job enqueued.", "job_id": job.job_id}
+    return {"message": "Training job enqueued.", "job_id": job["job_id"]}
 
 @router.get("/status/{job_id}", response_model=JobStatusResponse)
 async def get_job_status(job_id: str):

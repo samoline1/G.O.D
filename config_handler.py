@@ -1,5 +1,5 @@
 import yaml
-from const import CONFIG_TEMPLATE_PATH, HUGGINGFACE_TOKEN
+from const import CONFIG_TEMPLATE_PATH
 from schemas import DatasetType, FileFormat, CustomDatasetType
 import os
 import logging

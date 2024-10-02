@@ -5,11 +5,9 @@ import os
 import docker
 from docker.errors import DockerException
 import logging
-import tempfile
 from schemas import DatasetType, FileFormat, JobStatus
-from const import CONFIG_DIR, OUTPUT_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN, WANDB_API_KEY, WANDB_PROJECT, WANDB_ENTITY
+from const import CONFIG_DIR, OUTPUT_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN
 from config_handler import load_and_modify_config, save_config
-import shlex
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -69,9 +67,6 @@ class TrainingWorker:
         save_config(config, config_path)
 
         docker_env = {
-            "WANDB_API_KEY": WANDB_API_KEY,
-            "WANDB_PROJECT": WANDB_PROJECT,
-            "WANDB_ENTITY": WANDB_ENTITY,
             "HUGGINGFACE_TOKEN": HUGGINGFACE_TOKEN,
         }
 
