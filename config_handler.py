@@ -1,9 +1,10 @@
 import yaml
-from const import CONFIG_TEMPLATE_PATH
-from schemas import DatasetType, FileFormat, CustomDatasetType
 import os
 import logging
 from typing import Union
+
+from const import CONFIG_TEMPLATE_PATH
+from schemas import DatasetType, FileFormat, CustomDatasetType
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,19 @@ def load_and_modify_config(
 
     config['datasets'] = []
 
+    dataset_entry = create_dataset_entry(dataset, dataset_type, file_format)
+    config['datasets'].append(dataset_entry)
+    
+    update_model_info(config, model)
+    config['mlflow_experiment_name'] = dataset
+
+    return config
+
+def create_dataset_entry(
+    dataset: str,
+    dataset_type: Union[DatasetType, CustomDatasetType],
+    file_format: FileFormat
+) -> dict:
     dataset_entry = {'path': dataset}
 
     if isinstance(dataset_type, DatasetType):
@@ -35,14 +49,11 @@ def load_and_modify_config(
     if file_format != FileFormat.HF:
         dataset_entry['ds_type'] = file_format.value
         dataset_entry['data_files'] = [os.path.basename(dataset)]
-    else:
-        pass  # No additional keys needed
 
-    config['datasets'].append(dataset_entry)
+    return dataset_entry
+
+def update_model_info(config: dict, model: str):
     config['base_model'] = model
-    config['mlflow_experiment_name'] = dataset
-
-    return config
 
 def save_config(config: dict, config_path: str):
     with open(config_path, 'w') as file:

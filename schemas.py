@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from enum import Enum
-from typing import Union, Optional, Literal
+from typing import Union, Optional, Literal, Dict, Any
 import uuid
 
 class DatasetType(str, Enum):
@@ -52,3 +52,11 @@ class Job(BaseModel):
     file_format: FileFormat
     status: JobStatus = JobStatus.QUEUED
     error_message: Optional[str] = None
+
+class EvaluationRequest(TrainRequest):
+    original_model: str
+
+class EvaluationResponse(BaseModel):
+    message: str
+    is_finetune: bool
+    eval_results: Dict[str, Any]
