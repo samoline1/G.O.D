@@ -94,10 +94,18 @@ class TrainingWorker:
             script_content = script_content.replace('{{JOB_ID}}', job.job_id)
             script_content = script_content.replace('{{DATASET_FILENAME}}', os.path.basename(job.dataset))
 
+            # Save the script to a temporary file
+            with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.sh') as temp_script:
+                temp_script.write(script_content)
+                temp_script_path = temp_script.name
+
+            os.chmod(temp_script_path, 0o755)
+
             # Define volume bindings
             volume_bindings = {
                 os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
                 os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
+                temp_script_path: {'bind': '/tmp/run_script.sh', 'mode': 'ro'},
             }
 
             # If the dataset is local, mount the dataset directory
@@ -105,18 +113,15 @@ class TrainingWorker:
                 dataset_dir = os.path.dirname(os.path.abspath(job.dataset))
                 volume_bindings[dataset_dir] = {'bind': '/workspace/input_data', 'mode': 'ro'}
 
-            # Create and start the container
-            container = self.docker_client.containers.create(
+            container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
-                command=["/bin/bash", "-c", script_content],
+                command=["/bin/bash", "/tmp/run_script.sh"],
                 volumes=volume_bindings,
                 environment=docker_env,
                 runtime="nvidia",
                 detach=True,
                 tty=True,
             )
-
-            container.start()
 
             log_thread = threading.Thread(target=self.stream_logs, args=(container,))
             log_thread.start()
@@ -134,6 +139,8 @@ class TrainingWorker:
         finally:
             if 'container' in locals():
                 container.remove(force=True)
+            if 'temp_script_path' in locals():
+                os.unlink(temp_script_path)  # Remove the temporary script
 
     def stream_logs(self, container):
         out = ""
