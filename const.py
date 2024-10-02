@@ -19,3 +19,5 @@ REPO = 'tau-vision'
 # need to update this with the id? 
 USR = 'test_user'
 
+print(f"HUGGINGFACE_TOKEN in host environment: {os.getenv('HUGGINGFACE_TOKEN')}")
+

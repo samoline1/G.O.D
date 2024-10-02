@@ -79,6 +79,8 @@ class TrainingWorker:
             "HUGGINGFACE_TOKEN": HUGGINGFACE_TOKEN,
         }
 
+        logger.debug(f"HUGGINGFACE_TOKEN: {HUGGINGFACE_TOKEN}")
+
         try:
             logger.info(f"Running Docker container with dataset: {job.dataset}")
 
