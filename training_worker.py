@@ -44,17 +44,6 @@ class TrainingWorker:
         self.job_queue.put(None)
         self.thread.join()
         self.docker_client.close()
-
-def stream_logs(container):
-    log_buffer = ""
-    for log_chunk in container.logs(stream=True, follow=True):
-        try:
-            log_buffer += log_chunk.decode('utf-8', errors='replace')
-            while '\n' in log_buffer:
-                line, log_buffer = log_buffer.split('\n', 1)
-                logger.info(line.strip())
-        except Exception as e:
-            logger.error(f"Error processing log: {e}")
     
     if log_buffer:
         logger.info(log_buffer.strip())
