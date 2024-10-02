@@ -80,44 +80,45 @@ class TrainingWorker:
         try:
             logger.info(f"Running Docker container with dataset: {job.dataset}")
 
-            # Select the appropriate script based on the file format
             script_path = 'scripts/run_script_hf.sh' if job.file_format == FileFormat.HF else 'scripts/run_script_non_hf.sh'
+            logger.debug(f"Selected script path: {script_path}")
 
-            # Read the script content
+            if not os.path.exists(script_path):
+                raise FileNotFoundError(f"Script file not found: {script_path}")
+
             with open(script_path, 'r') as f:
                 script_content = f.read()
 
-            # Replace placeholders in the script
+            logger.debug(f"Original script content:\n{script_content}")
+
             script_content = script_content.replace('{{JOB_ID}}', job.job_id)
             if job.file_format != FileFormat.HF:
                 script_content = script_content.replace('{{DATASET_FILENAME}}', os.path.basename(job.dataset))
 
-            # Write the modified script to a temporary file
-            with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.sh') as temp_script:
-                temp_script.write(script_content)
-                temp_script_path = temp_script.name
-
-            os.chmod(temp_script_path, 0o755)
+            logger.debug(f"Modified script content:\n{script_content}")
 
             volume_bindings = {
                 os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
                 os.path.abspath(OUTPUT_DIR): {'bind': '/workspace/axolotl/outputs', 'mode': 'rw'},
-                temp_script_path: {'bind': '/tmp/run_script.sh', 'mode': 'ro'},
             }
 
             if job.file_format != FileFormat.HF:
                 dataset_dir = os.path.dirname(os.path.abspath(job.dataset))
                 volume_bindings[dataset_dir] = {'bind': '/workspace/input_data', 'mode': 'ro'}
 
+            logger.debug(f"Volume bindings: {volume_bindings}")
+
+            logger.info("Starting Docker container...")
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE,
-                command=["/bin/bash", "/tmp/run_script.sh"],
+                command=["/bin/bash", "-c", script_content],
                 volumes=volume_bindings,
                 environment=docker_env,
                 runtime="nvidia",
                 detach=True,
                 tty=True,
             )
+            logger.info(f"Docker container started with ID: {container.id}")
 
             log_thread = threading.Thread(target=self.stream_logs, args=(container,))
             log_thread.start()
@@ -128,15 +129,21 @@ class TrainingWorker:
             if result['StatusCode'] != 0:
                 raise DockerException(f"Container exited with non-zero status code: {result['StatusCode']}")
 
+        except FileNotFoundError as e:
+            logger.error(f"File not found: {e}")
+            self.update_job_status(job, JobStatus.FAILED, str(e))
+            raise e
         except DockerException as e:
             logger.error(f"Docker exception occurred: {e}")
+            self.update_job_status(job, JobStatus.FAILED, str(e))
+            raise e
+        except Exception as e:
+            logger.error(f"Unexpected error occurred: {e}")
             self.update_job_status(job, JobStatus.FAILED, str(e))
             raise e
         finally:
             if 'container' in locals():
                 container.remove(force=True)
-            if 'temp_script_path' in locals():
-                os.unlink(temp_script_path)
 
     def stream_logs(self, container):
         out = ""
