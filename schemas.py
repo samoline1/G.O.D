@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from enum import Enum
 from typing import Union, Optional, Literal
+import uuid
 
 class DatasetType(str, Enum):
     INSTRUCT = "instruct"
@@ -42,3 +43,12 @@ class TrainResponse(BaseModel):
 class JobStatusResponse(BaseModel):
     job_id: str
     status: JobStatus
+
+class Job(BaseModel):
+    job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    dataset: str
+    model: str
+    dataset_type: Union[DatasetType, CustomDatasetType]
+    file_format: FileFormat
+    status: JobStatus = JobStatus.QUEUED
+    error_message: Optional[str] = None

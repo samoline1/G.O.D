@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from training_worker import create_job
+from job_handler import create_job
 from dataset_validator import validate_dataset
 from schemas import TrainRequest, TrainResponse, JobStatusResponse, FileFormat
 
