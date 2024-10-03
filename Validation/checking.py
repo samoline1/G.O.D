@@ -59,6 +59,23 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
     eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 
+from transformers import TrainerCallback
+from axolotl.utils.callbacks import LossWatchDogCallback
+
+class LossExtractorCallback(TrainerCallback):
+    def __init__(self):
+        self.current_loss = None
+
+    def on_evaluate(self, args, state, control, metrics, **kwargs):
+        if 'eval_loss' in metrics:
+            self.current_loss = metrics['eval_loss']
+        else:
+            for callback in self.trainer.callback_handler.callbacks:
+                if isinstance(callback, LossWatchDogCallback):
+                    if len(state.log_history) > 0 and "loss" in state.log_history[-1]:
+                        self.current_loss = state.log_history[-1]["loss"]
+                    break
+
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
     cfg = DictDefault(cfg)
     cfg.tokenizer_config = tokenizer.name_or_path
@@ -79,8 +96,12 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         tokenizer,
         0, 
     )
+    loss_extractor = LossExtractorCallback()
+    trainer.add_callback(loss_extractor)
+
 
     eval_results = trainer.evaluate()
+    logger.info(f"Loss: {loss_extractor.current_loss}")
 
     logger.info(f"Evaluation results: {eval_results}")
 
