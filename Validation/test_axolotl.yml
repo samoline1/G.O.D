@@ -9,3 +9,6 @@ val_set_size: 0
 train_batch_size : 8
 micro_batch_size: 8
 do_causal_lm_eval: True
+#use_wandb: True
+#eval_table_size: 100
+eval_causal_lm_metrics: ["sacrebleu", "comet", "ter", chrf]
