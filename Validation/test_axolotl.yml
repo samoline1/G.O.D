@@ -11,4 +11,4 @@ micro_batch_size: 8
 do_causal_lm_eval: True
 #use_wandb: True
 #eval_table_size: 100
-eval_causal_lm_metrics: ["sacrebleu", "comet", "ter", chrf]
+eval_causal_lm_metrics: ["perplexity", "sacrebleu", "comet", "ter", chrf]

@@ -100,6 +100,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     trainer.add_callback(loss_extractor)
 
     eval_results = trainer.evaluate()
+    logger.info(f"Eval results: {eval_results}")
 
     if loss_extractor.eval_loss is not None:
         loss = loss_extractor.eval_loss
