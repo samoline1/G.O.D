@@ -102,14 +102,34 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     total_loss = 0.0
     total_samples = 0
 
+    # Get the maximum sequence length for the model
+    max_length = model.config.max_position_embeddings
+
     # Disable gradient calculation for evaluation
     with torch.no_grad():
         # Iterate through the entire dataset
         for batch in tqdm(dataset, desc="Evaluating"):
-            # Convert lists to tensors and move to the model's device
-            input_ids = torch.tensor(batch['input_ids']).to(model.device)
-            attention_mask = torch.tensor(batch['attention_mask']).to(model.device)
-            labels = torch.tensor(batch['labels']).to(model.device)
+            # Convert lists to tensors
+            input_ids = torch.tensor(batch['input_ids'])
+            attention_mask = torch.tensor(batch['attention_mask'])
+            labels = torch.tensor(batch['labels'])
+
+            # Truncate or pad sequences to match the model's maximum length
+            input_ids = input_ids[:, :max_length]
+            attention_mask = attention_mask[:, :max_length]
+            labels = labels[:, :max_length]
+
+            # Pad sequences if they're shorter than max_length
+            if input_ids.shape[1] < max_length:
+                padding_length = max_length - input_ids.shape[1]
+                input_ids = torch.nn.functional.pad(input_ids, (0, padding_length), value=tokenizer.pad_token_id)
+                attention_mask = torch.nn.functional.pad(attention_mask, (0, padding_length), value=0)
+                labels = torch.nn.functional.pad(labels, (0, padding_length), value=-100)  # -100 is typically ignored in loss calculation
+
+            # Move tensors to the model's device
+            input_ids = input_ids.to(model.device)
+            attention_mask = attention_mask.to(model.device)
+            labels = labels.to(model.device)
 
             # Forward pass
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
