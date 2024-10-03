@@ -109,7 +109,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         data_collator=data_collator,
     )
 
-    predictions, labels, _ = trainer.predict(eval_dataset)
+    predictions, labels, _ = trainer.predict(eval_dataset[0:10])
 
     logger.info(f"Predictions: {predictions}")
     logger.info(f"Labels: {labels}")
