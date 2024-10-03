@@ -1,4 +1,4 @@
-from transformers import AutoModel, AutoConfig, AutoTokenizer
+from transformers import AutoModel, AutoConfig, AutoTokenizer, Trainer, TrainingArguments
 from schemas import TrainRequest
 from config_handler import create_dataset_entry, update_model_info
 import yaml
@@ -14,6 +14,7 @@ import shutil
 import torch
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
+from datasets import Dataset
 
 logger = logging.getLogger(__name__)
 
@@ -68,10 +69,6 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
 
 
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
-    import torch
-    from torch.nn import CrossEntropyLoss
-    from tqdm import tqdm
-
     cfg = DictDefault(cfg)
     cfg.tokenizer_config = tokenizer.name_or_path
     logger.info(f"Config: {cfg}")
@@ -92,59 +89,38 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
 
     logger.info(f"Dataset: {dataset}")
 
-    # Set the model to evaluation mode
-    model.eval()
+    # Convert the dataset to a format compatible with the Trainer
+    def convert_to_features(batch):
+        return {
+            'input_ids': torch.tensor(batch['input_ids']),
+            'attention_mask': torch.tensor(batch['attention_mask']),
+            'labels': torch.tensor(batch['labels'])
+        }
 
-    # Initialize loss function
-    loss_fn = CrossEntropyLoss()
+    eval_dataset = Dataset.from_dict({
+        'input_ids': dataset['input_ids'],
+        'attention_mask': dataset['attention_mask'],
+        'labels': dataset['labels']
+    })
+    eval_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'labels'])
 
-    # Initialize variables to store total loss and number of samples
-    total_loss = 0.0
-    total_samples = 0
+    # Set up training arguments (we'll use these for evaluation)
+    training_args = TrainingArguments(
+        output_dir="./results",
+        per_device_eval_batch_size=8,
+        logging_dir="./logs",
+    )
 
-    # Get the maximum sequence length for the model
-    max_length = model.config.max_position_embeddings
+    # Initialize the Trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        eval_dataset=eval_dataset,
+    )
 
-    # Disable gradient calculation for evaluation
-    with torch.no_grad():
-        # Iterate through the entire dataset
-        for batch in tqdm(dataset, desc="Evaluating"):
-            # Convert lists to tensors
-            input_ids = torch.tensor(batch['input_ids'])
-            attention_mask = torch.tensor(batch['attention_mask'])
-            labels = torch.tensor(batch['labels'])
+    # Evaluate the model
+    eval_results = trainer.evaluate()
 
-            # Truncate or pad sequences to match the model's maximum length
-            input_ids = input_ids[:, :max_length]
-            attention_mask = attention_mask[:, :max_length]
-            labels = labels[:, :max_length]
+    logger.info(f"Evaluation completed. Results: {eval_results}")
 
-            # Pad sequences if they're shorter than max_length
-            if input_ids.shape[1] < max_length:
-                padding_length = max_length - input_ids.shape[1]
-                input_ids = torch.nn.functional.pad(input_ids, (0, padding_length), value=tokenizer.pad_token_id)
-                attention_mask = torch.nn.functional.pad(attention_mask, (0, padding_length), value=0)
-                labels = torch.nn.functional.pad(labels, (0, padding_length), value=-100)  # -100 is typically ignored in loss calculation
-
-            # Move tensors to the model's device
-            input_ids = input_ids.to(model.device)
-            attention_mask = attention_mask.to(model.device)
-            labels = labels.to(model.device)
-
-            # Forward pass
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits
-
-            # Calculate loss
-            loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
-
-            # Update total loss and sample count
-            total_loss += loss.item() * input_ids.size(0)
-            total_samples += input_ids.size(0)
-
-    # Calculate average loss
-    avg_loss = total_loss / total_samples
-
-    logger.info(f"Evaluation completed. Average loss: {avg_loss:.4f}")
-
-    return {"loss": avg_loss}
+    return eval_results
