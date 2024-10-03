@@ -10,10 +10,7 @@ from axolotl.utils.dict import DictDefault
 from huggingface_hub import snapshot_download
 from pathlib import Path
 import tempfile
-import shutil
-import torch
 from torch.nn import CrossEntropyLoss
-from tqdm import tqdm
 from datasets import Dataset
 
 logger = logging.getLogger(__name__)
@@ -107,6 +104,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         output_dir="./results",
         per_device_eval_batch_size=8,
         evaluation_strategy="steps",
+        eval_steps=1,
         logging_dir="./logs",
     )
 
@@ -115,6 +113,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         args=training_args,
         eval_dataset=eval_dataset,
         data_collator=data_collator,
+        loss_fct=compute_loss
     )
 
     eval_results = trainer.evaluate()
