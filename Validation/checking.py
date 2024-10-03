@@ -126,10 +126,28 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     })
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
+    from torch.nn import CrossEntropyLoss
+    import numpy as np
 
-    loss_fct = CrossEntropyLoss()
+    def compute_metrics(eval_pred):
+        logits, labels = eval_pred
+        predictions = np.argmax(logits, axis=-1)
 
+        accuracy = (predictions == labels).mean()
 
+        logits_tensor = torch.tensor(logits)
+        labels_tensor = torch.tensor(labels)
+
+        shift_logits = logits_tensor[..., :-1, :].contiguous()
+        shift_labels = labels_tensor[..., 1:].contiguous()
+
+        loss_fct = CrossEntropyLoss()
+        loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)).item()
+
+        return {
+            "accuracy": accuracy,
+            "loss": loss
+        }
     training_args = TrainingArguments(
         output_dir="./results",
         per_device_eval_batch_size=8,
@@ -138,11 +156,12 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         logging_dir="./logs",
     )
 
-    trainer = CustomTrainer(
+    trainer = Trainer(
         model=model,
         args=training_args,
         eval_dataset=eval_dataset,
         data_collator=data_collator,
+        compute_metrics=compute_metrics
     )
 
     eval_results = trainer.evaluate()
