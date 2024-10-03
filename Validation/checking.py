@@ -1,7 +1,7 @@
 from transformers import AutoModel, AutoConfig, AutoTokenizer
 from schemas import TrainRequest
 from axolotl.common.cli import TrainerCliArgs
-from axolotl.cli import load_prepare_datasets
+from axolotl.utils.data.sft import load_prepare_datasets
 from axolotl.train import train
 from axolotl.utils.dict import DictDefault
 from config_handler import create_dataset_entry, update_model_info
