@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     original_config = AutoConfig.from_pretrained(original_repo)
     finetuned_config = finetuned_model.config
+    logger.info(f"Original config: {original_config}")
+    logger.info(f"Finetuned config: {finetuned_config}")
     attrs_to_compare = ['model_type', 'hidden_size', 'num_hidden_layers', 'num_attention_heads', 'vocab_size']
     architecture_same = all(getattr(original_config, attr) == getattr(finetuned_config, attr) for attr in attrs_to_compare)
     base_model_match = finetuned_config._name_or_path == original_repo
