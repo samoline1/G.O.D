@@ -8,6 +8,7 @@ from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
 from axolotl.utils.trainer import setup_trainer
 from pathlib import Path
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +83,15 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     eval_dataset, _ = load_tokenized_prepared_datasets(
         tokenizer, cfg, prepared_path
     )
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
 
+    def custom_data_collator(features):
+            batch = data_collator(features)
+            if "labels" in batch:
+                batch["labels"] = torch.where(batch["labels"] == -100, -100, batch["labels"])
+            return batch
     logger.info(f"Loaded evaluation dataset: {eval_dataset}")
 
-    # I want to print a sample of the eval dataset
     logger.info(f"Eval dataset sample: {eval_dataset[0]}")
 
     trainer = setup_trainer(
@@ -95,18 +101,12 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         (model, None, None),  
         tokenizer,
         0, 
+        data_collator=custom_data_collator
     )
-    loss_extractor = LossExtractorCallback()
-    trainer.add_callback(loss_extractor)
 
     eval_results = trainer.evaluate()
     logger.info(f"Eval results: {eval_results}")
 
-    if loss_extractor.eval_loss is not None:
-        loss = loss_extractor.eval_loss
-    else:
-        loss = eval_results.get('eval_loss', None)
 
-    logger.info(f"Evaluation loss: {loss}")
 
     return loss
