@@ -51,7 +51,7 @@ def get_and_update_config(train_request: TrainRequest, config_path: str) -> Dict
         dataset_type=train_request.dataset_type,
         file_format=train_request.file_format
     )
-    config_dict['datasets'] = [dataset_entry]
+    config_dict['datasets']['test_datasets'] = [dataset_entry]
     update_model_info(config_dict, train_request.model)
     config = DictDefault(config_dict)
     return config
