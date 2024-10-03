@@ -87,8 +87,6 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
             tokenizer, cfg, prepared_path
         )
 
-    logger.info(f"Dataset: {dataset}")
-
     eval_dataset = Dataset.from_dict({
         'input_ids': dataset['input_ids'],
         'attention_mask': dataset['attention_mask'],
@@ -97,12 +95,20 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
 
+    loss_fct = CrossEntropyLoss()
+
+    def compute_loss(eval_pred):
+            logits, labels = eval_pred
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            return loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+
     training_args = TrainingArguments(
         output_dir="./results",
         per_device_eval_batch_size=8,
+        evaluation_strategy="steps",
         logging_dir="./logs",
     )
-    logger.info(f"Training args: {training_args}")
 
     trainer = Trainer(
         model=model,
@@ -110,7 +116,6 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         eval_dataset=eval_dataset,
         data_collator=data_collator,
     )
-    logger.info(f"Trainer: {trainer}")
 
     eval_results = trainer.evaluate()
 
