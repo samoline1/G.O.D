@@ -15,10 +15,16 @@ logger = logging.getLogger(__name__)
 def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     original_config = AutoConfig.from_pretrained(original_repo)
     finetuned_config = finetuned_model.config
-    adapter_config = os.path.join(original_repo, 'adapter_config.json')
+    
+    if hasattr(finetuned_model, 'name_or_path'):
+        finetuned_model_path = finetuned_model.name_or_path
+    else:
+        finetuned_model_path = finetuned_model.config._name_or_path
+    
+    adapter_config = os.path.join(finetuned_model_path, 'adapter_config.json')
     if os.path.exists(adapter_config):
         has_lora_modules = True
-        logger.info(f"Adapter config: {adapter_config}")
+        logger.info(f"Adapter config found: {adapter_config}")
     else:
         logger.info(f"Adapter config not found at {adapter_config}")
         has_lora_modules = False
