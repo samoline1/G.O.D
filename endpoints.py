@@ -31,7 +31,7 @@ async def train_model(request: TrainRequest):
     )
     router.worker.enqueue_job(job)
 
-    return {"message": "Training job enqueued.", "job_id": job["job_id"]}
+    return {"message": "Training job enqueued.", "job_id": job.job_id}
 
 @router.get("/status/{job_id}", response_model=JobStatusResponse)
 async def get_job_status(job_id: str):
