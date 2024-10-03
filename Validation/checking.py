@@ -102,6 +102,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         per_device_eval_batch_size=8,
         logging_dir="./logs",
     )
+    logger.info(f"Training args: {training_args}")
 
     trainer = Trainer(
         model=model,
@@ -109,9 +110,10 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         eval_dataset=eval_dataset,
         data_collator=data_collator,
     )
+    logger.info(f"Trainer: {trainer}")
 
-    eval_results = trainer.evaluate()
+#    eval_results = trainer.evaluate()
 
-    logger.info(f"Evaluation completed. Results: {eval_results}")
+#    logger.info(f"Evaluation completed. Results: {eval_results}")
 
     return eval_results
