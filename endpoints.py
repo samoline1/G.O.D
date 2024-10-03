@@ -3,7 +3,7 @@ from job_handler import create_job
 from dataset_validator import validate_dataset
 from schemas import TrainRequest, TrainResponse, JobStatusResponse, FileFormat, EvaluationRequest, EvaluationResponse
 from Validation.checking import is_likely_finetune, perform_evaluation
-from transformers import AutoModel
+from transformers import AutoModel, AutoTokenizer
 
 router = APIRouter()
 
@@ -57,13 +57,14 @@ async def evaluate_model(request: EvaluationRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     finetuned_model = AutoModel.from_pretrained(request.model)
+    tokenizer = AutoTokenizer.from_pretrained(request.model)
     is_finetune = is_likely_finetune(request.original_model, finetuned_model)
 
     if not is_finetune:
         raise HTTPException(status_code=400, detail="The provided model does not appear to be a fine-tune of the original model.")
 
     config_path = "Validation/test_axolotl.yml"  
-    eval_results = perform_evaluation(request, config_path)
+    eval_results = perform_evaluation(request, config_path, finetuned_model, tokenizer)
 
     return EvaluationResponse(
         message="Evaluation completed successfully.",

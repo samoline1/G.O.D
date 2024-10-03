@@ -1,4 +1,4 @@
-from transformers import AutoModel, AutoConfig
+from transformers import AutoModel, AutoConfig, AutoTokenizer
 from schemas import TrainRequest
 from axolotl.common.cli import TrainerCliArgs
 from axolotl.cli import load_datasets
@@ -56,17 +56,17 @@ def get_and_update_config(train_request: TrainRequest, config_path: str) -> Dict
     config = DictDefault(config_dict)
     return config
 
-def perform_evaluation(train_request: TrainRequest, config_path: str):
+def perform_evaluation(train_request: TrainRequest, config_path: str, model: AutoModel, tokenizer: AutoTokenizer):
     config = get_and_update_config(train_request, config_path)
-    eval_results = evaluate_test_set_loss(config)
+    eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 
 
-def evaluate_test_set_loss(config: DictDefault):
+def evaluate_test_set_loss(config: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
     cli_args = TrainerCliArgs()
     dataset_meta = load_datasets(cfg=config, cli_args=cli_args)
-    model, tokenizer = train(cfg=config, cli_args=cli_args, dataset_meta=dataset_meta)
-    trainer = getattr(model, 'trainer', None)
+    logger.info(f"Dataset meta: {dataset_meta}")
+    logger.info(f"Model: {model}")
     
     if trainer:
         eval_results = trainer.evaluate()
