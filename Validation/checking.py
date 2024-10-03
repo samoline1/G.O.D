@@ -89,24 +89,20 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
 
     logger.info(f"Dataset: {dataset}")
 
-    # Convert the dataset to a format compatible with the Trainer
     eval_dataset = Dataset.from_dict({
         'input_ids': dataset['input_ids'],
         'attention_mask': dataset['attention_mask'],
         'labels': dataset['labels']
     })
 
-    # Create a data collator that will dynamically pad the batched samples
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
 
-    # Set up training arguments (we'll use these for evaluation)
     training_args = TrainingArguments(
         output_dir="./results",
         per_device_eval_batch_size=8,
         logging_dir="./logs",
     )
 
-    # Initialize the Trainer
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -114,7 +110,6 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         data_collator=data_collator,
     )
 
-    # Evaluate the model
     eval_results = trainer.evaluate()
 
     logger.info(f"Evaluation completed. Results: {eval_results}")
