@@ -66,9 +66,6 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
 
 from axolotl.utils.dict import DictDefault
 from axolotl.utils.trainer import setup_trainer
-from axolotl.common.cli import TrainerCliArgs
-from axolotl.utils.models import load_tokenizer
-from axolotl.utils.data import load_datasets
 
 # Set up logging
 LOG = logging.getLogger("axolotl.cli.evaluate")
