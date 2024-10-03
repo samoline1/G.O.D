@@ -44,6 +44,19 @@ def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     logger.info(f"Architecture same: {architecture_same}, Base model match: {base_model_match}, Has lora modules: {has_lora_modules}")
     return architecture_same and (base_model_match or has_lora_modules)
 
+class CustomTrainer(Trainer):
+    def compute_loss(self, model, inputs, return_outputs=False):
+        labels = inputs.get("labels")
+        outputs = model(**inputs)
+        logits = outputs.get("logits")
+        
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+        
+        loss_fct = CrossEntropyLoss()
+        loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+        
+        return (loss, outputs) if return_outputs else loss
 
 def get_and_update_config(train_request: TrainRequest, config_path: str) -> DictDefault:
     with open(config_path, 'r') as file:
@@ -94,11 +107,6 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
 
     loss_fct = CrossEntropyLoss()
 
-    def compute_loss(eval_pred):
-            logits, labels = eval_pred
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
-            return loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
     training_args = TrainingArguments(
         output_dir="./results",
@@ -108,12 +116,11 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         logging_dir="./logs",
     )
 
-    trainer = Trainer(
+    trainer = CustomTrainer(
         model=model,
         args=training_args,
         eval_dataset=eval_dataset,
         data_collator=data_collator,
-        loss_fct=compute_loss
     )
 
     eval_results = trainer.evaluate()
