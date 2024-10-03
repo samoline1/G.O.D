@@ -61,8 +61,18 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
     eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 
+#being ahcky will fix later 
+class DotDict:
+    def __init__(self, dictionary):
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                setattr(self, key, DotDict(value))
+            else:
+                setattr(self, key, value)
+
 
 def evaluate_test_set_loss(config: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
+    config = DotDict(config)
     logger.info(f"Config: {config}")
     dataset_meta = load_prepare_datasets(
                         tokenizer,
