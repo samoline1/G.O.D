@@ -106,10 +106,10 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     with torch.no_grad():
         # Iterate through the entire dataset
         for batch in tqdm(dataset, desc="Evaluating"):
-            # Move input tensors to the same device as the model
-            input_ids = batch['input_ids'].to(model.device)
-            attention_mask = batch['attention_mask'].to(model.device)
-            labels = batch['labels'].to(model.device)
+            # Convert lists to tensors and move to the model's device
+            input_ids = torch.tensor(batch['input_ids']).to(model.device)
+            attention_mask = torch.tensor(batch['attention_mask']).to(model.device)
+            labels = torch.tensor(batch['labels']).to(model.device)
 
             # Forward pass
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
