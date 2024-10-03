@@ -62,8 +62,7 @@ def perform_evaluation(train_request: TrainRequest, config_path: str):
     return eval_results
 
 
-def evaluate_test_set_loss(train_request: TrainRequest, config_path: str):
-    config = get_and_update_config(train_request, config_path)
+def evaluate_test_set_loss(config: DictDefault):
     cli_args = TrainerCliArgs()
     dataset_meta = load_datasets(cfg=config, cli_args=cli_args)
     model, tokenizer = train(cfg=config, cli_args=cli_args, dataset_meta=dataset_meta)
