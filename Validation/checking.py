@@ -1,4 +1,4 @@
-from transformers import AutoModel, AutoConfig, AutoTokenizer, Trainer, TrainingArguments
+from transformers import AutoModel, AutoConfig, AutoTokenizer, Trainer, TrainingArguments, DataCollatorWithPadding
 from schemas import TrainRequest
 from config_handler import create_dataset_entry, update_model_info
 import yaml
@@ -90,19 +90,14 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     logger.info(f"Dataset: {dataset}")
 
     # Convert the dataset to a format compatible with the Trainer
-    def convert_to_features(batch):
-        return {
-            'input_ids': torch.tensor(batch['input_ids']),
-            'attention_mask': torch.tensor(batch['attention_mask']),
-            'labels': torch.tensor(batch['labels'])
-        }
-
     eval_dataset = Dataset.from_dict({
         'input_ids': dataset['input_ids'],
         'attention_mask': dataset['attention_mask'],
         'labels': dataset['labels']
     })
-    eval_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'labels'])
+
+    # Create a data collator that will dynamically pad the batched samples
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
 
     # Set up training arguments (we'll use these for evaluation)
     training_args = TrainingArguments(
@@ -116,6 +111,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         model=model,
         args=training_args,
         eval_dataset=eval_dataset,
+        data_collator=data_collator,
     )
 
     # Evaluate the model
