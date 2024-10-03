@@ -82,8 +82,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     cfg.base_model = model.config._name_or_path
     cfg.tokenizer_config = tokenizer.name_or_path
     
-    # Normalize and validate the config
-    normalize_config(cfg)
+
     cfg = validate_config(cfg)
 
     logger.info(f"Config: {cfg}")
