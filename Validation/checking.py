@@ -45,41 +45,6 @@ def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     logger.info(f"Architecture same: {architecture_same}, Base model match: {base_model_match}, Has lora modules: {has_lora_modules}")
     return architecture_same and (base_model_match or has_lora_modules)
 
-class CustomTrainer(Trainer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.eval_loss = 0
-        self.eval_steps = 0
-
-    def compute_loss(self, model, inputs, return_outputs=False):
-        labels = inputs.get("labels")
-        outputs = model(**inputs)
-        logits = outputs.get("logits")
-        
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        
-        loss_fct = torch.nn.CrossEntropyLoss()
-        loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-        
-        return (loss, outputs) if return_outputs else loss
-
-    def evaluation_loop(self, dataloader, description, prediction_loss_only=None, ignore_keys=None, metric_key_prefix="eval"):
-        self.eval_loss = 0
-        self.eval_steps = 0
-        
-        eval_output = super().evaluation_loop(dataloader, description, prediction_loss_only, ignore_keys, metric_key_prefix)
-        
-        eval_output.metrics['eval_loss'] = self.eval_loss / self.eval_steps if self.eval_steps > 0 else 0
-        return eval_output
-
-    def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
-        loss, logits, labels = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
-        if loss is not None:
-            self.eval_loss += loss.item()
-            self.eval_steps += 1
-        return loss, logits, labels
-
 def get_and_update_config(train_request: TrainRequest, config_path: str) -> DictDefault:
     with open(config_path, 'r') as file:
         config_dict = yaml.safe_load(file)
@@ -129,25 +94,6 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     from torch.nn import CrossEntropyLoss
     import numpy as np
 
-    def compute_metrics(eval_pred):
-        logits, labels = eval_pred
-        predictions = np.argmax(logits, axis=-1)
-
-        accuracy = (predictions == labels).mean()
-
-        logits_tensor = torch.tensor(logits)
-        labels_tensor = torch.tensor(labels)
-
-        shift_logits = logits_tensor[..., :-1, :].contiguous()
-        shift_labels = labels_tensor[..., 1:].contiguous()
-
-        loss_fct = CrossEntropyLoss()
-        loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)).item()
-
-        return {
-            "accuracy": accuracy,
-            "loss": loss
-        }
     training_args = TrainingArguments(
         output_dir="./results",
         per_device_eval_batch_size=8,
@@ -161,17 +107,31 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         args=training_args,
         eval_dataset=eval_dataset,
         data_collator=data_collator,
-        compute_metrics=compute_metrics
     )
 
-    eval_results = trainer.evaluate()
+    predictions, labels, _ = trainer.predict(eval_dataset)
 
-    logger.info(f"Evaluation completed. Results: {eval_results}")
+    logger.info(f"Predictions: {predictions}")
+    logger.info(f"Labels: {labels}")
 
-    print(f"Evaluation Results: {eval_results}")
-    if 'eval_loss' in eval_results:
-        print(f"Evaluation Loss: {eval_results['eval_loss']}")
-    else:
-        print("No evaluation loss found in results.")
+    logits_tensor = torch.tensor(predictions)
+    labels_tensor = torch.tensor(labels)
+
+    shift_logits = logits_tensor[..., :-1, :].contiguous()
+    shift_labels = labels_tensor[..., 1:].contiguous()
+
+    loss_fct = CrossEntropyLoss()
+    eval_loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)).item()
+
+    predictions = np.argmax(predictions, axis=-1)
+    accuracy = (predictions == labels).mean()
+
+    eval_results = {
+        "accuracy": accuracy,
+        "eval_loss": eval_loss
+    }
+
+    logger.info(f"Evaluation results: {eval_results}")
+
 
     return eval_results
