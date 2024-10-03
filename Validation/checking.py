@@ -68,8 +68,7 @@ def evaluate_test_set_loss(config: DictDefault, model: AutoModel, tokenizer: Aut
                         tokenizer,
                         config,
                         "data/",
-                        split="test",
-                        processor=None,
+                        split="test"
                     )
 
     logger.info(f"Dataset meta: {dataset_meta}")
