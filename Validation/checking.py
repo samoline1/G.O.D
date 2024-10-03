@@ -84,6 +84,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
             tokenizer, cfg, prepared_path
         )
 
+    logger.info(f"Dataset: {dataset}")
     eval_dataset = Dataset.from_dict({
         'input_ids': dataset['input_ids'],
         'attention_mask': dataset['attention_mask'],
