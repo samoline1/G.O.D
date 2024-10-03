@@ -7,6 +7,10 @@ import os
 import logging
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
+from huggingface_hub import snapshot_download
+from pathlib import Path
+import tempfile
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +66,23 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
 
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
 
-    
     cfg = DictDefault(cfg)
     cfg.tokenizer_config = tokenizer.name_or_path
     logger.info(f"Config: {cfg}")
-    
-    dataset, _ = load_tokenized_prepared_datasets(tokenizer, cfg, "data/")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_ds_path = Path("data/")
+            tmp_ds_path.mkdir(parents=True, exist_ok=True)
+            snapshot_download(
+                repo_id=cfg.datasets[0].path,
+                repo_type="dataset",
+                local_dir=tmp_ds_path,
+            )
+
+            prepared_path = Path(tmp_dir) / "prepared"
+            dataset, _ = load_tokenized_prepared_datasets(
+                tokenizer, cfg, prepared_path
+            )
 
     logger.info(f"Dataset: {dataset}")
     
