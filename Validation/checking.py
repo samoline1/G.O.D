@@ -81,7 +81,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
 
             prepared_path = Path(tmp_dir) / "prepared"
             dataset, _ = load_tokenized_prepared_datasets(
-                tokenizer, cfg, prepared_path
+                tokenizer, cfg, prepared_path, split="test"
             )
 
     logger.info(f"Dataset: {dataset}")
