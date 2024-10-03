@@ -1,7 +1,7 @@
 from transformers import AutoModel, AutoConfig, AutoTokenizer
 from schemas import TrainRequest
 from axolotl.common.cli import TrainerCliArgs
-from axolotl.cli import load_datasets
+from axolotl.cli import load_prepare_datasets
 from axolotl.train import train
 from axolotl.utils.dict import DictDefault
 from config_handler import create_dataset_entry, update_model_info
@@ -64,12 +64,19 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
 
 def evaluate_test_set_loss(config: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
     cli_args = TrainerCliArgs()
-    dataset_meta = load_datasets(cfg=config, cli_args=cli_args)
+    dataset_meta = load_prepare_datasets(
+                        tokenizer,
+                        config,
+                        "data/",
+                        split="test",
+                        processor=None,
+                    )
+
     logger.info(f"Dataset meta: {dataset_meta}")
     logger.info(f"Model: {model}")
     
-    if trainer:
-        eval_results = trainer.evaluate()
-        return eval_results
-    else:
-        raise ValueError("Trainer not found. Unable to evaluate.")
+##    if trainer:
+##        eval_results = trainer.evaluate()
+##        return eval_results
+##    else:
+##        raise ValueError("Trainer not found. Unable to evaluate.")
