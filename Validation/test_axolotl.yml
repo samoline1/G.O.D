@@ -15,3 +15,11 @@ training:
 evaluation:
   do_eval: True
   eval_steps: 0  
+
+
+bnb_config_kwargs:
+  llm_int8_has_fp16_weight: false
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_use_double_quant: true
+
+gptq: true
