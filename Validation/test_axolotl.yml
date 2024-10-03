@@ -13,3 +13,8 @@ do_causal_lm_eval: True
 #eval_table_size: 100
 eval_causal_lm_metrics: ["perplexity", "sacrebleu", "comet", "ter", chrf]
 device: 'cuda'
+
+do_train: false
+do_eval: true
+evaluation_strategy: "steps"
+eval_steps: 100
