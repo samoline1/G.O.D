@@ -18,3 +18,5 @@ do_train: false
 do_eval: true
 evaluation_strategy: "steps"
 eval_steps: 100
+sample_packing: false
+eval_sample_packing: false
