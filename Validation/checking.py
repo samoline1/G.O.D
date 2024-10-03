@@ -12,6 +12,7 @@ from pathlib import Path
 import tempfile
 from torch.nn import CrossEntropyLoss
 from datasets import Dataset
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,11 @@ def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     return architecture_same and (base_model_match or has_lora_modules)
 
 class CustomTrainer(Trainer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.eval_loss = 0
+        self.eval_steps = 0
+
     def compute_loss(self, model, inputs, return_outputs=False):
         labels = inputs.get("labels")
         outputs = model(**inputs)
@@ -53,10 +59,26 @@ class CustomTrainer(Trainer):
         shift_logits = logits[..., :-1, :].contiguous()
         shift_labels = labels[..., 1:].contiguous()
         
-        loss_fct = CrossEntropyLoss()
+        loss_fct = torch.nn.CrossEntropyLoss()
         loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
         
         return (loss, outputs) if return_outputs else loss
+
+    def evaluation_loop(self, dataloader, description, prediction_loss_only=None, ignore_keys=None, metric_key_prefix="eval"):
+        self.eval_loss = 0
+        self.eval_steps = 0
+        
+        eval_output = super().evaluation_loop(dataloader, description, prediction_loss_only, ignore_keys, metric_key_prefix)
+        
+        eval_output.metrics['eval_loss'] = self.eval_loss / self.eval_steps if self.eval_steps > 0 else 0
+        return eval_output
+
+    def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
+        loss, logits, labels = super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
+        if loss is not None:
+            self.eval_loss += loss.item()
+            self.eval_steps += 1
+        return loss, logits, labels
 
 def get_and_update_config(train_request: TrainRequest, config_path: str) -> DictDefault:
     with open(config_path, 'r') as file:
@@ -126,5 +148,11 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     eval_results = trainer.evaluate()
 
     logger.info(f"Evaluation completed. Results: {eval_results}")
+
+    print(f"Evaluation Results: {eval_results}")
+    if 'eval_loss' in eval_results:
+        print(f"Evaluation Loss: {eval_results['eval_loss']}")
+    else:
+        print("No evaluation loss found in results.")
 
     return eval_results
