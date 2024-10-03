@@ -74,7 +74,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
             tmp_ds_path = Path("data/")
             tmp_ds_path.mkdir(parents=True, exist_ok=True)
             snapshot_download(
-                repo_id=cfg.datasets[0].path,
+                repo_id=cfg.datasets.path,
                 repo_type="dataset",
                 local_dir=tmp_ds_path,
             )
