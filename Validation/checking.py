@@ -6,6 +6,8 @@ from axolotl.train import train
 from axolotl.utils.dict import DictDefault
 from config_handler import create_dataset_entry, update_model_info
 import yaml
+import json
+import os
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,15 +15,20 @@ logger = logging.getLogger(__name__)
 def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     original_config = AutoConfig.from_pretrained(original_repo)
     finetuned_config = finetuned_model.config
+    adapter_config = os.path.join(os.path.dirname(original_repo), 'adapter_config.json')
+    if os.path.exists(adapter_config):
+        has_lora_modules = True
+        logger.info(f"Adapter config: {adapter_config}")
+    else:
+        logger.info(f"Adapter config not found at {adapter_config}")
+        has_lora_modules = False
     logger.info(f"Original config: {original_config}")
     logger.info(f"Finetuned config: {finetuned_config}")
-    attrs_to_compare = ['model_type', 'hidden_size', 'num_hidden_layers', 'num_attention_heads', 'vocab_size']
+    attrs_to_compare = ['architectures', 'hidden_size', 'num_hidden_layers', 'num_attention_heads', 'vocab_size']
     architecture_same = all(getattr(original_config, attr) == getattr(finetuned_config, attr) for attr in attrs_to_compare)
     base_model_match = finetuned_config._name_or_path == original_repo
-    has_peft_attributes = hasattr(finetuned_config, 'peft_config_path') or 'LoRA' in str(finetuned_config)
-    has_lora_modules = any('lora' in name.lower() for name, _ in finetuned_model.named_modules())
-    logger.info(f"Architecture same: {architecture_same}, Base model match: {base_model_match}, Has peft attributes: {has_peft_attributes}, Has lora modules: {has_lora_modules}")
-    return architecture_same and (base_model_match or has_peft_attributes or has_lora_modules)
+    logger.info(f"Architecture same: {architecture_same}, Base model match: {base_model_match}, Has lora modules: {has_lora_modules}")
+    return architecture_same and (base_model_match or has_lora_modules)
 
 
 def get_and_update_config(train_request: TrainRequest, config_path: str) -> DictDefault:
