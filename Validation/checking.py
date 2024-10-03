@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     original_config = AutoConfig.from_pretrained(original_repo)
     finetuned_config = finetuned_model.config
-    adapter_config = os.path.join(os.path.dirname(original_repo), 'adapter_config.json')
+    adapter_config = os.path.join(original_repo, 'adapter_config.json')
     if os.path.exists(adapter_config):
         has_lora_modules = True
         logger.info(f"Adapter config: {adapter_config}")
@@ -24,13 +24,12 @@ def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
         has_lora_modules = False
     logger.info(f"Original config: {original_config}")
     logger.info(f"Finetuned config: {finetuned_config}")
-    attrs_to_compare = ['architectures', 'hidden_size', 'num_hidden_layers', 'num_attention_heads', 'vocab_size']
+    attrs_to_compare = ['architectures', 'hidden_size', 'num_hidden_layers', 'num_attention_heads', 'num_key_value_heads']
     for attr in attrs_to_compare:
         if getattr(original_config, attr) != getattr(finetuned_config, attr):
             logger.info(f"Original config: {getattr(original_config, attr)}")
             logger.info(f"Finetuned config: {getattr(finetuned_config, attr)}")
             logger.info(f"Attribute {attr} does not match")
-            return False
     architecture_same = all(getattr(original_config, attr) == getattr(finetuned_config, attr) for attr in attrs_to_compare)
     base_model_match = finetuned_config._name_or_path == original_repo
     logger.info(f"Architecture same: {architecture_same}, Base model match: {base_model_match}, Has lora modules: {has_lora_modules}")
