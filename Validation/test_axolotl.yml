@@ -1,4 +1,4 @@
-test_datasets:
+datasets:
     path: 'path/to/your/test/dataset'
     type: 'your_dataset_type'  
     split: 'test'
