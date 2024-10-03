@@ -4,7 +4,6 @@ import logging
 import docker
 from schemas import Job, JobStatus
 from job_handler import process_job
-from const import CONFIG_DIR, OUTPUT_DIR
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
