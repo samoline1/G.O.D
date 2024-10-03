@@ -61,12 +61,22 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
 
 from transformers import TrainerCallback
 from axolotl.utils.callbacks import LossWatchDogCallback
+from transformers import TrainerCallback, TrainerState, TrainerControl
+from typing import Dict
+
 
 class LossExtractorCallback(TrainerCallback):
     def __init__(self):
         self.current_loss = None
 
-    def on_evaluate(self, args, state: TrainerState, control: TrainerControl, metrics: Dict[str, float], **kwargs):
+    def on_evaluate(
+        self,
+        args,
+        state: TrainerState,
+        control: TrainerControl,
+        metrics: Dict[str, float],
+        **kwargs
+    ):
         if 'eval_loss' in metrics:
             self.current_loss = metrics['eval_loss']
         else:
