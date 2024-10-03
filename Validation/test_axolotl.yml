@@ -1,3 +1,7 @@
+datasets:
+    path: 'path/to/your/test/dataset'
+    type: 'your_dataset_type'  
+
 sequence_len: 4096
 batch_size: 1
 

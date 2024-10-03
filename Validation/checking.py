@@ -53,7 +53,7 @@ def get_and_update_config(train_request: TrainRequest, config_path: str) -> Dict
         dataset_type=train_request.dataset_type,
         file_format=train_request.file_format
     )
-    config_dict['test_datasets'] = [dataset_entry]
+    config_dict['datasets'] = [dataset_entry]
     update_model_info(config_dict, train_request.model)
     config = DictDefault(config_dict)
     return config
@@ -74,14 +74,14 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
             tmp_ds_path = Path("data/")
             tmp_ds_path.mkdir(parents=True, exist_ok=True)
             snapshot_download(
-                repo_id=cfg.test_datasets[0].path,
+                repo_id=cfg.datasets[0].path,
                 repo_type="dataset",
                 local_dir=tmp_ds_path,
             )
 
             prepared_path = Path(tmp_dir) / "prepared"
             dataset, _ = load_tokenized_prepared_datasets(
-                tokenizer, cfg, prepared_path, split="test"
+                tokenizer, cfg, prepared_path
             )
 
     logger.info(f"Dataset: {dataset}")
