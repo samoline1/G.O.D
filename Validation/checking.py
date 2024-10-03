@@ -112,8 +112,8 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     )
     logger.info(f"Trainer: {trainer}")
 
-#    eval_results = trainer.evaluate()
+    eval_results = trainer.evaluate()
 
-#    logger.info(f"Evaluation completed. Results: {eval_results}")
+    logger.info(f"Evaluation completed. Results: {eval_results}")
 
     return eval_results
