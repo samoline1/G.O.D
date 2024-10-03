@@ -97,6 +97,9 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         0, 
     )
 
+    predictions = trainer.predict(eval_dataset)
+    logger.info(f"Predictions: {predictions}")
+
     eval_results = trainer.evaluate()
     logger.info(f"Eval results: {eval_results}")
 
