@@ -66,11 +66,11 @@ class LossExtractorCallback(TrainerCallback):
     def __init__(self):
         self.current_loss = None
 
-    def on_evaluate(self, args, state, control, metrics, **kwargs):
+    def on_evaluate(self, args, state: TrainerState, control: TrainerControl, metrics: Dict[str, float], **kwargs):
         if 'eval_loss' in metrics:
             self.current_loss = metrics['eval_loss']
         else:
-            for callback in self.trainer.callback_handler.callbacks:
+            for callback in kwargs.get('callbacks', []):
                 if isinstance(callback, LossWatchDogCallback):
                     if len(state.log_history) > 0 and "loss" in state.log_history[-1]:
                         self.current_loss = state.log_history[-1]["loss"]
