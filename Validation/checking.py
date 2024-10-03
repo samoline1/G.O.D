@@ -11,6 +11,9 @@ from huggingface_hub import snapshot_download
 from pathlib import Path
 import tempfile
 import shutil
+import torch
+from torch.nn import CrossEntropyLoss
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -65,30 +68,63 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
 
 
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
+    import torch
+    from torch.nn import CrossEntropyLoss
+    from tqdm import tqdm
 
     cfg = DictDefault(cfg)
     cfg.tokenizer_config = tokenizer.name_or_path
     logger.info(f"Config: {cfg}")
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_ds_path = Path("data/")
-            tmp_ds_path.mkdir(parents=True, exist_ok=True)
-            snapshot_download(
-                repo_id=cfg.datasets[0].path,
-                repo_type="dataset",
-                local_dir=tmp_ds_path,
-            )
+        tmp_ds_path = Path("data/")
+        tmp_ds_path.mkdir(parents=True, exist_ok=True)
+        snapshot_download(
+            repo_id=cfg.datasets[0].path,
+            repo_type="dataset",
+            local_dir=tmp_ds_path,
+        )
 
-            prepared_path = Path(tmp_dir) / "prepared"
-            dataset, _ = load_tokenized_prepared_datasets(
-                tokenizer, cfg, prepared_path
-            )
+        prepared_path = Path(tmp_dir) / "prepared"
+        dataset, _ = load_tokenized_prepared_datasets(
+            tokenizer, cfg, prepared_path
+        )
 
     logger.info(f"Dataset: {dataset}")
-    
-    
-##    if trainer:
-##        eval_results = trainer.evaluate()
-##        return eval_results
-##    else:
-##        raise ValueError("Trainer not found. Unable to evaluate.")
+
+    # Set the model to evaluation mode
+    model.eval()
+
+    # Initialize loss function
+    loss_fn = CrossEntropyLoss()
+
+    # Initialize variables to store total loss and number of samples
+    total_loss = 0.0
+    total_samples = 0
+
+    # Disable gradient calculation for evaluation
+    with torch.no_grad():
+        # Iterate through the entire dataset
+        for batch in tqdm(dataset, desc="Evaluating"):
+            # Move input tensors to the same device as the model
+            input_ids = batch['input_ids'].to(model.device)
+            attention_mask = batch['attention_mask'].to(model.device)
+            labels = batch['labels'].to(model.device)
+
+            # Forward pass
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            logits = outputs.logits
+
+            # Calculate loss
+            loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
+
+            # Update total loss and sample count
+            total_loss += loss.item() * input_ids.size(0)
+            total_samples += input_ids.size(0)
+
+    # Calculate average loss
+    avg_loss = total_loss / total_samples
+
+    logger.info(f"Evaluation completed. Average loss: {avg_loss:.4f}")
+
+    return {"loss": avg_loss}
