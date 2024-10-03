@@ -57,7 +57,7 @@ async def evaluate_model(request: EvaluationRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     finetuned_model = AutoModel.from_pretrained(request.model)
-    tokenizer = AutoTokenizer.from_pretrained(request.model)
+    tokenizer = AutoTokenizer.from_pretrained(request.original_model)
     is_finetune = is_likely_finetune(request.original_model, finetuned_model)
 
     if not is_finetune:
