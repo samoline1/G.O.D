@@ -98,6 +98,9 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
 
     logger.info(f"Loaded evaluation dataset: {eval_dataset}")
 
+    # I want to print a sample of the eval dataset
+    logger.info(f"Eval dataset sample: {eval_dataset[0]}")
+
     trainer = setup_trainer(
         cfg,
         None,  
