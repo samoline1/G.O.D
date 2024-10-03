@@ -6,6 +6,9 @@ from axolotl.train import train
 from axolotl.utils.dict import DictDefault
 from config_handler import create_dataset_entry, update_model_info
 import yaml
+import logging
+
+logger = logging.getLogger(__name__)
 
 def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     original_config = AutoConfig.from_pretrained(original_repo)
@@ -15,6 +18,7 @@ def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
     base_model_match = finetuned_config._name_or_path == original_repo
     has_peft_attributes = hasattr(finetuned_config, 'peft_config_path') or 'LoRA' in str(finetuned_config)
     has_lora_modules = any('lora' in name.lower() for name, _ in finetuned_model.named_modules())
+    logger.info(f"Architecture same: {architecture_same}, Base model match: {base_model_match}, Has peft attributes: {has_peft_attributes}, Has lora modules: {has_lora_modules}")
     return architecture_same and (base_model_match or has_peft_attributes or has_lora_modules)
 
 
