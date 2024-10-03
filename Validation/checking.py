@@ -64,75 +64,47 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
     eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 
+from axolotl.utils.dict import DictDefault
+from axolotl.utils.trainer import setup_trainer
+from axolotl.common.cli import TrainerCliArgs
+from axolotl.utils.models import load_tokenizer
+from axolotl.utils.data import load_datasets
+
+# Set up logging
+LOG = logging.getLogger("axolotl.cli.evaluate")
 
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
     cfg = DictDefault(cfg)
     cfg.tokenizer_config = tokenizer.name_or_path
-    logger.info(f"Config: {cfg}")
+    LOG.info(f"Config: {cfg}")
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_ds_path = Path("data/")
-        tmp_ds_path.mkdir(parents=True, exist_ok=True)
-        snapshot_download(
-            repo_id=cfg.datasets[0].path,
-            repo_type="dataset",
-            local_dir=tmp_ds_path,
-        )
+    # Load the entire dataset for evaluation
+    prepared_path = Path(cfg.output_dir) / "prepared"
+    eval_dataset, _ = load_tokenized_prepared_datasets(
+        tokenizer, cfg, prepared_path
+    )
 
-        prepared_path = Path(tmp_dir) / "prepared"
-        dataset, _ = load_tokenized_prepared_datasets(
-            tokenizer, cfg, prepared_path
-        )
-
-    logger.info(f"Dataset: {dataset}")
-    eval_dataset = Dataset.from_dict({
-        'input_ids': dataset['input_ids'],
-        'attention_mask': dataset['attention_mask'],
-        'labels': dataset['labels']
-    })
-
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
-    from torch.nn import CrossEntropyLoss
-    import numpy as np
+    LOG.info(f"Loaded evaluation dataset: {eval_dataset}")
 
     training_args = TrainingArguments(
         output_dir="./results",
         per_device_eval_batch_size=8,
-        evaluation_strategy="steps",
-        eval_steps=1,
+        evaluation_strategy="no",
         logging_dir="./logs",
     )
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        eval_dataset=eval_dataset,
-        data_collator=data_collator,
+    trainer = setup_trainer(
+        cfg,
+        None,  
+        eval_dataset,
+        (model, None, None),  
+        tokenizer,
+        0, 
     )
 
-    predictions, labels, _ = trainer.predict(eval_dataset[0:10])
+    # Perform evaluation
+    eval_results = trainer.evaluate()
 
-    logger.info(f"Predictions: {predictions}")
-    logger.info(f"Labels: {labels}")
-
-    logits_tensor = torch.tensor(predictions)
-    labels_tensor = torch.tensor(labels)
-
-    shift_logits = logits_tensor[..., :-1, :].contiguous()
-    shift_labels = labels_tensor[..., 1:].contiguous()
-
-    loss_fct = CrossEntropyLoss()
-    eval_loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)).item()
-
-    predictions = np.argmax(predictions, axis=-1)
-    accuracy = (predictions == labels).mean()
-
-    eval_results = {
-        "accuracy": accuracy,
-        "eval_loss": eval_loss
-    }
-
-    logger.info(f"Evaluation results: {eval_results}")
-
+    LOG.info(f"Evaluation results: {eval_results}")
 
     return eval_results
