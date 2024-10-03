@@ -2,17 +2,12 @@ from transformers import AutoModel, AutoConfig, AutoTokenizer, Trainer, Training
 from schemas import TrainRequest
 from config_handler import create_dataset_entry, update_model_info
 import yaml
-import json
 import os
 import logging
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
-from huggingface_hub import snapshot_download
+from axolotl.utils.trainer import setup_trainer
 from pathlib import Path
-import tempfile
-from torch.nn import CrossEntropyLoss
-from datasets import Dataset
-import torch
 
 logger = logging.getLogger(__name__)
 
@@ -64,31 +59,17 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
     eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 
-from axolotl.utils.dict import DictDefault
-from axolotl.utils.trainer import setup_trainer
-
-# Set up logging
-LOG = logging.getLogger("axolotl.cli.evaluate")
-
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
     cfg = DictDefault(cfg)
     cfg.tokenizer_config = tokenizer.name_or_path
-    LOG.info(f"Config: {cfg}")
+    logger.info(f"Config: {cfg}")
 
-    # Load the entire dataset for evaluation
     prepared_path = Path(cfg.output_dir) / "prepared"
     eval_dataset, _ = load_tokenized_prepared_datasets(
         tokenizer, cfg, prepared_path
     )
 
-    LOG.info(f"Loaded evaluation dataset: {eval_dataset}")
-
-    training_args = TrainingArguments(
-        output_dir="./results",
-        per_device_eval_batch_size=8,
-        evaluation_strategy="no",
-        logging_dir="./logs",
-    )
+    logger.info(f"Loaded evaluation dataset: {eval_dataset}")
 
     trainer = setup_trainer(
         cfg,
@@ -99,9 +80,8 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
         0, 
     )
 
-    # Perform evaluation
     eval_results = trainer.evaluate()
 
-    LOG.info(f"Evaluation results: {eval_results}")
+    logger.info(f"Evaluation results: {eval_results}")
 
     return eval_results
