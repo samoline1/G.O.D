@@ -1,16 +1,12 @@
 from transformers import AutoModel, AutoConfig, AutoTokenizer
 from schemas import TrainRequest
-from axolotl.common.cli import TrainerCliArgs
-from axolotl.utils.data.sft import load_prepare_datasets
-from axolotl.train import train
-from axolotl.utils.dict import DictDefault
 from config_handler import create_dataset_entry, update_model_info
 import yaml
 import json
 import os
-from axolotl.utils.config import normalize_config, validate_config
-from axolotl.utils.models import load_tokenizer
 import logging
+from axolotl.utils.data import load_tokenized_prepared_datasets
+from axolotl.utils.dict import DictDefault
 
 logger = logging.getLogger(__name__)
 
@@ -63,50 +59,18 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
     eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 
-#being ahcky will fix later 
-class DotDict:
-    def __init__(self, dictionary):
-        for key, value in dictionary.items():
-            if isinstance(value, dict):
-                setattr(self, key, DotDict(value))
-            else:
-                setattr(self, key, value)
-
 
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
 
     
     cfg = DictDefault(cfg)
-    
-    # Update the config with the necessary fields
-    cfg.base_model = model.config._name_or_path
     cfg.tokenizer_config = tokenizer.name_or_path
-    
-
-    cfg = validate_config(cfg)
-
     logger.info(f"Config: {cfg}")
     
-    # Load the tokenizer using Axolotl's function
-    tokenizer = load_tokenizer(cfg)
-    
-    # Load and prepare the datasets
-    train_dataset, eval_dataset, prompters = load_prepare_datasets(
-        tokenizer,
-        cfg,
-        "data/",
-        split="test"
-    )
-    logger.info(f"Config: {config}")
-    dataset_meta = load_prepare_datasets(
-                        tokenizer,
-                        config,
-                        "data/",
-                        split="test"
-                    )
+    dataset, _ = load_tokenized_prepared_datasets(tokenizer, cfg, "data/")
 
-    logger.info(f"Dataset meta: {dataset_meta}")
-    logger.info(f"Model: {model}")
+    logger.info(f"Dataset: {dataset}")
+    
     
 ##    if trainer:
 ##        eval_results = trainer.evaluate()
