@@ -8,4 +8,4 @@ output_dir: 'outputs/'
 val_set_size: 0
 train_batch_size : 8
 micro_batch_size: 8
-
+do_causal_lm_eval: True
