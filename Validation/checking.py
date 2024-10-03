@@ -67,24 +67,11 @@ from typing import Dict
 
 class LossExtractorCallback(TrainerCallback):
     def __init__(self):
-        self.current_loss = None
+        self.eval_loss = None
 
-    def on_evaluate(
-        self,
-        args,
-        state: TrainerState,
-        control: TrainerControl,
-        metrics: Dict[str, float],
-        **kwargs
-    ):
+    def on_evaluate(self, args, state, control, metrics, **kwargs):
         if 'eval_loss' in metrics:
-            self.current_loss = metrics['eval_loss']
-        else:
-            for callback in kwargs.get('callbacks', []):
-                if isinstance(callback, LossWatchDogCallback):
-                    if len(state.log_history) > 0 and "loss" in state.log_history[-1]:
-                        self.current_loss = state.log_history[-1]["loss"]
-                    break
+            self.eval_loss = metrics['eval_loss']
 
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
     cfg = DictDefault(cfg)
@@ -112,10 +99,13 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     loss_extractor = LossExtractorCallback()
     trainer.add_callback(loss_extractor)
 
-
     eval_results = trainer.evaluate()
-    logger.info(f"Loss: {loss_extractor.current_loss}")
 
-    logger.info(f"Evaluation results: {eval_results}")
+    if loss_extractor.eval_loss is not None:
+        loss = loss_extractor.eval_loss
+    else:
+        loss = eval_results.get('eval_loss', None)
 
-    return eval_results
+    logger.info(f"Evaluation loss: {loss}")
+
+    return loss
