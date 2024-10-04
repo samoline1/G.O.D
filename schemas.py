@@ -57,6 +57,5 @@ class EvaluationRequest(TrainRequest):
     original_model: str
 
 class EvaluationResponse(BaseModel):
-    message: str
     is_finetune: bool
     eval_results: Dict[str, Any]

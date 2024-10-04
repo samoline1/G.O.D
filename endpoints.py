@@ -4,6 +4,10 @@ from dataset_validator import validate_dataset
 from schemas import TrainRequest, TrainResponse, JobStatusResponse, FileFormat, EvaluationRequest, EvaluationResponse
 from Validation.checking import is_likely_finetune, perform_evaluation
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import logging
+
+# so lazy to do this in each file :D - refactor later
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -61,13 +65,12 @@ async def evaluate_model(request: EvaluationRequest):
     is_finetune = is_likely_finetune(request.original_model, finetuned_model)
 
     if not is_finetune:
-        raise HTTPException(status_code=400, detail="The provided model does not appear to be a fine-tune of the original model.")
+        logger.info("The provided model does not appear to be a fine-tune of the original model.")
 
     config_path = "Validation/test_axolotl.yml"  
     eval_results = perform_evaluation(request, config_path, finetuned_model, tokenizer)
 
     return EvaluationResponse(
-        message="Evaluation completed successfully.",
         is_finetune=is_finetune,
         eval_results=eval_results
     )
