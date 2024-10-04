@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer, Trainer, TrainingArguments, DataCollatorWithPadding
+from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
 from schemas import TrainRequest
 from config_handler import create_dataset_entry, update_model_info
 import yaml
@@ -9,9 +9,6 @@ from axolotl.utils.dict import DictDefault
 from axolotl.utils.trainer import setup_trainer
 from pathlib import Path
 import torch
-from torch.utils.data import DataLoader
-from torch.nn.utils.rnn import pad_sequence
-import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +60,6 @@ def perform_evaluation(train_request: TrainRequest, config_path: str, model: Aut
     eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 
-
 def evaluate_test_set_loss(cfg: DictDefault, model: AutoModelForCausalLM, tokenizer: AutoTokenizer):
     cfg = DictDefault(cfg)
     cfg.tokenizer_config = tokenizer.name_or_path
@@ -88,15 +84,17 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModelForCausalLM, tokeni
         evaluation_strategy="no",
         save_strategy="no",
         logging_steps=50,
-        num_train_epochs=1,  
-        report_to="none", 
+        num_train_epochs=1,  # Not used for evaluation, but required
+        report_to="none",  # Disable wandb or other integrations
     )
 
-    trainer = Trainer(
+    trainer = setup_trainer(
+        cfg,
         model=model,
-        args=training_args,
+        train_dataset=None,
         eval_dataset=eval_dataset,
         tokenizer=tokenizer,
+        args=training_args,
     )
 
     eval_results = trainer.evaluate()
