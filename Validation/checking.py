@@ -91,10 +91,14 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     logger.info(f"Eval dataset sample: {eval_dataset[0]}")
     logger.info(f"Labels in sample: {eval_dataset[0]['labels']}")
 
+    vocab_size = model.config.vocab_size
+    logger.info(f"Model vocabulary size: {vocab_size}")
+
+    # Custom collate function
     def collate_fn(batch):
         input_ids = [torch.tensor(item['input_ids']) for item in batch]
         attention_mask = [torch.tensor(item['attention_mask']) for item in batch]
-        labels = [torch.tensor(item['labels']) for item in batch]
+        labels = [torch.tensor([l if l < vocab_size else -100 for l in item['labels']]) for item in batch]
 
         input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
         attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
@@ -134,6 +138,12 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
             # Compute loss manually
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
+            
+            # Ensure logits match the vocabulary size
+            if shift_logits.size(-1) != vocab_size:
+                logger.warning(f"Logits size {shift_logits.size(-1)} doesn't match vocab size {vocab_size}. Truncating logits.")
+                shift_logits = shift_logits[..., :vocab_size]
+
             loss = F.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), ignore_index=-100)
 
             logger.info(f"Batch {batch_idx + 1} loss: {loss.item()}")
