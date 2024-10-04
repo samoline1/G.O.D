@@ -3,7 +3,7 @@ from job_handler import create_job
 from dataset_validator import validate_dataset
 from schemas import TrainRequest, TrainResponse, JobStatusResponse, FileFormat, EvaluationRequest, EvaluationResponse
 from Validation.checking import is_likely_finetune, perform_evaluation
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 router = APIRouter()
 
@@ -56,7 +56,7 @@ async def evaluate_model(request: EvaluationRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    finetuned_model = AutoModel.from_pretrained(request.model)
+    finetuned_model = AutoModelForCausalLM.from_pretrained(request.model)
     tokenizer = AutoTokenizer.from_pretrained(request.original_model)
     is_finetune = is_likely_finetune(request.original_model, finetuned_model)
 
