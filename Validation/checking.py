@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, Trainer, TrainingArguments
 from schemas import TrainRequest
 from config_handler import create_dataset_entry, update_model_info
 import yaml
