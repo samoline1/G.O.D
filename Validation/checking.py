@@ -85,24 +85,41 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
 
     logger.info(f"Loaded evaluation dataset: {eval_dataset}")
 
-    # I want to print a sample of the eval dataset
+    # Print a sample of the eval dataset
     logger.info(f"Eval dataset sample: {eval_dataset[0]}")
 
-    trainer = setup_trainer(
-        cfg,
-        None,  
-        eval_dataset,
-        (model, None, None),  
-        tokenizer,
-        0, 
+    # Ensure that the dataset has labels
+    if 'labels' not in eval_dataset[0]:
+        raise ValueError("The dataset does not contain 'labels'. Please check your data preparation step.")
+
+    # Set up data collator
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    # Set up training arguments
+    training_args = TrainingArguments(
+        output_dir=cfg.output_dir,
+        per_device_eval_batch_size=cfg.micro_batch_size,
+        evaluation_strategy="steps",
     )
 
-    predictions = trainer.predict(eval_dataset)
-    logger.info(f"Predictions: {predictions}")
+    # Set up trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        eval_dataset=eval_dataset,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+    )
 
+    # Add LossExtractorCallback
+    loss_extractor = LossExtractorCallback()
+    trainer.add_callback(loss_extractor)
+
+    # Perform evaluation
     eval_results = trainer.evaluate()
     logger.info(f"Eval results: {eval_results}")
 
-
+    # Get the extracted loss
+    loss = loss_extractor.eval_loss
 
     return loss
