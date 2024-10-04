@@ -67,69 +67,90 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModelForCausalLM, tokeni
     cfg.tokenizer_config = tokenizer.name_or_path
     logger.info(f"Config: {cfg}")
 
-    prepared_path = Path(cfg.output_dir) / "prepared"
-    eval_dataset, _ = load_tokenized_prepared_datasets(
-        tokenizer, cfg, prepared_path
-    )
+    eval_dataset = load_evaluation_dataset(cfg, tokenizer)
+    log_dataset_and_model_info(eval_dataset, model, tokenizer)
+    eval_dataloader = create_eval_dataloader(eval_dataset, cfg, tokenizer)
 
+    model.eval()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+
+    total_loss, num_batches = process_evaluation_batches(model, eval_dataloader, device)
+
+    eval_results = calculate_evaluation_results(total_loss, num_batches)
+    logger.info(f"Final evaluation results: {eval_results}")
+
+    return eval_results
+
+def load_evaluation_dataset(cfg: DictDefault, tokenizer: AutoTokenizer):
+    prepared_path = Path(cfg.output_dir) / "prepared"
+    eval_dataset, _ = load_tokenized_prepared_datasets(tokenizer, cfg, prepared_path)
     logger.info(f"Loaded evaluation dataset with {len(eval_dataset)} samples")
+    return eval_dataset
+
+def log_dataset_and_model_info(eval_dataset, model: AutoModelForCausalLM, tokenizer: AutoTokenizer):
     logger.info(f"Eval dataset sample: {eval_dataset[0]}")
     logger.info(f"Model type: {type(model)}")
     logger.info(f"Model config: {model.config}")
     logger.info(f"Tokenizer vocabulary size: {len(tokenizer)}")
     logger.info(f"Model vocabulary size: {model.config.vocab_size}")
 
-    def collate_fn(batch):
-        input_ids = [torch.tensor(item['input_ids']) for item in batch]
-        attention_mask = [torch.tensor(item['attention_mask']) for item in batch]
-        labels = [torch.tensor(item['labels']) for item in batch]
-
-        input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
-        attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
-        labels = pad_sequence(labels, batch_first=True, padding_value=-100)
-
-        return {
-            'input_ids': input_ids,
-            'attention_mask': attention_mask,
-            'labels': labels
-        }
-
-    eval_dataloader = DataLoader(
+def create_eval_dataloader(eval_dataset, cfg: DictDefault, tokenizer: AutoTokenizer):
+    return DataLoader(
         eval_dataset,
         batch_size=cfg.micro_batch_size,
-        collate_fn=collate_fn,
+        collate_fn=lambda batch: collate_fn(batch, tokenizer),
         shuffle=False
     )
 
-    model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+def collate_fn(batch, tokenizer: AutoTokenizer):
+    input_ids = [torch.tensor(item['input_ids']) for item in batch]
+    attention_mask = [torch.tensor(item['attention_mask']) for item in batch]
+    labels = [torch.tensor(item['labels']) for item in batch]
 
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
+    attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
+    labels = pad_sequence(labels, batch_first=True, padding_value=-100)
+
+    return {
+        'input_ids': input_ids,
+        'attention_mask': attention_mask,
+        'labels': labels
+    }
+
+def process_evaluation_batches(model: AutoModelForCausalLM, eval_dataloader: DataLoader, device: torch.device):
     total_loss = 0
     num_batches = 0
 
     with torch.no_grad():
         for batch_idx, batch in enumerate(eval_dataloader):
             logger.info(f"Processing batch {batch_idx + 1}")
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['labels'].to(device)
-
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits
-
-            # Shift logits and labels for next token prediction
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
-
-            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), 
-                                   shift_labels.view(-1), 
-                                   ignore_index=-100)
-
-            logger.info(f"Batch {batch_idx + 1} loss: {loss.item()}")
-            total_loss += loss.item()
+            loss = compute_batch_loss(model, batch, device)
+            logger.info(f"Batch {batch_idx + 1} loss: {loss}")
+            total_loss += loss
             num_batches += 1
 
+    return total_loss, num_batches
+
+def compute_batch_loss(model: AutoModelForCausalLM, batch: dict, device: torch.device):
+    input_ids = batch['input_ids'].to(device)
+    attention_mask = batch['attention_mask'].to(device)
+    labels = batch['labels'].to(device)
+
+    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+    logits = outputs.logits
+
+    # Shift logits and labels for next token prediction
+    shift_logits = logits[..., :-1, :].contiguous()
+    shift_labels = labels[..., 1:].contiguous()
+
+    loss = F.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), 
+                           shift_labels.view(-1), 
+                           ignore_index=-100)
+
+    return loss.item()
+
+def calculate_evaluation_results(total_loss: float, num_batches: int):
     if num_batches > 0:
         average_loss = total_loss / num_batches
         logger.info(f"Average loss: {average_loss}")
@@ -137,11 +158,7 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModelForCausalLM, tokeni
         logger.error("No valid batches were processed during evaluation.")
         average_loss = float('inf')
 
-    eval_results = {
+    return {
         "eval_loss": average_loss,
         "perplexity": torch.exp(torch.tensor(average_loss)).item()
     }
-
-    logger.info(f"Final evaluation results: {eval_results}")
-
-    return eval_results

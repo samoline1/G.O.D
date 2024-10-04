@@ -6,8 +6,6 @@ sequence_len: 4096
 batch_size: 1
 output_dir: 'outputs/'
 val_set_size: 0
-train_batch_size : 8
-micro_batch_size: 8
 device: 'cuda'
 
 do_train: false
@@ -16,13 +14,7 @@ evaluation_strategy: "steps"
 eval_steps: 100
 sample_packing: false
 eval_sample_packing: false
-
-
 pad_to_sequence_len: true
-
 gradient_accumulation_steps: 4
-micro_batch_size: 2
+micro_batch_size: 8
 num_epochs: 1
-optimizer: adamw_bnb_8bit
-lr_scheduler: cosine
-learning_rate: 0.0002
