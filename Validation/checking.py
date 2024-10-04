@@ -94,7 +94,6 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModelForCausalLM, tokeni
         train_dataset=None,
         eval_dataset=eval_dataset,
         tokenizer=tokenizer,
-        args=training_args,
     )
 
     eval_results = trainer.evaluate()
