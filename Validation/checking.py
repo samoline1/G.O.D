@@ -1,4 +1,4 @@
-from transformers import AutoModel, AutoConfig, AutoTokenizer, Trainer, TrainingArguments, DataCollatorWithPadding
+from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer, Trainer, TrainingArguments, DataCollatorWithPadding
 from schemas import TrainRequest
 from config_handler import create_dataset_entry, update_model_info
 import yaml
@@ -15,7 +15,7 @@ import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
-def is_likely_finetune(original_repo: str, finetuned_model: AutoModel) -> bool:
+def is_likely_finetune(original_repo: str, finetuned_model: AutoModelForCausalLM) -> bool:
     original_config = AutoConfig.from_pretrained(original_repo)
     finetuned_config = finetuned_model.config
     
@@ -58,26 +58,13 @@ def get_and_update_config(train_request: TrainRequest, config_path: str) -> Dict
     config = DictDefault(config_dict)
     return config
 
-def perform_evaluation(train_request: TrainRequest, config_path: str, model: AutoModel, tokenizer: AutoTokenizer):
+def perform_evaluation(train_request: TrainRequest, config_path: str, model: AutoModelForCausalLM, tokenizer: AutoTokenizer):
     config = get_and_update_config(train_request, config_path)
     eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 
-from transformers import TrainerCallback
-from axolotl.utils.callbacks import LossWatchDogCallback
-from transformers import TrainerCallback, TrainerState, TrainerControl
-from typing import Dict
 
-
-class LossExtractorCallback(TrainerCallback):
-    def __init__(self):
-        self.eval_loss = None
-
-    def on_evaluate(self, args, state, control, metrics, **kwargs):
-        if 'eval_loss' in metrics:
-            self.eval_loss = metrics['eval_loss']
-
-def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTokenizer):
+def evaluate_test_set_loss(cfg: DictDefault, model: AutoModelForCausalLM, tokenizer: AutoTokenizer):
     cfg = DictDefault(cfg)
     cfg.tokenizer_config = tokenizer.name_or_path
     logger.info(f"Config: {cfg}")
@@ -89,79 +76,40 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
 
     logger.info(f"Loaded evaluation dataset with {len(eval_dataset)} samples")
     logger.info(f"Eval dataset sample: {eval_dataset[0]}")
-    logger.info(f"Labels in sample: {eval_dataset[0]['labels']}")
+    logger.info(f"Model type: {type(model)}")
+    logger.info(f"Model config: {model.config}")
+    logger.info(f"Tokenizer vocabulary size: {len(tokenizer)}")
+    logger.info(f"Model vocabulary size: {model.config.vocab_size}")
 
-    vocab_size = model.config.vocab_size
-    logger.info(f"Model vocabulary size: {vocab_size}")
-
-    # Custom collate function
-    def collate_fn(batch):
-        input_ids = [torch.tensor(item['input_ids']) for item in batch]
-        attention_mask = [torch.tensor(item['attention_mask']) for item in batch]
-        labels = [torch.tensor([l if l < vocab_size else -100 for l in item['labels']]) for item in batch]
-
-        input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
-        attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
-        labels = pad_sequence(labels, batch_first=True, padding_value=-100)
-
-        return {
-            'input_ids': input_ids,
-            'attention_mask': attention_mask,
-            'labels': labels
-        }
-
-    eval_dataloader = DataLoader(
-        eval_dataset,
-        batch_size=cfg.micro_batch_size,
-        collate_fn=collate_fn,
-        shuffle=False
+    # Set up training arguments
+    training_args = TrainingArguments(
+        output_dir=cfg.output_dir,
+        per_device_eval_batch_size=cfg.micro_batch_size,
+        evaluation_strategy="no",
+        save_strategy="no",
+        logging_steps=50,
+        num_train_epochs=1,  
+        report_to="none", 
     )
 
-    model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        eval_dataset=eval_dataset,
+        tokenizer=tokenizer,
+    )
 
-    total_loss = 0
-    num_batches = 0
-
-    with torch.no_grad():
-        for batch_idx, batch in enumerate(eval_dataloader):
-            logger.info(f"Processing batch {batch_idx + 1}")
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['labels'].to(device)
-
-            # Forward pass without labels
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.last_hidden_state
-
-            # Compute loss manually
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
-            
-            # Ensure logits match the vocabulary size
-            if shift_logits.size(-1) != vocab_size:
-                logger.warning(f"Logits size {shift_logits.size(-1)} doesn't match vocab size {vocab_size}. Truncating logits.")
-                shift_logits = shift_logits[..., :vocab_size]
-
-            loss = F.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), ignore_index=-100)
-
-            logger.info(f"Batch {batch_idx + 1} loss: {loss.item()}")
-            total_loss += loss.item()
-            num_batches += 1
-
-    if num_batches > 0:
-        average_loss = total_loss / num_batches
-        logger.info(f"Average loss: {average_loss}")
-    else:
-        logger.error("No valid batches were processed during evaluation.")
-        average_loss = float('inf')
-
-    eval_results = {
-        "eval_loss": average_loss,
-        "perplexity": torch.exp(torch.tensor(average_loss)).item()
-    }
-
+    eval_results = trainer.evaluate()
     logger.info(f"Eval results: {eval_results}")
 
-    return eval_results
+    eval_loss = eval_results.get("eval_loss")
+    perplexity = torch.exp(torch.tensor(eval_loss)).item() if eval_loss is not None else None
+
+    final_results = {
+        "eval_loss": eval_loss,
+        "perplexity": perplexity
+    }
+
+    logger.info(f"Final evaluation results: {final_results}")
+
+    return final_results
