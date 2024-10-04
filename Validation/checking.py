@@ -8,6 +8,8 @@ from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
 from axolotl.utils.trainer import setup_trainer
 from pathlib import Path
+import torch
+from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
 
@@ -84,42 +86,58 @@ def evaluate_test_set_loss(cfg: DictDefault, model: AutoModel, tokenizer: AutoTo
     )
 
     logger.info(f"Loaded evaluation dataset: {eval_dataset}")
-
-    # Print a sample of the eval dataset
     logger.info(f"Eval dataset sample: {eval_dataset[0]}")
 
     # Ensure that the dataset has labels
     if 'labels' not in eval_dataset[0]:
         raise ValueError("The dataset does not contain 'labels'. Please check your data preparation step.")
 
-    # Set up data collator
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+    # Set up data collator for pre-tokenized data
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
 
-    # Set up training arguments
-    training_args = TrainingArguments(
-        output_dir=cfg.output_dir,
-        per_device_eval_batch_size=cfg.micro_batch_size,
-        evaluation_strategy="steps",
+    # Create DataLoader
+    eval_dataloader = DataLoader(
+        eval_dataset,
+        batch_size=cfg.micro_batch_size,
+        collate_fn=data_collator,
+        shuffle=False
     )
 
-    # Set up trainer
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        eval_dataset=eval_dataset,
-        tokenizer=tokenizer,
-        data_collator=data_collator,
-    )
+    # Ensure model is in evaluation mode
+    model.eval()
 
-    # Add LossExtractorCallback
-    loss_extractor = LossExtractorCallback()
-    trainer.add_callback(loss_extractor)
+    # Move model to the appropriate device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
 
-    # Perform evaluation
-    eval_results = trainer.evaluate()
+    total_loss = 0
+    num_batches = 0
+
+    with torch.no_grad():
+        for batch in eval_dataloader:
+            # Move batch to the same device as the model
+            batch = {k: v.to(device) for k, v in batch.items()}
+            
+            outputs = model(**batch)
+            loss = outputs.loss
+            
+            if loss is not None:
+                total_loss += loss.item()
+                num_batches += 1
+            else:
+                logger.warning(f"Loss is None for batch: {batch}")
+
+    if num_batches > 0:
+        average_loss = total_loss / num_batches
+    else:
+        logger.error("No valid batches were processed during evaluation.")
+        average_loss = float('inf')
+
+    eval_results = {
+        "eval_loss": average_loss,
+        "perplexity": torch.exp(torch.tensor(average_loss)).item()
+    }
+
     logger.info(f"Eval results: {eval_results}")
 
-    # Get the extracted loss
-    loss = loss_extractor.eval_loss
-
-    return loss
+    return eval_results
