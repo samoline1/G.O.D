@@ -7,11 +7,12 @@ class DatasetType(str, Enum):
     INSTRUCT = "instruct"
     PRETRAIN = "pretrain"
     ALPACA = "alpaca"
+    # there is actually loads of these supported, but laziness is key here, add when we need 
 
 class FileFormat(str, Enum):
-    CSV = "csv"
-    JSON = "json"
-    HF = "hf"
+    CSV = "csv" # needs to be local file
+    JSON = "json" # needs to be local file
+    HF = "hf" # Hugging Face dataset 
 
 class JobStatus(str, Enum):
     QUEUED = "Queued"
