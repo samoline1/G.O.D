@@ -9,6 +9,8 @@ sam_vit_l_0b3195.pth
 *.so
 *.gguf
 
+axolotl/*
+axolotl
 postgres_data/*
 postgres_data
 

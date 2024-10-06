@@ -1,14 +1,12 @@
 import os
 from core.models.utility_models import Job, DatasetType, FileFormat
-from const import CONFIG_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN
+from core import constants as cst
 from api.configs.config_handler import create_dataset_entry, save_config, update_model_info
 import docker
 from docker.errors import DockerException
-from const import OUTPUT_DIR
 from utils import logger
 import yaml
 
-from const import CONFIG_TEMPLATE_PATH
 from core.models.utility_models import CustomDatasetType
 
 
@@ -22,7 +20,7 @@ def _load_and_modify_config(
     dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
 ) -> dict:
-    with open(CONFIG_TEMPLATE_PATH, "r") as file:
+    with open(cst.CONFIG_TEMPLATE_PATH, "r") as file:
         config = yaml.safe_load(file)
 
     config["datasets"] = []
@@ -46,7 +44,7 @@ def create_job(
 # TODO: Dutty code
 def process_job(job: Job):
     config_filename = f"{job.job_id}.yml"
-    config_path = os.path.join(CONFIG_DIR, config_filename)
+    config_path = os.path.join(cst.CONFIG_DIR, config_filename)
 
     config = _load_and_modify_config(
         job.job_id, job.dataset, job.model, job.dataset_type, job.file_format
@@ -54,7 +52,7 @@ def process_job(job: Job):
     save_config(config, config_path)
 
     docker_env = {
-        "HUGGINGFACE_TOKEN": HUGGINGFACE_TOKEN,
+        "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
     }
     logger.info(f"Docker environment: {docker_env}")
 
@@ -85,11 +83,11 @@ def process_job(job: Job):
             logger.info(f"Modified script content:\n{script_content}")
 
         volume_bindings = {
-            os.path.abspath(CONFIG_DIR): {
+            os.path.abspath(cst.CONFIG_DIR): {
                 "bind": "/workspace/axolotl/configs",
                 "mode": "rw",
             },
-            os.path.abspath(OUTPUT_DIR): {
+            os.path.abspath(cst.OUTPUT_DIR): {
                 "bind": "/workspace/axolotl/outputs",
                 "mode": "rw",
             },
@@ -104,7 +102,7 @@ def process_job(job: Job):
         logger.info(f"Starting container with script: {script_content}")
 
         container = docker_client.containers.run(
-            image=DOCKER_IMAGE,
+            image=cst.DOCKER_IMAGE,
             command=["/bin/bash", "-c", script_content],
             volumes=volume_bindings,
             environment=docker_env,

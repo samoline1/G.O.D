@@ -4,7 +4,8 @@ from core.models.utility_models import (
     FileFormat,
 )
 from core.models.payload_models import EvaluationRequest, EvaluationResponse
-from validator.checking import model_is_a_finetune, evaluate_finetune
+from validator.evaluation import utils as eval_utils
+from validator.evaluation import eval
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from utils import logger
 
@@ -32,7 +33,9 @@ async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
 
     finetuned_model = AutoModelForCausalLM.from_pretrained(request.model)
     tokenizer = AutoTokenizer.from_pretrained(request.original_model)
-    is_finetune = model_is_a_finetune(request.original_model, finetuned_model)
+    is_finetune = eval_utils.model_is_a_finetune(
+        request.original_model, finetuned_model
+    )
 
     if not is_finetune:
         logger.info(
@@ -40,7 +43,7 @@ async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
         )
         # TODO: So what? What do we do with it?
 
-    eval_results = evaluate_finetune(request, finetuned_model, tokenizer)
+    eval_results = eval.evaluate_finetuned_model(request, finetuned_model, tokenizer)
 
     return EvaluationResponse(is_finetune=is_finetune, eval_results=eval_results)
 
