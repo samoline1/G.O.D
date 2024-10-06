@@ -56,6 +56,7 @@ def process_job(job: Job):
         if job.file_format != FileFormat.HF:
             dataset_dir = os.path.dirname(os.path.abspath(job.dataset))
             volume_bindings[dataset_dir] = {'bind': '/workspace/input_data', 'mode': 'ro'}
+        logger.info(f"Starting container with script: {script_content}")
 
         container = docker_client.containers.run(
             image=DOCKER_IMAGE,
