@@ -87,7 +87,7 @@ Example request:
        },
        "file_format": "hf"
      }'
-    ```
+```
 
 ##### Process:
 1. Validates the input parameters
