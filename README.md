@@ -51,6 +51,8 @@ For the validator, we need to set up the Axolotl framework since we're not using
 
 ## Running the Service
 
+Not much to it rn 
+
 ```bash
 python main.py
 ```
