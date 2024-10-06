@@ -36,17 +36,22 @@ def process_job(job: Job):
     try:
         docker_client = docker.from_env()
         script_path = 'scripts/run_script_hf.sh' if job.file_format == FileFormat.HF else 'scripts/run_script_non_hf.sh'
+        logger.info(f"Selected script path: {script_path}")
 
         if not os.path.exists(script_path):
-            logger.info(f"Script file not found: {script_path}")
+            logger.error(f"Script file not found: {script_path}")
             raise FileNotFoundError(f"Script file not found: {script_path}")
+
+        logger.info(f"Script file exists: {script_path}")
 
         with open(script_path, 'r') as f:
             script_content = f.read()
+            logger.info(f"Original script content:\n{script_content}")
 
         script_content = script_content.replace('{{JOB_ID}}', job.job_id)
         if job.file_format != FileFormat.HF:
             script_content = script_content.replace('{{DATASET_FILENAME}}', os.path.basename(job.dataset))
+            logger.info(f"Modified script content:\n{script_content}")
 
         volume_bindings = {
             os.path.abspath(CONFIG_DIR): {'bind': '/workspace/axolotl/configs', 'mode': 'rw'},
