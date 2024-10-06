@@ -13,6 +13,10 @@ Starting point snr
 ### Miner Setup
 
 1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/tuning-subnet.git
+   cd tuning-subnet
+   ```
 
 2. Install the required Python packages:
    ```bash
@@ -24,12 +28,11 @@ Starting point snr
    export HUGGINGFACE_TOKEN=<your_huggingface_token>
    ```
 
-I think I covered everything in the requirements - but honestly cannie remember - might need a couple more bits, the errors will guide you. 
+I think I covered everything in the requirements - but honestly can't remember - might need a couple more bits, the errors will guide you. 
 
 ### Validator Setup
 
-
-For the validator we need to setup the axolotl framework since we're not using the docker container. 
+For the validator, we need to set up the Axolotl framework since we're not using the Docker container. 
 
 1. Follow steps 1-3 from the Miner Setup.
 
@@ -48,7 +51,7 @@ For the validator we need to setup the axolotl framework since we're not using t
 
 ## Running the Service
 
-```
+```bash
 python main.py
 ```
 
@@ -64,7 +67,7 @@ The train endpoint allows you to initiate a fine-tuning job for a language model
 - `dataset`: Path to the dataset file or Hugging Face dataset name
 - `model`: Name or path of the model to be trained
 - `dataset_type`: Type of the dataset (e.g., "instruct", "pretrain", "alpaca", or a custom one like I shared with you)
-- `file_format`: Format of the dataset file (e.g., "csv", "json", "hf") - csv and json are local formats, hf is a hugging face dataset which the container will download. 
+- `file_format`: Format of the dataset file (e.g., "csv", "json", "hf") - csv and json are local formats, hf is a Hugging Face dataset which the container will download. 
 
 ##### Process:
 1. Validates the input parameters
@@ -93,25 +96,24 @@ The evaluate endpoint allows you to assess the performance of a fine-tuned model
 - `is_finetune`: Boolean indicating if the model appears to be a fine-tune
 - `eval_results`: Dictionary containing evaluation metrics
 
-## Additional shinfo 
+## Additional Info 
 
 - Miners use a custom `TrainingWorker` class to manage the job queue and process training jobs asynchronously.
 - Docker is used by miners to isolate the training environment and ensure consistent execution across different systems.
-- Validators use the Axolotl framework directly to load and process datasets, and perform custom evaluation loops to calculate loss and perplexity. I needed to write the validation loop to work with the axolotl framework since the dataset stuff was all handled in the lib making it easier to work with. 
+- Validators use the Axolotl framework directly to load and process datasets, and perform custom evaluation loops to calculate loss and perplexity. I needed to write the validation loop to work with the Axolotl framework since the dataset stuff was all handled in the lib, making it easier to work with. 
 
+### Things for Jefe to Do
 
-### Things for Jefe to do
+- Given a user dataset, we need to split it train/test, and save the train to HF to pass out to miners for tuning. 
+- Validators need to select groups of miners to send the same training dataset to, and then we need a scoring mechanism for evaluating the results of the miners given the perplexity scores they return. 
+- The passing around of datasets and having miners submit their fine-tuned models to the chain within the allocated time period (https://github.com/macrocosm-os/pretraining/blob/fde1e899f16bc6ad438eee868d26f940d6f8b146/pretrain/mining.py#L56 could be adapted for this)
+- Taking my lackluster code and putting it into the format you'd like.
+- Probably creating our own Docker container for the miners to use with the added script stuff I needed to add (see scripts/*) - I can help with this bit.
 
-- Given a user dataset, we need to split it train/test, and save the train to hf to pass out to miners for tuning. 
-- Validators need to select groups miners to send the same training dataset to and then we need a scoring mechanism for evaluating the results of the miners given the perplexiy scores they return. 
-- The passing around datasets and having miners submit their finetuned models to the chain within the allocated time period 
- - Taking my lackluster code and putting into the format you'd like 
- - Probably creating our own docker container for the miners to use with the added script stuff I needed to add (see scripts/*) - I can help with this bit
-
-### Things for both of us 
+### Things for Both of Us 
 
 - Think about a way of using the ML loss charts to score miners. 
-- Create some synthetic data pipeline given the real data so that we can test the miners models on this data too, if miners do amazing on the test but terrible on this synthetic data then we know there is something up with their finetuning process and they will probably have trained on the test dataset. A threshold where given a competition of 4 miners, the top 3 of synthetic data will then be compared on the test dataset for the final score. 
+- Create some synthetic data pipeline given the real data so that we can test the miners' models on this data too. If miners do amazing on the test but terrible on this synthetic data, then we know there's something up with their fine-tuning process and they will probably have trained on the test dataset. A threshold where given a competition of 4 miners, the top 3 of synthetic data will then be compared on the test dataset for the final score. 
 
 
 
