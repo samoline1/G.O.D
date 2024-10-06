@@ -1,15 +1,15 @@
 import threading
 import queue
 import docker
-from schemas import Job, JobStatus
+from core.models.utility_models import Job, JobStatus
 from utils import logger
-from miner.job_handler import process_job
+from mining.job_handler import process_job
 
 
 class TrainingWorker:
     def __init__(self):
-        self.job_queue = queue.Queue()
-        self.job_store = {}
+        self.job_queue: queue.Queue[Job] = queue.Queue()
+        self.job_store: dict[str, Job] = {}
         self.thread = threading.Thread(target=self.worker, daemon=True)
         self.thread.start()
         self.docker_client = docker.from_env()

@@ -4,4 +4,4 @@ torchvision
 torchaudio
 packaging 
 ninja
-git+https://github.com/axolotl-ai-cloud/axolotl.git#egg=axolotl[flash-attn,deepspeed]
+wheel  # wheel --upgrade?
