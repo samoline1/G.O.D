@@ -1,26 +1,117 @@
 # Tuning Subnet
 
-## Training
+Starting point snr 
+
+## Setup
+
+### Prerequisites
+
+- Docker
+- Python 3.8+
+- Hugging Face account and API token
+
+### Miner Setup
+
+1. Clone the repository:
+
+2. Install the required Python packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Set up your Hugging Face token:
+   ```bash
+   export HUGGINGFACE_TOKEN=<your_huggingface_token>
+   ```
+
+I think I covered everything in the requirements - but honestly cannie remember - might need a couple more bits, the errors will guide you. 
+
+### Validator Setup
 
 
-To run the training worker, you need to have docker installed and running on your machine and export your huggingface token to the environment.
+For the validator we need to setup the axolotl framework since we're not using the docker container. 
 
-```bash
-export HUGGINGFACE_TOKEN=<your_huggingface_token>
-python training_worker.py
+1. Follow steps 1-3 from the Miner Setup.
+
+2. Install Axolotl dependencies:
+   ```bash
+   git clone https://github.com/axolotl-ai-cloud/axolotl
+   cd axolotl
+   pip install packaging ninja
+   pip install -e '.[flash-attn,deepspeed]'
+   ```
+
+3. Install additional validation requirements:
+   ```bash
+   pip install -r Validation/requirements.txt
+   ```
+
+## Running the Service
+
+```
+python main.py
 ```
 
-All the training settings are is the configs/base.yml 
+## Components
+
+### 1. Train Endpoint (Miners Only)
+
+The train endpoint allows you to initiate a fine-tuning job for a language model. It takes a dataset, a model, and a dataset type as input and enqueues the job for processing. The job is then processed by a worker in a separate Docker container.
+
+#### Endpoint: POST /train/
+
+##### Request Body:
+- `dataset`: Path to the dataset file or Hugging Face dataset name
+- `model`: Name or path of the model to be trained
+- `dataset_type`: Type of the dataset (e.g., "instruct", "pretrain", "alpaca", or a custom one like I shared with you)
+- `file_format`: Format of the dataset file (e.g., "csv", "json", "hf") - csv and json are local formats, hf is a hugging face dataset which the container will download. 
+
+##### Process:
+1. Validates the input parameters
+2. Creates a job configuration file
+3. Enqueues the job for processing
+4. Starts a Docker container to run the training process
+
+### 2. Evaluate Endpoint (Validators Only)
+
+The evaluate endpoint allows you to assess the performance of a fine-tuned model.
+
+#### Endpoint: POST /evaluate/
+
+##### Request Body:
+- Same as the train endpoint, plus:
+- `original_model`: Name or path of the original model (before fine-tuning)
+
+##### Process:
+1. Validates the input parameters
+2. Loads the fine-tuned model and original tokenizer
+3. Checks if the provided model is likely a fine-tune of the original model based on model parameters
+4. Performs evaluation using a test dataset
+5. Calculates evaluation metrics (loss and perplexity)
+
+##### Response:
+- `is_finetune`: Boolean indicating if the model appears to be a fine-tune
+- `eval_results`: Dictionary containing evaluation metrics
+
+## Additional shinfo 
+
+- Miners use a custom `TrainingWorker` class to manage the job queue and process training jobs asynchronously.
+- Docker is used by miners to isolate the training environment and ensure consistent execution across different systems.
+- Validators use the Axolotl framework directly to load and process datasets, and perform custom evaluation loops to calculate loss and perplexity. I needed to write the validation loop to work with the axolotl framework since the dataset stuff was all handled in the lib making it easier to work with. 
 
 
-## Evaluation
+### Things for Jefe to do
 
-#this stuff needs installling 
-git clone https://github.com/axolotl-ai-cloud/axolotl
-cd axolotl
+- Given a user dataset, we need to split it train/test, and save the train to hf to pass out to miners for tuning. 
+- Validators need to select groups miners to send the same training dataset to and then we need a scoring mechanism for evaluating the results of the miners given the perplexiy scores they return. 
+- The passing around datasets and having miners submit their finetuned models to the chain within the allocated time period 
+ - Taking my lackluster code and putting into the format you'd like 
+ - Probably creating our own docker container for the miners to use with the added script stuff I needed to add (see scripts/*) - I can help with this bit
 
-pip3 install packaging ninja
-pip3 install -e '.[flash-attn,deepspeed]'
+### Things for both of us 
 
-Then the requirements for the validation are in the Validation/requirements.txt
+- Think about a way of using the ML loss charts to score miners. 
+- Create some synthetic data pipeline given the real data so that we can test the miners models on this data too, if miners do amazing on the test but terrible on this synthetic data then we know there is something up with their finetuning process and they will probably have trained on the test dataset. A threshold where given a competition of 4 miners, the top 3 of synthetic data will then be compared on the test dataset for the final score. 
+
+
 
