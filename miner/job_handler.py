@@ -38,6 +38,7 @@ def process_job(job: Job):
         script_path = 'scripts/run_script_hf.sh' if job.file_format == FileFormat.HF else 'scripts/run_script_non_hf.sh'
 
         if not os.path.exists(script_path):
+            logger.info(f"Script file not found: {script_path}")
             raise FileNotFoundError(f"Script file not found: {script_path}")
 
         with open(script_path, 'r') as f:
