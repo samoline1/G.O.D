@@ -1,18 +1,17 @@
 from fastapi import APIRouter, HTTPException
-from data.dataset_validator import validate_dataset
+from core.utils import validate_dataset
 from core.models.utility_models import (
     FileFormat,
 )
 from core.models.payload_models import EvaluationRequest, EvaluationResponse
-from validator.checking import is_likely_finetune, perform_evaluation
+from validator.checking import model_is_a_finetune, evaluate_finetune
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from utils import logger
 
 router = APIRouter()
 
 
-@router.post("/evaluate/", response_model=EvaluationResponse)
-async def evaluate_model(request: EvaluationRequest):
+async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
     if not request.dataset or not request.model or not request.original_model:
         raise HTTPException(
             status_code=400, detail="Dataset, model, and original_model are required."
@@ -33,13 +32,19 @@ async def evaluate_model(request: EvaluationRequest):
 
     finetuned_model = AutoModelForCausalLM.from_pretrained(request.model)
     tokenizer = AutoTokenizer.from_pretrained(request.original_model)
-    is_finetune = is_likely_finetune(request.original_model, finetuned_model)
+    is_finetune = model_is_a_finetune(request.original_model, finetuned_model)
 
     if not is_finetune:
         logger.info(
             "The provided model does not appear to be a fine-tune of the original model."
         )
+        # TODO: So what? What do we do with it?
 
-    eval_results = perform_evaluation(request, finetuned_model, tokenizer)
+    eval_results = evaluate_finetune(request, finetuned_model, tokenizer)
 
     return EvaluationResponse(is_finetune=is_finetune, eval_results=eval_results)
+
+
+def factory():
+    router = APIRouter()
+    router.add_api_route("/evaluate/", evaluate_model, methods=["POST"])

@@ -1,35 +1,12 @@
 import yaml
 import os
-from typing import Union
 
-from const import CONFIG_TEMPLATE_PATH
 from core.models.utility_models import DatasetType, FileFormat, CustomDatasetType
 
-
-def load_and_modify_config(
-    job_id: str,
-    dataset: str,
-    model: str,
-    dataset_type: Union[DatasetType, CustomDatasetType],
-    file_format: FileFormat,
-) -> dict:
-    with open(CONFIG_TEMPLATE_PATH, "r") as file:
-        config = yaml.safe_load(file)
-
-    config["datasets"] = []
-
-    dataset_entry = create_dataset_entry(dataset, dataset_type, file_format)
-    config["datasets"].append(dataset_entry)
-
-    update_model_info(config, model)
-    config["mlflow_experiment_name"] = dataset
-
-    return config
-
-
+# TODO: docstring or smth with this - no idea what its doing
 def create_dataset_entry(
     dataset: str,
-    dataset_type: Union[DatasetType, CustomDatasetType],
+    dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
 ) -> dict:
     dataset_entry = {"path": dataset}
@@ -39,7 +16,7 @@ def create_dataset_entry(
     elif isinstance(dataset_type, CustomDatasetType):
         custom_type_dict = {
             key: value
-            for key, value in dataset_type.dict().items()
+            for key, value in dataset_type.model_dump().items()
             if value is not None and (key != "field" or value != "")
         }
         dataset_entry["type"] = custom_type_dict

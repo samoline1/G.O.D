@@ -1,6 +1,5 @@
 import os
 from fiber.miner import server
-from core.models.utility_models import TaskType
 from miner.endpoints.generic import factory_router as generic_factory_router
 from miner.endpoints.tuning import factory_router as tuning_factory_router
 from fiber.logging_utils import get_logger

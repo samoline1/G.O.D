@@ -3,7 +3,7 @@ import queue
 import docker
 from core.models.utility_models import Job, JobStatus
 from utils import logger
-from mining.job_handler import process_job
+from miner.logic.job_handler import process_job
 
 
 class TrainingWorker:

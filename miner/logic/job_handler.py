@@ -1,13 +1,41 @@
 import os
-from schemas import Job, DatasetType, FileFormat
+from core.models.utility_models import Job, DatasetType, FileFormat
 from const import CONFIG_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN
-from configs.config_handler import load_and_modify_config, save_config
+from api.configs.config_handler import create_dataset_entry, save_config, update_model_info
 import docker
 from docker.errors import DockerException
 from const import OUTPUT_DIR
 from utils import logger
+import yaml
+
+from const import CONFIG_TEMPLATE_PATH
+from core.models.utility_models import CustomDatasetType
 
 
+
+
+# TODO: give a much nicer name - maybe even a docstring
+# I have no idea what this is referring to or doing
+def _load_and_modify_config(
+    dataset: str,
+    model: str,
+    dataset_type: DatasetType | CustomDatasetType,
+    file_format: FileFormat,
+) -> dict:
+    with open(CONFIG_TEMPLATE_PATH, "r") as file:
+        config = yaml.safe_load(file)
+
+    config["datasets"] = []
+
+    dataset_entry = create_dataset_entry(dataset, dataset_type, file_format)
+    config["datasets"].append(dataset_entry)
+
+    update_model_info(config, model)
+    config["mlflow_experiment_name"] = dataset
+
+    return config
+
+#  TODO: Much nicer names please
 def create_job(
     dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
 ) -> Job:
@@ -15,12 +43,12 @@ def create_job(
         dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format
     )
 
-
+# TODO: Dutty code
 def process_job(job: Job):
     config_filename = f"{job.job_id}.yml"
     config_path = os.path.join(CONFIG_DIR, config_filename)
 
-    config = load_and_modify_config(
+    config = _load_and_modify_config(
         job.job_id, job.dataset, job.model, job.dataset_type, job.file_format
     )
     save_config(config, config_path)
@@ -102,7 +130,7 @@ def process_job(job: Job):
         if "container" in locals():
             container.remove(force=True)
 
-
+# Whats this for, wen typehints?
 def stream_logs(container):
     log_buffer = ""
     for log_chunk in container.logs(stream=True, follow=True):

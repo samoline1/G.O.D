@@ -8,12 +8,12 @@ from fiber.logging_utils import get_logger
 
 from core.models.payload_models import JobStatusResponse, TrainResponse
 from core.models.utility_models import FileFormat, JobStatus
-from data.dataset_validator import validate_dataset
+from core.utils import validate_dataset
 from fiber.miner.core.configuration import Config
 from fiber.miner.dependencies import blacklist_low_stake, get_config, verify_request
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
-from mining.job_handler import create_job
+from miner.logic.job_handler import create_job
 
 logger = get_logger(__name__)
 
