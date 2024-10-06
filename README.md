@@ -145,6 +145,7 @@ Example request:
 - Miners use a custom `TrainingWorker` class to manage the job queue and process training jobs asynchronously.
 - Docker is used by miners to isolate the training environment and ensure consistent execution across different systems.
 - Validators use the Axolotl framework directly to load and process datasets, and perform custom evaluation loops to calculate loss and perplexity. I needed to write the validation loop to work with the Axolotl framework since the dataset stuff was all handled in the lib, making it easier to work with. 
+- The hf repo will write to hub_model_id which is inside the configs/base.yml file. 
 
 ### Things for Jefe to Do
 
