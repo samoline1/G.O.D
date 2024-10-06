@@ -10,10 +10,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from api.configs.config_handler import create_dataset_entry, update_model_info
 from core import constants as cst
 from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat
-from utils import logger
+from fiber.logging_utils import get_logger
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
 
+logger = get_logger(__name__)
 
 def _load_and_update_evaluation_config(
     dataset_name: str,

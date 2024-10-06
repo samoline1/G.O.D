@@ -4,13 +4,12 @@ from core import constants as cst
 from api.configs.config_handler import create_dataset_entry, save_config, update_model_info
 import docker
 from docker.errors import DockerException
-from utils import logger
+from fiber.logging_utils import get_logger
 import yaml
 
 from core.models.utility_models import CustomDatasetType
 
-
-
+logger = get_logger(__name__)
 
 # TODO: give a much nicer name - maybe even a docstring
 # I have no idea what this is referring to or doing
@@ -42,7 +41,7 @@ def create_job(
     )
 
 # TODO: Dutty code
-def process_job(job: Job):
+def start_tuning_container(job: Job):
     config_filename = f"{job.job_id}.yml"
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
 

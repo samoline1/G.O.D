@@ -1,5 +1,8 @@
 import os
 from dotenv import load_dotenv
+from fiber.logging_utils import get_logger
+
+logger = get_logger(__name__)
 load_dotenv()
 
 DOCKER_IMAGE = "winglian/axolotl-cloud:main-latest"
@@ -10,4 +13,5 @@ OUTPUT_DIR = "./outputs/"
 CONFIG_TEMPLATE_PATH = CONFIG_DIR + 'base.yml'
 VALI_CONFIG_PATH = "validator/test_axolotl.yml"  
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+logger.debug(f"HUGGINGFACE_TOKEN: {HUGGINGFACE_TOKEN}")
 

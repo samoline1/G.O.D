@@ -7,9 +7,12 @@ from core.models.payload_models import EvaluationRequest, EvaluationResponse
 from validator.evaluation import utils as eval_utils
 from validator.evaluation import eval
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from utils import logger
+from fiber.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
+
 
 
 async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:

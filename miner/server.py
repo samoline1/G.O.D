@@ -7,6 +7,7 @@ from fiber.miner.middleware import configure_extra_logging_middleware
 
 logger = get_logger(__name__)
 
+# BIT annoyign as i want to extend the lifespan. how?
 app = server.factory_app(debug=True)
 
 

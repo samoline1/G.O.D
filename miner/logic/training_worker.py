@@ -2,9 +2,11 @@ import threading
 import queue
 import docker
 from core.models.utility_models import Job, JobStatus
-from utils import logger
-from miner.logic.job_handler import process_job
+from fiber.logging_utils import get_logger
+from miner.logic.job_handler import start_tuning_container
 
+
+logger = get_logger(__name__)
 
 class TrainingWorker:
     def __init__(self):
@@ -20,7 +22,7 @@ class TrainingWorker:
             if job is None:
                 break
             try:
-                process_job(job)
+                start_tuning_container(job)
                 job.status = JobStatus.COMPLETED
             except Exception as e:
                 logger.error(f"Error processing job {job.job_id}: {str(e)}")

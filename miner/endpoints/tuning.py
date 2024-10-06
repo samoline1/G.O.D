@@ -1,7 +1,5 @@
-from functools import partial
 from fastapi import Depends, HTTPException
 
-from fiber.miner.security.encryption import decrypt_general_payload
 from core.models import payload_models
 from fastapi.routing import APIRouter
 from fiber.logging_utils import get_logger
@@ -19,9 +17,7 @@ logger = get_logger(__name__)
 
 
 async def tune_model(
-    decrypted_payload: payload_models.TrainRequest = Depends(
-        partial(decrypt_general_payload, payload_models.TrainRequest)
-    ),
+    decrypted_payload: payload_models.TrainRequest,
     config: Config = Depends(get_config),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
@@ -55,10 +51,7 @@ async def tune_model(
 
 
 async def get_job_status(
-    decrypted_payload: payload_models.JobStatusPayload = Depends(
-        partial(decrypt_general_payload, payload_models.JobStatusPayload)
-    ),
-    config: Config = Depends(get_config),
+    decrypted_payload: payload_models.JobStatusPayload,
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     status = worker_config.trainer.get_status(decrypted_payload.job_id)
