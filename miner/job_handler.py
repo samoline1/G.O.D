@@ -1,13 +1,11 @@
 import os
-import logging
 from schemas import Job, DatasetType, FileFormat
 from const import CONFIG_DIR, DOCKER_IMAGE, HUGGINGFACE_TOKEN
-from config_handler import load_and_modify_config, save_config
+from configs.config_handler import load_and_modify_config, save_config
 import docker
 from docker.errors import DockerException
 from const import CONFIG_DIR, OUTPUT_DIR
-
-logger = logging.getLogger(__name__)
+from utils import logger
 
 
 def create_job(dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat) -> Job:

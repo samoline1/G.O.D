@@ -8,6 +8,6 @@ CONFIG_DIR = "./configs/"
 OUTPUT_DIR = "./outputs/"
 
 CONFIG_TEMPLATE_PATH = CONFIG_DIR + 'base.yml'
-
+VALI_CONFIG_PATH = "Validation/test_axolotl.yml"  
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 

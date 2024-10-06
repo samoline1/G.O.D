@@ -1,8 +1,8 @@
 import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from training_worker import TrainingWorker
-from endpoints import router
+from miner.training_worker import TrainingWorker
+from mpi.endpoints import router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

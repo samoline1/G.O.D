@@ -1,12 +1,10 @@
 import threading
 import queue
-import logging
 import docker
 from schemas import Job, JobStatus
-from job_handler import process_job
+from utils import logger
+from miner.job_handler import process_job
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 class TrainingWorker:
     def __init__(self):

@@ -1,9 +1,10 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from schemas import TrainRequest
-from config_handler import create_dataset_entry, update_model_info
+from configs.config_handler import create_dataset_entry, update_model_info
+from const import VALI_CONFIG_PATH
 import yaml
 import os
-import logging
+from utils import logger
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
 from pathlib import Path
@@ -12,7 +13,6 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 
-logger = logging.getLogger(__name__)
 
 def is_likely_finetune(original_repo: str, finetuned_model: AutoModelForCausalLM) -> bool:
     original_config = AutoConfig.from_pretrained(original_repo)
@@ -52,8 +52,8 @@ def get_and_update_config(train_request: TrainRequest, config_path: str) -> Dict
     config = DictDefault(config_dict)
     return config
 
-def perform_evaluation(train_request: TrainRequest, config_path: str, model: AutoModelForCausalLM, tokenizer: AutoTokenizer):
-    config = get_and_update_config(train_request, config_path)
+def perform_evaluation(train_request: TrainRequest, model: AutoModelForCausalLM, tokenizer: AutoTokenizer):
+    config = get_and_update_config(train_request, VALI_CONFIG_PATH)
     eval_results = evaluate_test_set_loss(config, model, tokenizer)
     return eval_results
 

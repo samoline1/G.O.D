@@ -1,12 +1,9 @@
 import yaml
 import os
-import logging
 from typing import Union
 
 from const import CONFIG_TEMPLATE_PATH
 from schemas import DatasetType, FileFormat, CustomDatasetType
-
-logger = logging.getLogger(__name__)
 
 def load_and_modify_config(
     job_id: str,

@@ -1,13 +1,10 @@
 from fastapi import APIRouter, HTTPException
-from job_handler import create_job
-from dataset_validator import validate_dataset
+from miner.job_handler import create_job
+from data.dataset_validator import validate_dataset
 from schemas import TrainRequest, TrainResponse, JobStatusResponse, FileFormat, EvaluationRequest, EvaluationResponse
-from Validation.checking import is_likely_finetune, perform_evaluation
+from validator.checking import is_likely_finetune, perform_evaluation
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import logging
-
-# so lazy to do this in each file :D - refactor later
-logger = logging.getLogger(__name__)
+from utils import logger
 
 router = APIRouter()
 
@@ -67,8 +64,7 @@ async def evaluate_model(request: EvaluationRequest):
     if not is_finetune:
         logger.info("The provided model does not appear to be a fine-tune of the original model.")
 
-    config_path = "Validation/test_axolotl.yml"  
-    eval_results = perform_evaluation(request, config_path, finetuned_model, tokenizer)
+    eval_results = perform_evaluation(request, finetuned_model, tokenizer)
 
     return EvaluationResponse(
         is_finetune=is_finetune,
