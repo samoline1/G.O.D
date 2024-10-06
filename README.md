@@ -69,6 +69,26 @@ The train endpoint allows you to initiate a fine-tuning job for a language model
 - `dataset_type`: Type of the dataset (e.g., "instruct", "pretrain", "alpaca", or a custom one like I shared with you)
 - `file_format`: Format of the dataset file (e.g., "csv", "json", "hf") - csv and json are local formats, hf is a Hugging Face dataset which the container will download. 
 
+Example request:
+
+```bash
+       curl -X POST http://94.156.8.58:8000/train/ \
+     -H "Content-Type: application/json" \
+     -d '{
+       "dataset": "mhenrichsen/alpaca_2k_test",
+       "model": "unsloth/Llama-3.2-3B-Instruct",
+       "dataset_type": {
+         "system_prompt": "you are helpful",
+         "system_format": "{system}",
+         "field_system": "text",
+         "field_instruction": "instruction",
+         "field_input": "input",
+         "field_output": "output"
+       },
+       "file_format": "hf"
+     }'
+    ```
+
 ##### Process:
 1. Validates the input parameters
 2. Creates a job configuration file
@@ -84,6 +104,28 @@ The evaluate endpoint allows you to assess the performance of a fine-tuned model
 ##### Request Body:
 - Same as the train endpoint, plus:
 - `original_model`: Name or path of the original model (before fine-tuning)
+
+Example request:
+
+
+```bash
+ curl -X POST http://localhost:8000/evaluate/ \
+     -H "Content-Type: application/json" \
+     -d '{
+       "dataset": "mhenrichsen/alpaca_2k_test",
+       "model": "unsloth/Llama-3.2-3B-Instruct",
+       "original_model": "unsloth/Llama-3.2-3B-Instruct",
+       "dataset_type": {
+         "system_prompt": "you are helpful",
+         "system_format": "{system}",
+         "field_system": "text",
+         "field_instruction": "instruction",
+         "field_input": "input",
+         "field_output": "output"
+       },
+       "file_format": "hf"
+     }'
+```
 
 ##### Process:
 1. Validates the input parameters
