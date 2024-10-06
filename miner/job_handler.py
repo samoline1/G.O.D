@@ -32,6 +32,7 @@ def process_job(job: Job):
     docker_env = {
         "HUGGINGFACE_TOKEN": HUGGINGFACE_TOKEN,
     }
+    logger.info(f"Docker environment: {docker_env}")
 
     try:
         docker_client = docker.from_env()
