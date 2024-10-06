@@ -46,7 +46,7 @@ For the validator, we need to set up the Axolotl framework since we're not using
 
 3. Install additional validation requirements:
    ```bash
-   pip install -r Validation/requirements.txt
+   pip install -r validator/requirements.txt
    ```
 
 ## Running the Service
