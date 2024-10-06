@@ -61,14 +61,14 @@ python main.py
 
 ### 1. Train Endpoint (Miners Only)
 
-The train endpoint allows you to initiate a fine-tuning job for a language model. It takes a dataset, a model, and a dataset type as input and enqueues the job for processing. The job is then processed by a worker in a separate Docker container.
+The train endpoint allows you to initiate a fine-tuning job. Takes a dataset, a model, and a dataset type as input and enqueues the job for processing. The job is then processed by a worker in a separate Docker container, the idea is to allow for expansion to kubernetes seemlessly. 
 
 #### Endpoint: POST /train/
 
 ##### Request Body:
 - `dataset`: Path to the dataset file or Hugging Face dataset name
 - `model`: Name or path of the model to be trained
-- `dataset_type`: Type of the dataset (e.g., "instruct", "pretrain", "alpaca", or a custom one like I shared with you)
+- `dataset_type`: Type of the dataset (e.g., "instruct", "pretrain", "alpaca", or a custom one like I shared with you below)
 - `file_format`: Format of the dataset file (e.g., "csv", "json", "hf") - csv and json are local formats, hf is a Hugging Face dataset which the container will download. 
 
 Example request:
@@ -92,10 +92,10 @@ Example request:
 ```
 
 ##### Process:
-1. Validates the input parameters
-2. Creates a job configuration file
-3. Enqueues the job for processing
-4. Starts a Docker container to run the training process
+1. Validates the input parameters (dataset_validation.py)
+2. Creates a job configuration file job_handler.py)
+3. Enqueues the job for processing (training_worker.py)
+4. Starts a Docker container to run the training process (job_handler.py)
 
 ### 2. Evaluate Endpoint (Validators Only)
 
@@ -130,11 +130,9 @@ Example request:
 ```
 
 ##### Process:
-1. Validates the input parameters
-2. Loads the fine-tuned model and original tokenizer
-3. Checks if the provided model is likely a fine-tune of the original model based on model parameters
-4. Performs evaluation using a test dataset
-5. Calculates evaluation metrics (loss and perplexity)
+1. Loads the fine-tuned model and original tokenizer (endpoints.py)
+2. Checks if the provided model is likely a fine-tune of the original model based on model parameters (checking.py)
+3. Performs evaluation using a test dataset and gets loss and perplexity (checking.py)
 
 ##### Response:
 - `is_finetune`: Boolean indicating if the model appears to be a fine-tune
