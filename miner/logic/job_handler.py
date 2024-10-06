@@ -6,7 +6,6 @@ import docker
 from docker.errors import DockerException
 from fiber.logging_utils import get_logger
 import yaml
-
 from core.models.utility_models import CustomDatasetType
 
 logger = get_logger(__name__)
@@ -106,6 +105,7 @@ def start_tuning_container(job: Job):
             volumes=volume_bindings,
             environment=docker_env,
             runtime="nvidia",
+            device_requests=[docker.types.DeviceRequest(count=1, capabilities=[['gpu']])],
             detach=True,
             tty=True,
         )
