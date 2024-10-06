@@ -1,7 +1,7 @@
 import os
 from core.models.utility_models import Job, DatasetType, FileFormat
 from core import constants as cst
-from api.configs.config_handler import create_dataset_entry, save_config, update_model_info
+from core.config.config_handler import create_dataset_entry, save_config, update_model_info
 import docker
 from docker.errors import DockerException
 from fiber.logging_utils import get_logger
@@ -46,7 +46,7 @@ def start_tuning_container(job: Job):
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
 
     config = _load_and_modify_config(
-        job.job_id, job.dataset, job.model, job.dataset_type, job.file_format
+        job.dataset, job.model, job.dataset_type, job.file_format
     )
     save_config(config, config_path)
 

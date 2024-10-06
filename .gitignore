@@ -20,6 +20,10 @@ postgres_data/*
 todo.md
 core/custom_task_config.py
 
+core/config/*.yml
+!core/config/base.yml
+
+
 *_keys.encrypted
 container_logs.txt
 .bittensor

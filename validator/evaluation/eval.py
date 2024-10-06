@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.nn.utils.rnn import pad_sequence
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from api.configs.config_handler import create_dataset_entry, update_model_info
+from core.config.config_handler import create_dataset_entry, update_model_info
 from core import constants as cst
 from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat
 from fiber.logging_utils import get_logger

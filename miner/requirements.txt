@@ -7,4 +7,4 @@ PyYAML==6.0
 docker==6.0.0
 huggingface-hub==0.14.1
 datasets==2.14.4  
-docker
+docker==7.1.0

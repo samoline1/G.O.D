@@ -7,8 +7,8 @@ load_dotenv()
 
 DOCKER_IMAGE = "winglian/axolotl-cloud:main-latest"
 
-CONFIG_DIR = "./configs/"
-OUTPUT_DIR = "./outputs/"
+CONFIG_DIR = "./core/config/"
+OUTPUT_DIR = "./core/outputs/"
 
 CONFIG_TEMPLATE_PATH = CONFIG_DIR + 'base.yml'
 VALI_CONFIG_PATH = "validator/test_axolotl.yml"  

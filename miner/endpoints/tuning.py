@@ -8,7 +8,7 @@ from core.models.payload_models import JobStatusResponse, TrainResponse
 from core.models.utility_models import FileFormat, JobStatus
 from core.utils import validate_dataset
 from fiber.miner.core.configuration import Config
-from fiber.miner.dependencies import blacklist_low_stake, get_config, verify_request
+from fiber.miner.dependencies import get_config
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
@@ -68,7 +68,7 @@ def factory_router() -> APIRouter:
         tune_model,
         tags=["Subnet"],
         methods=["POST"],
-        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
+        # dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
         response_model=TrainResponse,
     )
     router.add_api_route(
@@ -76,7 +76,7 @@ def factory_router() -> APIRouter:
         get_job_status,
         tags=["Subnet"],
         methods=["GET"],
-        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
+        # dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
         response_model=JobStatusResponse,
     )
     return router
