@@ -189,8 +189,20 @@ def evaluate_finetuned_model() -> dict[str, float]:
     dataset = os.environ["DATASET"]
     model = os.environ["MODEL"]
     original_model = os.environ["ORIGINAL_MODEL"]
-    dataset_type = os.environ["DATASET_TYPE"]
-    file_format = os.environ["FILE_FORMAT"]
+    dataset_type_str = os.environ["DATASET_TYPE"]
+    file_format = FileFormat(os.environ["FILE_FORMAT"])
+
+    if dataset_type_str == "custom":
+        dataset_type = CustomDatasetType(
+            system_prompt=os.environ.get("SYSTEM_PROMPT"),
+            system_format=os.environ.get("SYSTEM_FORMAT"),
+            field_system=os.environ.get("FIELD_SYSTEM"),
+            field_instruction=os.environ.get("FIELD_INSTRUCTION"),
+            field_input=os.environ.get("FIELD_INPUT"),
+            field_output=os.environ.get("FIELD_OUTPUT")
+        )
+    else:
+        dataset_type = DatasetType(dataset_type_str)
 
     finetuned_model, tokenizer = load_model_and_tokenizer()
     
