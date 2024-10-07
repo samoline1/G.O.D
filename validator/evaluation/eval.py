@@ -9,13 +9,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 import os
 import json
 from core.config.config_handler import create_dataset_entry, update_model_info
-from core import constants as cst
 from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat
 from fiber.logging_utils import get_logger
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
 from core.models.payload_models import EvaluationResult
-import docker 
 import json
 from datasets import load_dataset
 from validator.evaluation.utils import model_is_a_finetune
