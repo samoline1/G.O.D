@@ -16,6 +16,9 @@ from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
 from core.models.payload_models import EvaluationResult
 import docker 
+import json
+from datasets import load_dataset
+from validator.evaluation.utils import model_is_a_finetune
 
 logger = get_logger(__name__)
 
@@ -148,10 +151,15 @@ def _calculate_evaluation_metrics(
         logger.error("No valid batches were processed during evaluation.")
         average_loss = float("inf")
 
-    return {
-        "eval_loss": average_loss,
-        "perplexity": torch.exp(torch.tensor(average_loss)).item(),
+    results = {
+        "average_loss": average_loss,
+        "perplexity": 2 ** average_loss,
     }
+
+    with open('/app/results/evaluation_results.json', 'w') as f:
+        json.dump(results, f)
+
+    return results
 
 
 
@@ -212,25 +220,23 @@ def run_evaluation_docker(dataset: str, model: str, original_model: str, dataset
             environment=environment,
             runtime="nvidia",
             device_requests=[docker.types.DeviceRequest(count=1, capabilities=[['gpu']])],
+            volumes={'/tmp': {'bind': '/app/results', 'mode': 'rw'}},
             detach=True,
         )
 
-        for log in container.logs(stream=True, follow=True):
-            logger.info(log.strip().decode())
-
         result = container.wait()
-        logs = container.logs().decode("utf-8")
-        container.remove()
-
+        
         if result["StatusCode"] != 0:
+            logs = container.logs().decode("utf-8")
             raise Exception(f"Evaluation failed: {logs}")
 
-        eval_results = json.loads(logs)
-        return EvaluationResult(
-            is_finetune=eval_results["is_finetune"],
-            eval_loss=eval_results["eval_results"]["eval_loss"],
-            perplexity=eval_results["eval_results"]["perplexity"]
-        )
+        _, output = container.get_archive('/app/results/evaluation_results.json')
+        file_content = b''.join(output)
+        eval_results = json.loads(file_content.decode('utf-8'))
+
+        container.remove()
+
+        return EvaluationResult(**eval_results)
 
     except Exception as e:
         logger.error(f"Error during evaluation: {str(e)}")
@@ -243,10 +249,8 @@ def run_evaluation_docker(dataset: str, model: str, original_model: str, dataset
 def load_model_and_tokenizer():
     model_name = os.environ["MODEL"]
     original_model_name = os.environ["ORIGINAL_MODEL"]
-    
     tokenizer = AutoTokenizer.from_pretrained(original_model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
-    
     return model, tokenizer
 
 def model_is_a_finetune(original_model: str, finetuned_model: AutoModelForCausalLM) -> bool:
@@ -271,3 +275,105 @@ def model_is_a_finetune(original_model: str, finetuned_model: AutoModelForCausal
     base_model_match = finetuned_config._name_or_path == original_model
     
     return architecture_same and (base_model_match or has_lora_modules)
+
+def load_model_and_tokenizer(model_name: str):
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    return model, tokenizer
+
+def load_dataset_from_file(dataset_path: str, file_format: FileFormat):
+    if file_format == FileFormat.CSV:
+        return load_dataset("csv", data_files=dataset_path)
+    elif file_format == FileFormat.JSON:
+        return load_dataset("json", data_files=dataset_path)
+    else:
+        raise ValueError(f"Unsupported file format: {file_format}")
+
+def prepare_dataset(dataset, tokenizer, dataset_type: DatasetType | CustomDatasetType):
+    def tokenize_function(examples):
+        if isinstance(dataset_type, DatasetType):
+            if dataset_type == DatasetType.INSTRUCT:
+                text = [f"Instruction: {instr}\nInput: {inp}\nOutput: {out}" 
+                        for instr, inp, out in zip(examples["instruction"], examples["input"], examples["output"])]
+            elif dataset_type == DatasetType.PRETRAIN:
+                text = examples["input"]
+            else:
+                raise ValueError(f"Unsupported dataset type: {dataset_type}")
+        elif isinstance(dataset_type, CustomDatasetType):
+            text = [dataset_type.format.format(**example) for example in examples]
+        else:
+            raise ValueError(f"Invalid dataset_type: {dataset_type}")
+
+        return tokenizer(text, truncation=True, padding="max_length")
+
+    tokenized_dataset = dataset.map(tokenize_function, batched=True)
+    return tokenized_dataset
+
+def _calculate_evaluation_metrics(total_loss: float, num_batches: int) -> dict[str, float]:
+    """Calculate evaluation metrics based on total loss and number of batches."""
+    if num_batches > 0:
+        average_loss = total_loss / num_batches
+        logger.info(f"Average loss: {average_loss}")
+    else:
+        logger.error("No valid batches were processed during evaluation.")
+        average_loss = float("inf")
+
+    return {
+        "average_loss": average_loss,
+        "perplexity": 2 ** average_loss,
+    }
+
+def run_evaluation():
+    # Load environment variables
+    dataset = os.environ.get("DATASET")
+    model = os.environ.get("MODEL")
+    original_model = os.environ.get("ORIGINAL_MODEL")
+    dataset_type = os.environ.get("DATASET_TYPE")
+    file_format = os.environ.get("FILE_FORMAT")
+
+    # Load model and tokenizer
+    model, tokenizer = load_model_and_tokenizer(model)
+
+    # Load dataset
+    if file_format == FileFormat.HF:
+        raw_dataset = load_dataset(dataset)
+    else:
+        raw_dataset = load_dataset_from_file(dataset, FileFormat(file_format))
+
+    # Prepare dataset
+    if dataset_type == "custom":
+        dataset_type = CustomDatasetType(**json.loads(os.environ.get("DATASET_TYPE_CONFIG", "{}")))
+    else:
+        dataset_type = DatasetType(dataset_type)
+    
+    tokenized_dataset = prepare_dataset(raw_dataset, tokenizer, dataset_type)
+
+    # Evaluation loop
+    model.eval()
+    total_loss = 0
+    num_batches = 0
+
+    with torch.no_grad():
+        for batch in tokenized_dataset["train"]:
+            inputs = {k: torch.tensor(v).unsqueeze(0) for k, v in batch.items()}
+            outputs = model(**inputs, labels=inputs["input_ids"])
+            total_loss += outputs.loss.item()
+            num_batches += 1
+
+    # Calculate metrics
+    results = _calculate_evaluation_metrics(total_loss, num_batches)
+    
+    # Check if the model is a fine-tune
+    is_finetune = model_is_a_finetune(original_model, model)
+    
+    # Add is_finetune to results
+    results["is_finetune"] = is_finetune
+
+    # Save results to a JSON file
+    with open('/app/results/evaluation_results.json', 'w') as f:
+        json.dump(results, f)
+
+    logger.info(f"Evaluation results: {results}")
+
+if __name__ == "__main__":
+    run_evaluation()
