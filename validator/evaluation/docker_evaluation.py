@@ -1,7 +1,7 @@
 import docker
 from typing import Union
 from core.models.payload_models import DatasetType, CustomDatasetType, FileFormat, EvaluationResult
-import validator.constants as cst
+from core import constants as cst
 from fiber.logging_utils import get_logger
 import json
 
