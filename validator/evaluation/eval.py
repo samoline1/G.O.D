@@ -324,23 +324,19 @@ def _calculate_evaluation_metrics(total_loss: float, num_batches: int) -> dict[s
     }
 
 def run_evaluation():
-    # Load environment variables
     dataset = os.environ.get("DATASET")
     model = os.environ.get("MODEL")
     original_model = os.environ.get("ORIGINAL_MODEL")
     dataset_type = os.environ.get("DATASET_TYPE")
     file_format = os.environ.get("FILE_FORMAT")
 
-    # Load model and tokenizer
     model, tokenizer = load_model_and_tokenizer(model)
 
-    # Load dataset
     if file_format == FileFormat.HF:
         raw_dataset = load_dataset(dataset)
     else:
         raw_dataset = load_dataset_from_file(dataset, FileFormat(file_format))
 
-    # Prepare dataset
     if dataset_type == "custom":
         dataset_type = CustomDatasetType(**json.loads(os.environ.get("DATASET_TYPE_CONFIG", "{}")))
     else:
@@ -348,7 +344,6 @@ def run_evaluation():
     
     tokenized_dataset = prepare_dataset(raw_dataset, tokenizer, dataset_type)
 
-    # Evaluation loop
     model.eval()
     total_loss = 0
     num_batches = 0
@@ -360,20 +355,13 @@ def run_evaluation():
             total_loss += outputs.loss.item()
             num_batches += 1
 
-    # Calculate metrics
     results = _calculate_evaluation_metrics(total_loss, num_batches)
     
-    # Check if the model is a fine-tune
     is_finetune = model_is_a_finetune(original_model, model)
     
-    # Add is_finetune to results
     results["is_finetune"] = is_finetune
 
-    # Save results to a JSON file
     with open('/app/results/evaluation_results.json', 'w') as f:
         json.dump(results, f)
 
     logger.info(f"Evaluation results: {results}")
-
-if __name__ == "__main__":
-    run_evaluation()
