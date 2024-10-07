@@ -15,3 +15,4 @@ VALI_CONFIG_PATH = "validator/test_axolotl.yml"
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 logger.debug(f"HUGGINGFACE_TOKEN: {HUGGINGFACE_TOKEN}")
 
+VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
