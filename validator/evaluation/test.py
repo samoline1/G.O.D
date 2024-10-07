@@ -1,5 +1,5 @@
 from validator.evaluation.docker_evaluation import run_evaluation_docker
-from core.models.payload_models import CustomDatasetType, FileFormat
+from core.models.payload_models import CustomDatasetType, FileFormat, EvaluationResult
 import os
 from fiber.logging_utils import get_logger
 

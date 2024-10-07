@@ -1,4 +1,4 @@
-from typing import Union, dict
+from typing import Union
 from pathlib import Path
 import yaml
 import torch
