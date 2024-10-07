@@ -14,6 +14,8 @@ from core.models.utility_models import CustomDatasetType, DatasetType, FileForma
 from fiber.logging_utils import get_logger
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
+from core.models.payload_models import EvaluationResult
+import docker 
 
 logger = get_logger(__name__)
 
@@ -182,48 +184,61 @@ def evaluate_language_model_loss(
 
     return evaluation_results
 
+def run_evaluation_docker(dataset: str, model: str, original_model: str, dataset_type: Union[DatasetType, CustomDatasetType], file_format: FileFormat) -> EvaluationResult:
+    client = docker.from_env()
 
-
-
-def evaluate_finetuned_model() -> dict[str, float]:
-    dataset = os.environ["DATASET"]
-    model = os.environ["MODEL"]
-    original_model = os.environ["ORIGINAL_MODEL"]
-    dataset_type_str = os.environ["DATASET_TYPE"]
-    file_format = FileFormat(os.environ["FILE_FORMAT"])
-
-    if dataset_type_str == "custom":
-        dataset_type = CustomDatasetType(
-            system_prompt=os.environ.get("SYSTEM_PROMPT"),
-            system_format=os.environ.get("SYSTEM_FORMAT"),
-            field_system=os.environ.get("FIELD_SYSTEM"),
-            field_instruction=os.environ.get("FIELD_INSTRUCTION"),
-            field_input=os.environ.get("FIELD_INPUT"),
-            field_output=os.environ.get("FIELD_OUTPUT")
-        )
-    else:
-        dataset_type = DatasetType(dataset_type_str)
-
-    finetuned_model, tokenizer = load_model_and_tokenizer()
-    
-    is_finetune = model_is_a_finetune(original_model, finetuned_model)
-    
-    if not is_finetune:
-        logger.warning("The provided model does not appear to be a fine-tune of the original model.")
-
-    evaluation_config = _load_and_update_evaluation_config(
-        dataset, finetuned_model, dataset_type, file_format, cst.VALI_CONFIG_PATH
-    )
-    
-    eval_results = evaluate_language_model_loss(evaluation_config, finetuned_model, tokenizer)
-    
-    results = {
-        "is_finetune": is_finetune,
-        "eval_results": eval_results
+    environment = {
+        "DATASET": dataset,
+        "MODEL": model,
+        "ORIGINAL_MODEL": original_model,
+        "DATASET_TYPE": dataset_type.value if isinstance(dataset_type, DatasetType) else "custom",
+        "FILE_FORMAT": file_format.value,
+        "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
     }
-    
-    print(json.dumps(results))
-    return results
+
+    if isinstance(dataset_type, CustomDatasetType):
+        environment.update({
+            "SYSTEM_PROMPT": dataset_type.system_prompt,
+            "SYSTEM_FORMAT": dataset_type.system_format,
+            "FIELD_SYSTEM": dataset_type.field_system,
+            "FIELD_INSTRUCTION": dataset_type.field_instruction,
+            "FIELD_INPUT": dataset_type.field_input,
+            "FIELD_OUTPUT": dataset_type.field_output
+        })
+
+    try:
+        container = client.containers.run(
+            cst.VALIDATOR_DOCKER_IMAGE,
+            environment=environment,
+            runtime="nvidia",
+            device_requests=[docker.types.DeviceRequest(count=1, capabilities=[['gpu']])],
+            detach=True,
+        )
+
+        for log in container.logs(stream=True, follow=True):
+            logger.info(log.strip().decode())
+
+        result = container.wait()
+        logs = container.logs().decode("utf-8")
+        container.remove()
+
+        if result["StatusCode"] != 0:
+            raise Exception(f"Evaluation failed: {logs}")
+
+        eval_results = json.loads(logs)
+        return EvaluationResult(
+            is_finetune=eval_results["is_finetune"],
+            eval_loss=eval_results["eval_results"]["eval_loss"],
+            perplexity=eval_results["eval_results"]["perplexity"]
+        )
+
+    except Exception as e:
+        logger.error(f"Error during evaluation: {str(e)}")
+        raise
+
+    finally:
+        client.close()
+
 
 def load_model_and_tokenizer():
     model_name = os.environ["MODEL"]
@@ -256,7 +271,3 @@ def model_is_a_finetune(original_model: str, finetuned_model: AutoModelForCausal
     base_model_match = finetuned_config._name_or_path == original_model
     
     return architecture_same and (base_model_match or has_lora_modules)
-
-if __name__ == "__main__":
-    results = evaluate_finetuned_model()
-    print(results)
