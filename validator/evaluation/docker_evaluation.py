@@ -39,19 +39,29 @@ def run_evaluation_docker(dataset: str, model: str, original_model: str, dataset
             detach=True,
         )
 
+        # Stream logs in real-time
+        for log in container.logs(stream=True, follow=True):
+            logger.info(f"Container log: {log.decode('utf-8').strip()}")
+
         result = container.wait()
         
         if result["StatusCode"] != 0:
             logs = container.logs().decode("utf-8")
-            raise Exception(f"Evaluation failed: {logs}")
+            raise Exception(f"Evaluation failed with status code {result['StatusCode']}: {logs}")
 
         try:
+            # List files in the /app/results directory
+            _, output = container.get_archive('/app/results')
+            file_list = [name for name in output.getnames() if not name.endswith('/')]
+            logger.info(f"Files in /app/results: {file_list}")
+
             _, output = container.get_archive('/app/results/evaluation_results.json')
             file_content = b''.join(output)
             eval_results = json.loads(file_content.decode('utf-8'))
-        except docker.errors.NotFound:
+        except docker.errors.NotFound as e:
             logs = container.logs().decode("utf-8")
             logger.error(f"Evaluation results file not found. Container logs: {logs}")
+            logger.error(f"Error details: {str(e)}")
             raise Exception("Evaluation results file not found in the container")
 
         container.remove()

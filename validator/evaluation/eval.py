@@ -160,8 +160,6 @@ def _calculate_evaluation_metrics(
     return results
 
 
-
-
 def evaluate_language_model_loss(
     evaluation_config: DictDefault,
     language_model: AutoModelForCausalLM,
@@ -190,13 +188,6 @@ def evaluate_language_model_loss(
 
     return evaluation_results
 
-
-def load_model_and_tokenizer():
-    model_name = os.environ["MODEL"]
-    original_model_name = os.environ["ORIGINAL_MODEL"]
-    tokenizer = AutoTokenizer.from_pretrained(original_model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    return model, tokenizer
 
 def load_model_and_tokenizer(model_name: str):
     model = AutoModelForCausalLM.from_pretrained(model_name)
@@ -245,45 +236,51 @@ def _calculate_evaluation_metrics(total_loss: float, num_batches: int) -> dict[s
         "perplexity": 2 ** average_loss,
     }
 
-def run_evaluation():
+if __name__ == "__main__":
     dataset = os.environ.get("DATASET")
     model = os.environ.get("MODEL")
     original_model = os.environ.get("ORIGINAL_MODEL")
     dataset_type = os.environ.get("DATASET_TYPE")
     file_format = os.environ.get("FILE_FORMAT")
 
-    model, tokenizer = load_model_and_tokenizer(model)
+    logger.info(f"Starting evaluation with dataset: {dataset}, model: {model}, original_model: {original_model}")
 
-    if file_format == FileFormat.HF:
-        raw_dataset = load_dataset(dataset)
-    else:
-        raw_dataset = load_dataset_from_file(dataset, FileFormat(file_format))
+    try:
+        model, tokenizer = load_model_and_tokenizer(model)
 
-    if dataset_type == "custom":
-        dataset_type = CustomDatasetType(**json.loads(os.environ.get("DATASET_TYPE_CONFIG", "{}")))
-    else:
-        dataset_type = DatasetType(dataset_type)
-    
-    tokenized_dataset = prepare_dataset(raw_dataset, tokenizer, dataset_type)
+        if file_format == FileFormat.HF.value:
+            raw_dataset = load_dataset(dataset)
+        else:
+            raw_dataset = load_dataset_from_file(dataset, FileFormat(file_format))
 
-    model.eval()
-    total_loss = 0
-    num_batches = 0
+        if dataset_type == "custom":
+            dataset_type = CustomDatasetType(**json.loads(os.environ.get("DATASET_TYPE_CONFIG", "{}")))
+        else:
+            dataset_type = DatasetType(dataset_type)
+        
+        tokenized_dataset = prepare_dataset(raw_dataset, tokenizer, dataset_type)
 
-    with torch.no_grad():
-        for batch in tokenized_dataset["train"]:
-            inputs = {k: torch.tensor(v).unsqueeze(0) for k, v in batch.items()}
-            outputs = model(**inputs, labels=inputs["input_ids"])
-            total_loss += outputs.loss.item()
-            num_batches += 1
+        model.eval()
+        total_loss = 0
+        num_batches = 0
 
-    results = _calculate_evaluation_metrics(total_loss, num_batches)
-    
-    is_finetune = model_is_a_finetune(original_model, model)
-    
-    results["is_finetune"] = is_finetune
+        with torch.no_grad():
+            for batch in tokenized_dataset["train"]:
+                inputs = {k: torch.tensor(v).unsqueeze(0) for k, v in batch.items()}
+                outputs = model(**inputs, labels=inputs["input_ids"])
+                total_loss += outputs.loss.item()
+                num_batches += 1
 
-    with open('/app/results/evaluation_results.json', 'w') as f:
-        json.dump(results, f)
+        results = _calculate_evaluation_metrics(total_loss, num_batches)
+        
+        is_finetune = model_is_a_finetune(original_model, model)
+        
+        results["is_finetune"] = is_finetune
 
-    logger.info(f"Evaluation results: {results}")
+        with open('/app/results/evaluation_results.json', 'w') as f:
+            json.dump(results, f)
+
+        logger.info(f"Evaluation results: {results}")
+    except Exception as e:
+        logger.error(f"Error during evaluation: {str(e)}")
+        raise
