@@ -39,3 +39,7 @@ tasks:
     cmds:
       - ENV=DEV uvicorn miner.server:app --reload --host 0.0.0.0 --port 4002 --env-file .2.env --log-level debug
 
+  validator_eval_endpoint:
+    cmds:
+      - LOCALHOST=true uvicorn validator.server:app --reload --host 0.0.0.0 --port 8000 --env-file .vali.env
+
