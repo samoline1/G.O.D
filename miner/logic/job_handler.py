@@ -51,34 +51,14 @@ def start_tuning_container(job: Job):
 
     docker_env = {
         "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
+        "JOB_ID": job.job_id,
+        "DATASET_TYPE": job.dataset_type.value if isinstance(job.dataset_type, DatasetType) else "custom",
+        "DATASET_FILENAME": os.path.basename(job.dataset) if job.file_format != FileFormat.HF else "",
     }
     logger.info(f"Docker environment: {docker_env}")
 
     try:
         docker_client = docker.from_env()
-        script_path = (
-            "scripts/run_script_hf.sh"
-            if job.file_format == FileFormat.HF
-            else "scripts/run_script_non_hf.sh"
-        )
-        logger.info(f"Selected script path: {script_path}")
-
-        if not os.path.exists(script_path):
-            logger.error(f"Script file not found: {script_path}")
-            raise FileNotFoundError(f"Script file not found: {script_path}")
-
-        logger.info(f"Script file exists: {script_path}")
-
-        with open(script_path, "r") as f:
-            script_content = f.read()
-            logger.info(f"Original script content:\n{script_content}")
-
-        script_content = script_content.replace("{{JOB_ID}}", job.job_id)
-        if job.file_format != FileFormat.HF:
-            script_content = script_content.replace(
-                "{{DATASET_FILENAME}}", os.path.basename(job.dataset)
-            )
-            logger.info(f"Modified script content:\n{script_content}")
 
         volume_bindings = {
             os.path.abspath(cst.CONFIG_DIR): {
@@ -97,13 +77,11 @@ def start_tuning_container(job: Job):
                 "bind": "/workspace/input_data",
                 "mode": "ro",
             }
-        logger.info(f"Starting container with script: {script_content}")
 
         container = docker_client.containers.run(
             image=cst.DOCKER_IMAGE,
-            command=["/bin/bash", "-c", script_content],
-            volumes=volume_bindings,
             environment=docker_env,
+            volumes=volume_bindings,
             runtime="nvidia",
             device_requests=[docker.types.DeviceRequest(count=1, capabilities=[['gpu']])],
             detach=True,
