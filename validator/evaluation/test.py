@@ -1,4 +1,4 @@
-from validator.evaluation.eval import run_evaluation_docker  
+from validator.evaluation.docker_evaluation import run_evaluation_docker  
 import os
 from fiber.logging_utils import get_logger
 
