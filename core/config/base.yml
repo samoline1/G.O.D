@@ -53,7 +53,7 @@ xformers_attention:
 flash_attention: true
 s2_attention:
 
-hub_model_id: cwaud/test
+hub_model_id: tau-vision/testing_ax
 hub_strategy: checkpoint
 hub_token: 
 
