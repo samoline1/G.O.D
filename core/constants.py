@@ -5,7 +5,7 @@ from fiber.logging_utils import get_logger
 logger = get_logger(__name__)
 load_dotenv()
 
-DOCKER_IMAGE = "winglian/axolotl-cloud:main-latest"
+DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
 
 CONFIG_DIR = "./core/config/"
 OUTPUT_DIR = "./core/outputs/"
