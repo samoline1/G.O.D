@@ -1,1 +1,0 @@
-DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
