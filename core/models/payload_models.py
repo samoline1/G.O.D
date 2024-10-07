@@ -38,10 +38,8 @@ class JobStatusResponse(BaseModel):
     status: JobStatus
 
 
-
 class EvaluationRequest(TrainRequest):
     original_model: str
-
 
 class EvaluationResult(BaseModel):
     is_finetune: bool

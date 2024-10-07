@@ -253,29 +253,6 @@ def load_model_and_tokenizer():
     model = AutoModelForCausalLM.from_pretrained(model_name)
     return model, tokenizer
 
-def model_is_a_finetune(original_model: str, finetuned_model: AutoModelForCausalLM) -> bool:
-    original_config = AutoConfig.from_pretrained(original_model)
-    finetuned_config = finetuned_model.config
-
-    attrs_to_compare = [
-        "architectures",
-        "hidden_size",
-        "num_hidden_layers",
-        "num_attention_heads",
-        "num_key_value_heads",
-    ]
-    architecture_same = all(
-        getattr(original_config, attr) == getattr(finetuned_config, attr)
-        for attr in attrs_to_compare
-    )
-    
-    adapter_config = os.path.join(finetuned_model.name_or_path, "adapter_config.json")
-    has_lora_modules = os.path.exists(adapter_config)
-    
-    base_model_match = finetuned_config._name_or_path == original_model
-    
-    return architecture_same and (base_model_match or has_lora_modules)
-
 def load_model_and_tokenizer(model_name: str):
     model = AutoModelForCausalLM.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
