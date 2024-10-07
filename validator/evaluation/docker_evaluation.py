@@ -45,9 +45,14 @@ def run_evaluation_docker(dataset: str, model: str, original_model: str, dataset
             logs = container.logs().decode("utf-8")
             raise Exception(f"Evaluation failed: {logs}")
 
-        _, output = container.get_archive('/app/results/evaluation_results.json')
-        file_content = b''.join(output)
-        eval_results = json.loads(file_content.decode('utf-8'))
+        try:
+            _, output = container.get_archive('/app/results/evaluation_results.json')
+            file_content = b''.join(output)
+            eval_results = json.loads(file_content.decode('utf-8'))
+        except docker.errors.NotFound:
+            logs = container.logs().decode("utf-8")
+            logger.error(f"Evaluation results file not found. Container logs: {logs}")
+            raise Exception("Evaluation results file not found in the container")
 
         container.remove()
 
