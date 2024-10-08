@@ -19,6 +19,7 @@ def load_and_sample_dataset(dataset_name: str) -> List[dict]:
     dataset = load_dataset(dataset_name)
     num_samples = int(len(dataset) * PERCENTAGE_SYNTH)
     sampled_data = random.sample(list(dataset), num_samples)
+    logger.info(f"Loaded {len(sampled_data)} samples from {dataset_name}")
     return sampled_data
 
 async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> str:
