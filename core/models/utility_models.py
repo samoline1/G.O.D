@@ -45,3 +45,18 @@ class Job(BaseModel):
     file_format: FileFormat
     status: JobStatus = JobStatus.QUEUED
     error_message: str | None = None
+
+
+class Role(str, Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class Message(BaseModel):
+    role: Role
+    content: str
+
+class Prompts(BaseModel):
+    syth_data_creation_sys: str
+    syth_data_creation_prompt: str
