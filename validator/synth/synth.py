@@ -17,7 +17,9 @@ def load_prompts() -> Prompts:
 
 def load_and_sample_dataset(dataset_name: str) -> List[dict]:
     dataset = load_dataset(dataset_name)
+    logger.info(f"Loaded {len(dataset)} samples from {dataset_name}")
     num_samples = int(len(dataset) * PERCENTAGE_SYNTH)
+    logger.info(f"Sampling {num_samples} samples from {dataset_name}")
     sampled_data = random.sample(list(dataset), num_samples)
     logger.info(f"Loaded {len(sampled_data)} samples from {dataset_name}")
     return sampled_data
