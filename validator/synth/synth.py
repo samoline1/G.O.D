@@ -2,7 +2,7 @@ import json
 from typing import Any, List, AsyncGenerator
 import httpx
 import yaml
-from const import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN
+from core.constants import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN
 from datasets import load_dataset
 import random
 from core.models.utility_models import Message, Role, Prompts
@@ -62,7 +62,9 @@ async def generate_synthetic_dataset(dataset_name: str) -> List[dict]:
     for row in sampled_data:
         messages = create_messages_from_row(row, prompts)
         payload = {
-            "messages": [message.dict() for message in messages]
+            "messages": [message.dict() for message in messages],
+            "model": "llama-3-1-70b",
+            "temperature": 0.7,
         }
         try:
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
