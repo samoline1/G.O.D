@@ -50,6 +50,7 @@ def start_tuning_container(job: Job):
 
     docker_env = {
         "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
+        "WANDB_TOKEN": cst.WANDB_TOKEN,
         "JOB_ID": job.job_id,
         "DATASET_TYPE": job.dataset_type.value if isinstance(job.dataset_type, DatasetType) else "custom",
         "DATASET_FILENAME": os.path.basename(job.dataset) if job.file_format != FileFormat.HF else "",

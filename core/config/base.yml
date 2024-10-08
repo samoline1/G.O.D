@@ -53,6 +53,12 @@ xformers_attention:
 flash_attention: true
 s2_attention:
 
+wandb_project: Public_TuningSN
+wandb_entity: rayonlabs-rayon-labs
+wandb_mode: online
+wandb_run: miner_id_24
+wandb_runid: default
+
 hub_model_id: tau-vision/testing_ax
 hub_strategy: checkpoint
 hub_token: 
