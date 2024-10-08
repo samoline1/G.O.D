@@ -15,8 +15,8 @@ def load_prompts() -> Prompts:
         prompts_dict = yaml.safe_load(file)
     return Prompts(**prompts_dict)
 
-def load_and_sample_dataset(dataset_name: str, split: str = "train") -> List[dict]:
-    dataset = load_dataset(dataset_name, split=split)
+def load_and_sample_dataset(dataset_name: str) -> List[dict]:
+    dataset = load_dataset(dataset_name)
     num_samples = int(len(dataset) * PERCENTAGE_SYNTH)
     sampled_data = random.sample(list(dataset), num_samples)
     return sampled_data
