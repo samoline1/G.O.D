@@ -1,17 +1,14 @@
 import os
-from core.models.utility_models import Job, DatasetType, FileFormat
-from core import constants as cst
-from core.config.config_handler import create_dataset_entry, save_config, update_model_info
+import yaml
 import docker
 from docker.errors import DockerException
+from core.models.utility_models import Job, DatasetType, FileFormat, CustomDatasetType
+from core import constants as cst
+from core.config.config_handler import create_dataset_entry, save_config, update_model_info
 from fiber.logging_utils import get_logger
-import yaml
-from core.models.utility_models import CustomDatasetType
 
 logger = get_logger(__name__)
 
-# TODO: give a much nicer name - maybe even a docstring
-# I have no idea what this is referring to or doing
 def _load_and_modify_config(
     dataset: str,
     model: str,
@@ -31,7 +28,6 @@ def _load_and_modify_config(
 
     return config
 
-#  TODO: Much nicer names please 
 def create_job(
     dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
 ) -> Job:
@@ -39,7 +35,6 @@ def create_job(
         dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format
     )
 
-# TODO: Dutty code
 def start_tuning_container(job: Job):
     config_filename = f"{job.job_id}.yml"
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
@@ -88,7 +83,7 @@ def start_tuning_container(job: Job):
             tty=True,
         )
 
-        stream_logs(container)
+        _stream_logs(container)
 
         result = container.wait()
 
@@ -105,8 +100,7 @@ def start_tuning_container(job: Job):
         if "container" in locals():
             container.remove(force=True)
 
-# Whats this for, wen typehints?
-def stream_logs(container):
+def _stream_logs(container):
     log_buffer = ""
     for log_chunk in container.logs(stream=True, follow=True):
         try:

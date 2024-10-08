@@ -68,7 +68,6 @@ def factory_router() -> APIRouter:
         tune_model,
         tags=["Subnet"],
         methods=["POST"],
-        # dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
         response_model=TrainResponse,
     )
     router.add_api_route(
@@ -76,7 +75,6 @@ def factory_router() -> APIRouter:
         get_job_status,
         tags=["Subnet"],
         methods=["GET"],
-        # dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
         response_model=JobStatusResponse,
     )
     return router

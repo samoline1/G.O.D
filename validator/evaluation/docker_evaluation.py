@@ -8,7 +8,7 @@ from fiber.logging_utils import get_logger
 from core.models.utility_models import DatasetType, CustomDatasetType
 from typing import Union
 
-logger = get_Logger(__name__)
+logger = get_logger(__name__)
 
 def run_evaluation_docker(
     dataset: str,

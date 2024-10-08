@@ -5,18 +5,17 @@ from core.models.utility_models import Job, JobStatus
 from fiber.logging_utils import get_logger
 from miner.logic.job_handler import start_tuning_container
 
-
 logger = get_logger(__name__)
 
 class TrainingWorker:
     def __init__(self):
         self.job_queue: queue.Queue[Job] = queue.Queue()
         self.job_store: dict[str, Job] = {}
-        self.thread = threading.Thread(target=self.worker, daemon=True)
+        self.thread = threading.Thread(target=self._worker, daemon=True)
         self.thread.start()
         self.docker_client = docker.from_env()
 
-    def worker(self):
+    def _worker(self):
         while True:
             job = self.job_queue.get()
             if job is None:

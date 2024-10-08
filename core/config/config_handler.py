@@ -3,12 +3,22 @@ import os
 
 from core.models.utility_models import DatasetType, FileFormat, CustomDatasetType
 
-# TODO: docstring or smth with this - no idea what its doing
 def create_dataset_entry(
     dataset: str,
     dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
 ) -> dict:
+    """
+    Create a dataset entry for the configuration file.
+
+    Args:
+        dataset (str): The path or identifier of the dataset.
+        dataset_type (DatasetType | CustomDatasetType): The type of the dataset, a simple example would be INSTRUCT which will have columns [INSTRUCTION, INPUT, OUTPUT]
+        file_format (FileFormat): The format of the dataset file - HF, JSON, CSV - HF is a dataset on Hugging Face, JSON and CSV are local files
+
+    Returns:
+        dict: A dictionary containing the dataset entry information, this is basically the dataset information, how it should be parsed by the axolotl library
+    """
     dataset_entry = {"path": dataset}
 
     if isinstance(dataset_type, DatasetType):
@@ -29,10 +39,8 @@ def create_dataset_entry(
 
     return dataset_entry
 
-
 def update_model_info(config: dict, model: str):
     config["base_model"] = model
-
 
 def save_config(config: dict, config_path: str):
     with open(config_path, "w") as file:
