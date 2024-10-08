@@ -4,10 +4,11 @@ import httpx
 import yaml
 from core.constants import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN
 from datasets import load_dataset
-import random
 from core.models.utility_models import Message, Role, Prompts
 from fiber.logging_utils import get_logger
 import asyncio
+from core.constants import SYNTH_BATCH_SIZE, SYNTH_TEMPERATURE, SYNTH_MODEL
+
 logger = get_logger(__name__)
 
 
@@ -19,15 +20,11 @@ def load_prompts() -> Prompts:
 def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> List[dict]:
     dataset = load_dataset(dataset_name)
     logger.info(f"Dataset: {dataset}")
-    
     train_dataset = dataset['train']
     train_dataset = train_dataset.remove_columns([col for col in train_dataset.column_names if col not in columns_to_sample])
-    
     num_samples = int(train_dataset.num_rows * PERCENTAGE_SYNTH)
     logger.info(f"Sampling {num_samples} samples from {dataset_name}")
-    
     sampled_data = train_dataset.shuffle(seed=42).select(range(num_samples))
-    
     sampled_data_list = [sample for sample in sampled_data]
     
     return sampled_data_list
@@ -78,14 +75,13 @@ async def generate_synthetic_dataset(dataset_name: str, columns_to_sample: List[
     sampled_data = load_and_sample_dataset(dataset_name, columns_to_sample)
     logger.info(f"Creating synthetic dataset")
     synthetic_dataset = []
-    batch_size = 10  # Number of parallel tasks
 
     async def process_row(row):
         messages = create_messages_from_row(row, prompts)
         payload = {
             "messages": [message.dict() for message in messages],
-            "model": "llama-3-1-70b",
-            "temperature": 0.7,
+            "model": SYNTH_MODEL,
+            "temperature": SYNTH_TEMPERATURE,
         }
         try:
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
@@ -98,8 +94,8 @@ async def generate_synthetic_dataset(dataset_name: str, columns_to_sample: List[
             logger.error(f"Error generating synthetic data point: {str(e)}")
         return None  # Return None if there's an error or invalid data
 
-    for i in range(0, len(sampled_data), batch_size):
-        batch = sampled_data[i:i + batch_size]
+    for i in range(0, len(sampled_data), SYNTH_BATCH_SIZE):
+        batch = sampled_data[i:i + SYNTH_BATCH_SIZE]
         tasks = [process_row(row) for row in batch]
         results = await asyncio.gather(*tasks)
         logger.info(f"Additional synthetic data points: {results}")

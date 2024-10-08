@@ -22,3 +22,7 @@ PROMPT_GEN_ENDPOINT = "https://api.corcel.io/v1/chat/completions"
 PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
 PROMPT_PATH = "validator/prompts.yml"
 PERCENTAGE_SYNTH = 0.1 
+
+SYNTH_BATCH_SIZE = 10
+SYNTH_TEMPERATURE = 0.7
+SYNTH_MODEL = "llama-3-1-70b"
