@@ -42,7 +42,7 @@ def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None
     dataset_dict.push_to_hub(repo_name, token=token, private=True)
     logger.info("Upload complete")
 
-def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> None:
+def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> Dataset:
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict['train']
     test_dataset = dataset_dict['test']
