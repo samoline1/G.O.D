@@ -1,15 +1,15 @@
 import docker
 import json
-import os
+import io
 import tarfile
-import tempfile
+import logging
 from core.models.payload_models import DatasetType, CustomDatasetType, FileFormat, EvaluationResult
 from core import constants as cst
 from fiber.logging_utils import get_logger
 from core.models.utility_models import DatasetType, CustomDatasetType
 from typing import Union
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 def run_evaluation_docker(
     dataset: str,
@@ -56,22 +56,37 @@ def run_evaluation_docker(
             logger.error(f"Container exited with status {result['StatusCode']}: {logs}")
             raise Exception(f"Container exited with status {result['StatusCode']}")
 
+        # Define the path of the results file inside the container
         container_results_path = "/app/evaluation_results.json"
 
+        # Copy the evaluation results file from the container
         tar_stream, _ = container.get_archive(container_results_path)
 
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            tarfile_path = os.path.join(tmpdirname, "evaluation_results.tar")
-            with open(tarfile_path, "wb") as f:
-                for chunk in tar_stream:
-                    f.write(chunk)
+        # Read the tar stream into a file-like object
+        file_like_object = io.BytesIO()
+        for chunk in tar_stream:
+            file_like_object.write(chunk)
+        file_like_object.seek(0)
 
-            with tarfile.open(tarfile_path) as tar:
-                tar.extractall(path=tmpdirname)
+        # Open the tar file from the file-like object
+        with tarfile.open(fileobj=file_like_object) as tar:
+            # List the members of the tar file
+            members = tar.getnames()
+            logger.debug(f"Tar archive members: {members}")
 
-            extracted_file_path = os.path.join(tmpdirname, container_results_path.lstrip("/"))
-            with open(extracted_file_path, "r") as f:
-                eval_results = json.load(f)
+            # Try to find the evaluation_results.json file in the tar archive
+            eval_results_file = None
+            for member in members:
+                if member.endswith('evaluation_results.json'):
+                    eval_results_file = tar.extractfile(member)
+                    break
+
+            if eval_results_file is None:
+                raise Exception("Evaluation results file not found in tar archive")
+
+            # Read and parse the evaluation results
+            eval_results_content = eval_results_file.read().decode('utf-8')
+            eval_results = json.loads(eval_results_content)
 
         container.remove()
         return EvaluationResult(**eval_results)
