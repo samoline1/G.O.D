@@ -11,7 +11,7 @@ OUTPUT_DIR = "./core/outputs/"
 CONFIG_TEMPLATE_PATH = CONFIG_DIR + 'base.yml'
 VALI_CONFIG_PATH = "validator/test_axolotl.yml"  
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
-
+WANDB_TOKEN = os.getenv("WANDB_TOKEN")
 
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
 
