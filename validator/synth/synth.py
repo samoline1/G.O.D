@@ -6,7 +6,7 @@ from datasets import load_dataset
 from core.models.utility_models import Message, Role, Prompts
 from fiber.logging_utils import get_logger
 import asyncio
-from validator.constants import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, SYNTH_GEN_BATCH_SIZE, SYNTH_MODEL_TEMPERATURE, SYNTH_MODEL
+from validator.constants import PROMPT_PATH, ADDITIONAL_SYNTH_DATA_PERCENTAGE, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, SYNTH_GEN_BATCH_SIZE, SYNTH_MODEL_TEMPERATURE, SYNTH_MODEL
 
 logger = get_logger(__name__)
 
@@ -20,7 +20,7 @@ def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> 
     logger.info(f"Dataset: {dataset}")
     train_dataset = dataset['train']
     train_dataset = train_dataset.remove_columns([col for col in train_dataset.column_names if col not in columns_to_sample])
-    num_samples = int(train_dataset.num_rows * PERCENTAGE_SYNTH)
+    num_samples = int(train_dataset.num_rows * ADDITIONAL_SYNTH_DATA_PERCENTAGE)
     logger.info(f"Sampling {num_samples} samples from {dataset_name}")
     sampled_data = train_dataset.shuffle(seed=42).select(range(num_samples))
     sampled_data_list = [sample for sample in sampled_data]
