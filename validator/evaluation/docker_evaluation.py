@@ -7,6 +7,7 @@ from core.models.payload_models import DatasetType, CustomDatasetType, FileForma
 from core import constants as cst
 from fiber.logging_utils import get_logger
 from core.models.utility_models import DatasetType, CustomDatasetType
+from typing import Union
 
 logger = get_logger(__name__)
 
