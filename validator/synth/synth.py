@@ -6,7 +6,7 @@ from datasets import load_dataset
 from core.models.utility_models import Message, Role, Prompts
 from fiber.logging_utils import get_logger
 import asyncio
-from validator.constants import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, SYNTH_BATCH_SIZE, SYNTH_TEMPERATURE, SYNTH_MODEL
+from validator.constants import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, SYNTH_GEN_BATCH_SIZE, SYNTH_MODEL_TEMPERATURE, SYNTH_MODEL
 
 logger = get_logger(__name__)
 
@@ -78,7 +78,7 @@ async def generate_synthetic_dataset(dataset_name: str, columns_to_sample: List[
         payload = {
             "messages": [message.dict() for message in messages],
             "model": SYNTH_MODEL,
-            "temperature": SYNTH_TEMPERATURE,
+            "temperature": SYNTH_MODEL_TEMPERATURE,
         }
         try:
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
@@ -91,8 +91,8 @@ async def generate_synthetic_dataset(dataset_name: str, columns_to_sample: List[
             logger.error(f"Error generating synthetic data point: {str(e)}")
         return None  # Return None if there's an error or invalid data
 
-    for i in range(0, len(sampled_data), SYNTH_BATCH_SIZE):
-        batch = sampled_data[i:i + SYNTH_BATCH_SIZE]
+    for i in range(0, len(sampled_data), SYNTH_GEN_BATCH_SIZE):
+        batch = sampled_data[i:i + SYNTH_GEN_BATCH_SIZE]
         tasks = [process_row(row) for row in batch]
         results = await asyncio.gather(*tasks)
         logger.info(f"Additional synthetic data point example: {results[0]}")
