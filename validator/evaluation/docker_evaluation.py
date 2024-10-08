@@ -58,6 +58,10 @@ def run_evaluation_docker(
         if result["StatusCode"] != 0:
             raise Exception(f"Container exited with status {result['StatusCode']}")
 
+
+        # Confession, this is a bit of an llm hack, I had issues pulling from the path directly and 
+        # llm said this was a better solution and faster ... it works so llm knows best
+        # TODO: come back to this and make it more readible / actually understand it
         tar_stream, _ = container.get_archive(cst.CONTAINER_EVAL_RESULTS_PATH)
 
         file_like_object = io.BytesIO()
