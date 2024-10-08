@@ -16,15 +16,10 @@ def load_prompts() -> Prompts:
     return Prompts(**prompts_dict)
 
 def load_and_sample_dataset(dataset_name: str) -> List[dict]:
-    try:
-        dataset = load_dataset("csv", data_files=f"{dataset_name}/prompts.csv")
-        dataset = dataset['train']
-        num_samples = max(1, int(len(dataset) * PERCENTAGE_SYNTH))  
-        sampled_data = dataset.shuffle(seed=42).select(range(num_samples))
-        return sampled_data
-    except Exception as e:
-        logger.error(f"Error loading dataset '{dataset_name}': {e}")
-        raise
+    dataset = load_dataset(dataset_name)
+    num_samples = int(len(dataset) * PERCENTAGE_SYNTH)
+    sampled_data = random.sample(list(dataset), num_samples)
+    return sampled_data
 
 async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> str:
     headers = {
