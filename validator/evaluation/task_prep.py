@@ -63,5 +63,5 @@ def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str
         combined_test_dataset = test_dataset
 
     upload_train_to_hf(train_dataset, repo_name, cst.HF_TOKEN)
-
-    # Save test dataset (with synthetic data) somewhere is the final step here for evaluation 
+    # Save test dataset (with synthetic data) somewhere is the final step here for evaluation
+    return combined_test_dataset
