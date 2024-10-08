@@ -18,12 +18,19 @@ def load_prompts() -> Prompts:
 def load_and_sample_dataset(dataset_name: str) -> List[dict]:
     dataset = load_dataset(dataset_name)
     logger.info(f"Dataset: {dataset}")
-    logger.info(f"Loaded {len(dataset)} samples from {dataset_name}")
-    num_samples = int(dataset.num_rows * PERCENTAGE_SYNTH)
+    
+    train_dataset = dataset['train']
+    logger.info(f"Loaded {train_dataset.num_rows} samples from {dataset_name}")
+    
+    num_samples = int(train_dataset.num_rows * PERCENTAGE_SYNTH)
     logger.info(f"Sampling {num_samples} samples from {dataset_name}")
-    sampled_data = random.sample(list(dataset), num_samples)
-    logger.info(f"Loaded {len(sampled_data)} samples from {dataset_name}")
-    return sampled_data
+    
+    sampled_data = train_dataset.shuffle(seed=42).select(range(num_samples))
+    
+    sampled_data_list = [sample for sample in sampled_data]
+    
+    logger.info(f"Loaded {len(sampled_data_list)} samples from {dataset_name}")
+    return sampled_data_list
 
 async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> str:
     headers = {
