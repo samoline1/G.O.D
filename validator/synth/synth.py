@@ -11,7 +11,6 @@ from core.constants import SYNTH_BATCH_SIZE, SYNTH_TEMPERATURE, SYNTH_MODEL
 
 logger = get_logger(__name__)
 
-
 def load_prompts() -> Prompts:
     with open(PROMPT_PATH, 'r') as file:
         prompts_dict = yaml.safe_load(file)
