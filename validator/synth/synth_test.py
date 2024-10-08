@@ -1,5 +1,5 @@
 import asyncio
-from synth import generate_synthetic_dataset
+from validator.synth.synth import generate_synthetic_dataset
 
 async def main():
     dataset_name = "mhenrichsen/alpaca_2k_test"
