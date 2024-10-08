@@ -1,27 +1,23 @@
-from functools import partial
 from fastapi import Depends, HTTPException
 
-from fiber.miner.security.encryption import decrypt_general_payload
 from core.models import payload_models
 from fastapi.routing import APIRouter
 from fiber.logging_utils import get_logger
 
 from core.models.payload_models import JobStatusResponse, TrainResponse
 from core.models.utility_models import FileFormat, JobStatus
-from data.dataset_validator import validate_dataset
+from core.utils import validate_dataset
 from fiber.miner.core.configuration import Config
-from fiber.miner.dependencies import blacklist_low_stake, get_config, verify_request
+from fiber.miner.dependencies import get_config
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
-from mining.job_handler import create_job
+from miner.logic.job_handler import create_job
 
 logger = get_logger(__name__)
 
 
 async def tune_model(
-    decrypted_payload: payload_models.TrainRequest = Depends(
-        partial(decrypt_general_payload, payload_models.TrainRequest)
-    ),
+    decrypted_payload: payload_models.TrainRequest,
     config: Config = Depends(get_config),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
@@ -55,10 +51,7 @@ async def tune_model(
 
 
 async def get_job_status(
-    decrypted_payload: payload_models.JobStatusPayload = Depends(
-        partial(decrypt_general_payload, payload_models.JobStatusPayload)
-    ),
-    config: Config = Depends(get_config),
+    decrypted_payload: payload_models.JobStatusPayload,
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     status = worker_config.trainer.get_status(decrypted_payload.job_id)
@@ -75,7 +68,6 @@ def factory_router() -> APIRouter:
         tune_model,
         tags=["Subnet"],
         methods=["POST"],
-        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
         response_model=TrainResponse,
     )
     router.add_api_route(
@@ -83,7 +75,6 @@ def factory_router() -> APIRouter:
         get_job_status,
         tags=["Subnet"],
         methods=["GET"],
-        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
         response_model=JobStatusResponse,
     )
     return router

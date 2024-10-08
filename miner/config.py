@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from typing import TypeVar
 from pydantic import BaseModel
 
-from mining.training_worker import TrainingWorker
+from miner.logic.training_worker import TrainingWorker
 
 load_dotenv()
 

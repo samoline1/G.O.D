@@ -38,11 +38,10 @@ class JobStatusResponse(BaseModel):
     status: JobStatus
 
 
-
 class EvaluationRequest(TrainRequest):
     original_model: str
 
-
-class EvaluationResponse(BaseModel):
+class EvaluationResult(BaseModel):
     is_finetune: bool
-    eval_results: dict[str, Any]
+    eval_loss: float
+    perplexity: float

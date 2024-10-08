@@ -30,11 +30,10 @@ tasks:
   dev_setup:
     cmds:
       - docker compose --env-file .vali.env -f docker-compose.yml -f docker-compose.dev.yml --profile entry_node_profile up -d --build --scale entry_node=0 --scale query_node=0 --scale control_node=0 --scale weight_setter=0
-      # Now use control_node_dev etc
 
   m1_dev:
     cmds:
-      - ENV=DEV uvicorn miner.server:app --reload --host 0.0.0.0 --port 4001 --env-file .1.env --log-level debug
+      - ENV=DEV uvicorn miner.server:app --reload --host 0.0.0.0 --port 7999 --env-file .1.env --log-level debug
 
   m2_dev:
     cmds:

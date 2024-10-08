@@ -27,6 +27,7 @@ Starting point snr
    ```bash
    export HUGGINGFACE_TOKEN=<your_huggingface_token>
    ```
+   # NOTE: need a nicer error if this is not set
 
 I think I covered everything in the requirements - but honestly can't remember - might need a couple more bits, the errors will guide you. 
 
@@ -74,7 +75,7 @@ The train endpoint allows you to initiate a fine-tuning job. Takes a dataset, a 
 Example request:
 
 ```bash
-       curl -X POST http://94.156.8.58:8000/train/ \
+      curl -X POST http://localhost:7999/train/ \
      -H "Content-Type: application/json" \
      -d '{
        "dataset": "mhenrichsen/alpaca_2k_test",

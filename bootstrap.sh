@@ -65,6 +65,42 @@ fi
 
 chown -R $SUDO_USER:$SUDO_USER $HOME/.local
 
+# nvidia drivers
+################################################################################
+echo_ checking for nvidia drivers
+if ! [[ $(which nvidia-smi) ]]; then
+  echo_ nvidia drivers were not found, installing...
+
+  apt purge nvidia-*
+  add-apt-repository -y ppa:graphics-drivers/ppa
+  apt update -qq
+  apt-mark unhold nvidia* libnvidia*
+  apt install -y libnvidia-common-$NVIDIA_DRIVER_VERSION libnvidia-gl-$NVIDIA_DRIVER_VERSION nvidia-driver-$NVIDIA_DRIVER_VERSION
+  dpkg-query -W --showformat='${Package} ${Status}\n' | grep -v deinstall | awk '{ print $1 }' | grep -E 'nvidia.*-[0-9]+$' | xargs -r -L 1 apt-mark hold
+
+  # signal to the script that it _should_ reboot the server once done.
+  REBOOT_REQUIRED=1
+fi
+
+
+# nvidia/cuda/container-toolkit
+################################################################################
+echo_ checking for the nvidia container toolkit
+if ! [[ $(command nvidia-ctk) ]]; then
+  echo_ the nvidia container toolkit was not found, installing...
+  wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb
+  dpkg -i cuda-keyring_1.1-1_all.deb
+  rm cuda-keyring_1.1-1_all.deb
+
+  apt update -qq
+  apt-mark unhold nvidia* libnvidia*
+  apt install -y nvidia-container-toolkit
+  dpkg-query -W --showformat='${Package} ${Status}\n' | grep -v deinstall | awk '{ print $1 }' | grep -E 'nvidia.*-[0-9]+$' | xargs -r -L 1 apt-mark hold
+fi
+
+nvidia-ctk runtime configure --runtime=docker
+systemctl restart docker
+
 
 # do not upgrade openssh server whilst installing
 ################################################################################
