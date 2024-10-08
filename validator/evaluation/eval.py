@@ -14,6 +14,7 @@ from core.models.utility_models import CustomDatasetType, DatasetType, FileForma
 from fiber.logging_utils import get_logger
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
+from validator.evaluation.utils import model_is_a_finetune
 
 logger = get_logger(__name__)
 
@@ -220,6 +221,10 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     finetuned_model = AutoModelForCausalLM.from_pretrained(model).to(device)
     tokenizer = AutoTokenizer.from_pretrained(original_model)
+
+    # Determine if the model is a fine-tune
+    is_finetune = model_is_a_finetune(original_model, finetuned_model)
+
     results = evaluate_finetuned_model(
         dataset_name=dataset,
         finetuned_model=finetuned_model,
@@ -227,6 +232,9 @@ def main():
         file_format=file_format,
         tokenizer=tokenizer
     )
+
+    # Include is_finetune in the results
+    results['is_finetune'] = is_finetune
 
     output_file = "/app/evaluation_results.json"
     with open(output_file, "w") as f:
