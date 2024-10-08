@@ -25,7 +25,6 @@ def _load_and_update_evaluation_config(
     file_format: FileFormat,
     config_path: str,
 ) -> DictDefault:
-    """Load and update the configuration for model evaluation."""
     with open(config_path, "r") as file:
         config_dict = yaml.safe_load(file)
 
@@ -42,7 +41,6 @@ def _load_and_update_evaluation_config(
 def _load_evaluation_dataset(
     evaluation_config: DictDefault, tokenizer: AutoTokenizer
 ) -> Dataset:
-    """Load the evaluation dataset."""
     prepared_path = Path(evaluation_config.output_dir) / "prepared"
     eval_dataset, _ = load_tokenized_prepared_datasets(
         tokenizer, evaluation_config, prepared_path
@@ -56,7 +54,6 @@ def _log_dataset_and_model_info(
     language_model: AutoModelForCausalLM,
     tokenizer: AutoTokenizer,
 ) -> None:
-    """Log information about the dataset and model."""
     logger.info(f"Eval dataset sample: {eval_dataset[0]}")
     logger.info(f"Model type: {type(language_model)}")
     logger.info(f"Model config: {language_model.config}")
@@ -67,7 +64,6 @@ def _log_dataset_and_model_info(
 def _create_evaluation_dataloader(
     eval_dataset: Dataset, evaluation_config: DictDefault, tokenizer: AutoTokenizer
 ) -> DataLoader:
-    """Create a DataLoader for the evaluation dataset."""
     return DataLoader(
         eval_dataset,
         batch_size=evaluation_config.micro_batch_size,
@@ -79,7 +75,6 @@ def _create_evaluation_dataloader(
 def _collate_evaluation_batch(
     batch: list[dict[str, list[int]]], tokenizer: AutoTokenizer
 ) -> dict[str, torch.Tensor]:
-    """Collate function for batching dataset items."""
     input_ids = [torch.tensor(item["input_ids"]) for item in batch]
     attention_mask = [torch.tensor(item["attention_mask"]) for item in batch]
     labels = [torch.tensor(item["labels"]) for item in batch]
@@ -98,7 +93,6 @@ def _process_evaluation_batches(
     eval_dataloader: DataLoader,
     device: torch.device,
 ) -> tuple[float, int]:
-    """Process evaluation batches and compute total loss."""
     total_loss = 0.0
     num_batches = 0
 
@@ -116,7 +110,6 @@ def _process_evaluation_batches(
 def _compute_batch_loss(
     language_model: AutoModelForCausalLM, batch: dict, device: torch.device
 ) -> float:
-    """Compute the loss for a single batch."""
     input_ids = batch["input_ids"].to(device)
     attention_mask = batch["attention_mask"].to(device)
     labels = batch["labels"].to(device)
@@ -139,7 +132,6 @@ def _compute_batch_loss(
 def _calculate_evaluation_metrics(
     total_loss: float, num_batches: int
 ) -> dict[str, float]:
-    """Calculate evaluation metrics based on total loss and number of batches."""
     if num_batches > 0:
         average_loss = total_loss / num_batches
         logger.info(f"Average loss: {average_loss}")
@@ -160,7 +152,6 @@ def evaluate_language_model_loss(
     language_model: AutoModelForCausalLM,
     tokenizer: AutoTokenizer,
 ) -> dict[str, float]:
-    """Evaluate the loss of a language model on a test set."""
     evaluation_config.tokenizer_config = tokenizer.name_or_path
     logger.info(f"Config: {evaluation_config}")
 
@@ -193,7 +184,6 @@ def evaluate_finetuned_model(
     file_format: FileFormat,
     tokenizer: AutoTokenizer,
 ) -> dict[str, float]:
-    """Evaluate a finetuned language model on a specific dataset."""
     evaluation_config = _load_and_update_evaluation_config(
         dataset_name, finetuned_model, dataset_type, file_format, cst.VALI_CONFIG_PATH
     )
@@ -222,7 +212,6 @@ def main():
     finetuned_model = AutoModelForCausalLM.from_pretrained(model).to(device)
     tokenizer = AutoTokenizer.from_pretrained(original_model)
 
-    # Determine if the model is a fine-tune
     is_finetune = model_is_a_finetune(original_model, finetuned_model)
 
     results = evaluate_finetuned_model(
@@ -233,10 +222,9 @@ def main():
         tokenizer=tokenizer
     )
 
-    # Include is_finetune in the results
     results['is_finetune'] = is_finetune
 
-    output_file = "/app/evaluation_results.json"
+    output_file = cst.CONTAINER_EVAL_RESULTS_PATH
     with open(output_file, "w") as f:
         json.dump(results, f)
 

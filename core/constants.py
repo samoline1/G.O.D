@@ -16,3 +16,5 @@ HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 logger.debug(f"HUGGINGFACE_TOKEN: {HUGGINGFACE_TOKEN}")
 
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
+
+CONTAINER_EVAL_RESULTS_PATH = "/app/evaluation_results.json"
