@@ -7,6 +7,7 @@ from datasets import load_dataset
 import random
 from core.models.utility_models import Message, Role, Prompts
 from fiber.logging_utils import get_logger
+import asyncio
 logger = get_logger(__name__)
 
 
@@ -15,11 +16,12 @@ def load_prompts() -> Prompts:
         prompts_dict = yaml.safe_load(file)
     return Prompts(**prompts_dict)
 
-def load_and_sample_dataset(dataset_name: str) -> List[dict]:
+def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> List[dict]:
     dataset = load_dataset(dataset_name)
     logger.info(f"Dataset: {dataset}")
     
     train_dataset = dataset['train']
+    train_dataset = train_dataset.remove_columns([col for col in train_dataset.column_names if col not in columns_to_sample])
     
     num_samples = int(train_dataset.num_rows * PERCENTAGE_SYNTH)
     logger.info(f"Sampling {num_samples} samples from {dataset_name}")
@@ -70,14 +72,15 @@ def create_messages_from_row(row: dict, prompts: Prompts) -> List[Message]:
 def check_the_synthetic_data(synthetic_data_point: dict, original_data_columns: List[str]) -> bool:
     return synthetic_data_point.keys() == original_data_columns
 
-async def generate_synthetic_dataset(dataset_name: str) -> List[dict]:
+async def generate_synthetic_dataset(dataset_name: str, columns_to_sample: List[str]) -> List[dict]:
     prompts = load_prompts()
     logger.info(f"Loading and sampling dataset: {dataset_name}")
-    sampled_data = load_and_sample_dataset(dataset_name)
+    sampled_data = load_and_sample_dataset(dataset_name, columns_to_sample)
     logger.info(f"Creating synthetic dataset")
     synthetic_dataset = []
+    batch_size = 10  # Number of parallel tasks
 
-    for row in sampled_data:
+    async def process_row(row):
         messages = create_messages_from_row(row, prompts)
         payload = {
             "messages": [message.dict() for message in messages],
@@ -88,12 +91,19 @@ async def generate_synthetic_dataset(dataset_name: str) -> List[dict]:
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
             json_synthetic_data_point = json.loads(synthetic_data_point)
             if check_the_synthetic_data(json_synthetic_data_point, row.keys()):
-                synthetic_dataset.append(json_synthetic_data_point)
-                logger.info(f"Synthetic data point added: {json_synthetic_data_point}")
+                return json_synthetic_data_point
         except json.JSONDecodeError:
-            print(f"Error decoding synthetic data point: {synthetic_data_point}")
+            logger.error(f"Error decoding synthetic data point: {synthetic_data_point}")
         except Exception as e:
-            print(f"Error generating synthetic data point: {str(e)}")
+            logger.error(f"Error generating synthetic data point: {str(e)}")
+        return None  # Return None if there's an error or invalid data
+
+    for i in range(0, len(sampled_data), batch_size):
+        batch = sampled_data[i:i + batch_size]
+        tasks = [process_row(row) for row in batch]
+        results = await asyncio.gather(*tasks)
+        logger.info(f"Additional synthetic data points: {results}")
+        synthetic_dataset.extend([result for result in results if result is not None])
 
     return synthetic_dataset
 
