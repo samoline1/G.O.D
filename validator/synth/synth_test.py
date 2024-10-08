@@ -4,7 +4,7 @@ from fiber.logging_utils import get_logger
 logger = get_logger(__name__)
 
 async def main():
-    dataset_name = "stanfordnlp/imdb"
+    dataset_name = "mhenrichsen/alpaca_2k_test"
     
     synthetic_dataset = await generate_synthetic_dataset(dataset_name)
     
