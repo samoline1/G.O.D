@@ -228,7 +228,13 @@ def main():
         tokenizer=tokenizer
     )
 
-    print(json.dumps(results))
+    output_file = "/app/evaluation_results.json"
+    with open(output_file, "w") as f:
+        json.dump(results, f)
+
+    logger.info(f"Evaluation results saved to {output_file}")
+
+    logger.info(json.dumps(results))
 
 if __name__ == "__main__":
     main()
