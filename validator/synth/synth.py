@@ -26,8 +26,6 @@ def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> 
     logger.info(f"Sampling {num_samples} samples from {dataset_name}")
     sampled_data = train_dataset.shuffle(seed=42).select(range(num_samples))
     sampled_data_list = [sample for sample in sampled_data]
-    logger.info(f"Sampled data: {sampled_data_list[0]}")
-    
     return sampled_data_list
 
 async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> str:
@@ -99,7 +97,7 @@ async def generate_synthetic_dataset(dataset_name: str, columns_to_sample: List[
         batch = sampled_data[i:i + SYNTH_BATCH_SIZE]
         tasks = [process_row(row) for row in batch]
         results = await asyncio.gather(*tasks)
-        logger.info(f"Additional synthetic data points: {results}")
+        logger.info(f"Additional synthetic data point example: {results[0]}")
         synthetic_dataset.extend([result for result in results if result is not None])
 
     return synthetic_dataset
