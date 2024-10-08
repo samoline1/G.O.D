@@ -2,12 +2,11 @@ import json
 from typing import Any, List, AsyncGenerator
 import httpx
 import yaml
-from core.constants import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN
 from datasets import load_dataset
 from core.models.utility_models import Message, Role, Prompts
 from fiber.logging_utils import get_logger
 import asyncio
-from core.constants import SYNTH_BATCH_SIZE, SYNTH_TEMPERATURE, SYNTH_MODEL
+from validator.constants import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, SYNTH_BATCH_SIZE, SYNTH_TEMPERATURE, SYNTH_MODEL
 
 logger = get_logger(__name__)
 

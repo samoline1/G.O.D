@@ -2,10 +2,10 @@ import docker
 import json
 import io
 import tarfile
-from core.models.payload_models import DatasetType, CustomDatasetType, FileFormat, EvaluationResult
-from core import constants as cst
+from core.models.payload_models import EvaluationResult
+from validator import constants as cst
 from fiber.logging_utils import get_logger
-from core.models.utility_models import DatasetType, CustomDatasetType
+from core.models.utility_models import DatasetType, CustomDatasetType, FileFormat
 from typing import Union
 from core.docker_utils import stream_logs  
 import threading
