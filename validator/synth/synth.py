@@ -89,6 +89,7 @@ async def generate_synthetic_dataset(dataset_name: str) -> List[dict]:
             json_synthetic_data_point = json.loads(synthetic_data_point)
             if check_the_synthetic_data(json_synthetic_data_point, row.keys()):
                 synthetic_dataset.append(json_synthetic_data_point)
+                logger.info(f"Synthetic data point added: {json_synthetic_data_point}")
         except json.JSONDecodeError:
             print(f"Error decoding synthetic data point: {synthetic_data_point}")
         except Exception as e:
