@@ -7,6 +7,8 @@ from core import constants as cst
 from fiber.logging_utils import get_logger
 from core.models.utility_models import DatasetType, CustomDatasetType
 from typing import Union
+from core.docker_utils import stream_logs  
+import threading
 
 logger = get_logger(__name__)
 
@@ -46,11 +48,14 @@ def run_evaluation_docker(
             detach=True,
         )
 
+        log_thread = threading.Thread(target=stream_logs, args=(container,))
+        log_thread.start()
+
         result = container.wait()
 
+        log_thread.join()
+
         if result["StatusCode"] != 0:
-            logs = container.logs().decode('utf-8')
-            logger.error(f"Container exited with status {result['StatusCode']}: {logs}")
             raise Exception(f"Container exited with status {result['StatusCode']}")
 
         tar_stream, _ = container.get_archive(cst.CONTAINER_EVAL_RESULTS_PATH)
@@ -60,16 +65,14 @@ def run_evaluation_docker(
             file_like_object.write(chunk)
         file_like_object.seek(0)
 
-        # LLM Wrote me, I work, apparently optimised for speed, note to come back to
         with tarfile.open(fileobj=file_like_object) as tar:
-            # List the members of the tar file
             members = tar.getnames()
             logger.debug(f"Tar archive members: {members}")
 
             eval_results_file = None
-            for member in members:
-                if member.endswith('evaluation_results.json'):
-                    eval_results_file = tar.extractfile(member)
+            for member_info in tar.getmembers():
+                if member_info.name.endswith('evaluation_results.json'):
+                    eval_results_file = tar.extractfile(member_info)
                     break
 
             if eval_results_file is None:
@@ -85,4 +88,3 @@ def run_evaluation_docker(
         raise Exception(f"Failed to retrieve evaluation results: {str(e)}")
     finally:
         client.close()
-

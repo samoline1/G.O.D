@@ -6,6 +6,7 @@ from core.models.utility_models import Job, DatasetType, FileFormat, CustomDatas
 from core import constants as cst
 from core.config.config_handler import create_dataset_entry, save_config, update_model_info
 from fiber.logging_utils import get_logger
+from core.docker_utils import stream_logs  
 
 logger = get_logger(__name__)
 
@@ -15,6 +16,9 @@ def _load_and_modify_config(
     dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
 ) -> dict:
+    """
+    Loads the config template and modifies it to create a new job config.
+    """
     with open(cst.CONFIG_TEMPLATE_PATH, "r") as file:
         config = yaml.safe_load(file)
 
@@ -83,7 +87,8 @@ def start_tuning_container(job: Job):
             tty=True,
         )
 
-        _stream_logs(container)
+        # Use the shared stream_logs function
+        stream_logs(container)
 
         result = container.wait()
 
@@ -99,17 +104,3 @@ def start_tuning_container(job: Job):
     finally:
         if "container" in locals():
             container.remove(force=True)
-
-def _stream_logs(container):
-    log_buffer = ""
-    for log_chunk in container.logs(stream=True, follow=True):
-        try:
-            log_buffer += log_chunk.decode("utf-8", errors="replace")
-            while "\n" in log_buffer:
-                line, log_buffer = log_buffer.split("\n", 1)
-                logger.info(line.strip())
-        except Exception as e:
-            logger.error(f"Error processing log: {e}")
-
-    if log_buffer:
-        logger.info(log_buffer.strip())
