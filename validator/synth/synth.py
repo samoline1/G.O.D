@@ -66,6 +66,10 @@ def create_messages_from_row(row: dict, prompts: Prompts) -> List[Message]:
     messages.append(user_message)
     return messages
 
+
+def check_the_synthetic_data(synthetic_data_point: dict, original_data_columns: List[str]) -> bool:
+    return synthetic_data_point.keys() == original_data_columns
+
 async def generate_synthetic_dataset(dataset_name: str) -> List[dict]:
     prompts = load_prompts()
     logger.info(f"Loading and sampling dataset: {dataset_name}")
@@ -82,8 +86,9 @@ async def generate_synthetic_dataset(dataset_name: str) -> List[dict]:
         }
         try:
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
-            logger.info(f"Synthetic data point: {synthetic_data_point}")
-            synthetic_dataset.append(json.loads(synthetic_data_point))
+            json_synthetic_data_point = json.loads(synthetic_data_point)
+            if check_the_synthetic_data(json_synthetic_data_point, row.keys()):
+                synthetic_dataset.append(json_synthetic_data_point)
         except json.JSONDecodeError:
             print(f"Error decoding synthetic data point: {synthetic_data_point}")
         except Exception as e:
