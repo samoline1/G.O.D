@@ -6,6 +6,9 @@ from core.constants import PROMPT_PATH, PERCENTAGE_SYNTH, PROMPT_GEN_ENDPOINT, P
 from datasets import load_dataset
 import random
 from core.models.utility_models import Message, Role, Prompts
+from fiber.logging_utils import get_logger
+logger = get_logger(__name__)
+
 
 def load_prompts() -> Prompts:
     with open(PROMPT_PATH, 'r') as file:
@@ -56,7 +59,9 @@ def create_messages_from_row(row: dict, prompts: Prompts) -> List[Message]:
 
 async def generate_synthetic_dataset(dataset_name: str) -> List[dict]:
     prompts = load_prompts()
+    logger.info(f"Loading and sampling dataset: {dataset_name}")
     sampled_data = load_and_sample_dataset(dataset_name)
+    logger.info(f"Creating synthetic dataset")
     synthetic_dataset = []
 
     for row in sampled_data:
