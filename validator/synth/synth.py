@@ -20,7 +20,6 @@ def load_and_sample_dataset(dataset_name: str) -> List[dict]:
     logger.info(f"Dataset: {dataset}")
     
     train_dataset = dataset['train']
-    logger.info(f"Loaded {train_dataset.num_rows} samples from {dataset_name}")
     
     num_samples = int(train_dataset.num_rows * PERCENTAGE_SYNTH)
     logger.info(f"Sampling {num_samples} samples from {dataset_name}")
@@ -29,7 +28,6 @@ def load_and_sample_dataset(dataset_name: str) -> List[dict]:
     
     sampled_data_list = [sample for sample in sampled_data]
     
-    logger.info(f"Loaded {len(sampled_data_list)} samples from {dataset_name}")
     return sampled_data_list
 
 async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> str:
@@ -84,6 +82,7 @@ async def generate_synthetic_dataset(dataset_name: str) -> List[dict]:
         }
         try:
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
+            logger.info(f"Synthetic data point: {synthetic_data_point}")
             synthetic_dataset.append(json.loads(synthetic_data_point))
         except json.JSONDecodeError:
             print(f"Error decoding synthetic data point: {synthetic_data_point}")
