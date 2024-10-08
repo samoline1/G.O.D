@@ -20,5 +20,5 @@ CONTAINER_EVAL_RESULTS_PATH = "/app/evaluation_results.json"
 
 PROMPT_GEN_ENDPOINT = "https://api.corcel.io/v1/chat/completions"
 PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
-PROMPT_PATH = "validator/prompts.yaml"
+PROMPT_PATH = "validator/prompts.yml"
 PERCENTAGE_SYNTH = 0.1 
