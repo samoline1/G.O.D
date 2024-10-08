@@ -15,6 +15,7 @@ def _load_and_modify_config(
     model: str,
     dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
+    job_id: str,
 ) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
@@ -27,7 +28,7 @@ def _load_and_modify_config(
     dataset_entry = create_dataset_entry(dataset, dataset_type, file_format)
     config["datasets"].append(dataset_entry)
 
-    update_model_info(config, model)
+    update_model_info(config, model, job_id)
     config["mlflow_experiment_name"] = dataset
 
     return config
@@ -44,7 +45,7 @@ def start_tuning_container(job: Job):
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
 
     config = _load_and_modify_config(
-        job.dataset, job.model, job.dataset_type, job.file_format
+        job.dataset, job.model, job.dataset_type, job.file_format, job.job_id
     )
     save_config(config, config_path)
 
