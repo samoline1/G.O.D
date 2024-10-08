@@ -19,7 +19,7 @@ def load_and_sample_dataset(dataset_name: str) -> List[dict]:
     dataset = load_dataset(dataset_name)
     logger.info(f"Dataset: {dataset}")
     logger.info(f"Loaded {len(dataset)} samples from {dataset_name}")
-    num_samples = int(len(dataset) * PERCENTAGE_SYNTH)
+    num_samples = int(dataset.num_rows * PERCENTAGE_SYNTH)
     logger.info(f"Sampling {num_samples} samples from {dataset_name}")
     sampled_data = random.sample(list(dataset), num_samples)
     logger.info(f"Loaded {len(sampled_data)} samples from {dataset_name}")
