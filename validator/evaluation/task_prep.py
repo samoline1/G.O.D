@@ -1,6 +1,5 @@
 from typing import List
-from datasets import load_dataset, DatasetDict, Dataset
-import datasets
+from datasets import load_dataset, DatasetDict, Dataset, concatenate_datasets
 from fiber.logging_utils import get_logger
 from validator.synth.synth import generate_synthetic_dataset
 import validator.constants as cst
@@ -14,7 +13,7 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     dataset = load_dataset(dataset_name)
     
     if isinstance(dataset, DatasetDict):
-        combined_dataset = datasets.concatenate_datasets([split for split in dataset.values()])
+        combined_dataset = concatenate_datasets([split for split in dataset.values()])
     else:
         combined_dataset = dataset
 
@@ -50,7 +49,7 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
     if cst.GET_SYNTH_DATA:
         logger.info("Generating additional synthetic data")
         synthetic_data = await get_additional_synth_data(test_dataset, columns_to_sample)
-        synthetic_dataset = datasets.Dataset.from_list(synthetic_data)
+        synthetic_dataset = Dataset.from_list(synthetic_data)
         logger.info("First 2 examples from original test dataset:")
         for i, example in enumerate(test_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
