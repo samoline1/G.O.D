@@ -53,12 +53,12 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
         logger.info("Generating additional synthetic data")
         synthetic_data = await get_additional_synth_data(test_dataset, columns_to_sample)
         synthetic_dataset = datasets.Dataset.from_list(synthetic_data)
-        logger.info("First 5 examples from original test dataset:")
-        for i, example in enumerate(test_dataset.select(range(5))):
+        logger.info("First 2 examples from original test dataset:")
+        for i, example in enumerate(test_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
             
-        logger.info("First 5 examples from synthetic dataset:")
-        for i, example in enumerate(synthetic_dataset.select(range(5))):
+        logger.info("First 2 examples from synthetic dataset:")
+        for i, example in enumerate(synthetic_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
     else:
         logger.info("Skipping synthetic data generation")
