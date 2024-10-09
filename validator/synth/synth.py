@@ -64,12 +64,10 @@ def create_messages_from_row(row: dict, prompts: Prompts) -> List[Message]:
 
 
 def check_the_synthetic_data(synthetic_data_point: dict, original_data_columns: List[str]) -> bool:
-    return synthetic_data_point.keys() == original_data_columns
+    return set(synthetic_data_point.keys()) == set(original_data_columns)
 
-async def generate_synthetic_dataset(dataset_name: str, columns_to_sample: List[str]) -> List[dict]:
+async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
     prompts = load_prompts()
-    logger.info(f"Loading and sampling dataset: {dataset_name}")
-    sampled_data = load_and_sample_dataset(dataset_name, columns_to_sample)
     logger.info(f"Creating synthetic dataset")
     synthetic_dataset = []
 
@@ -95,7 +93,8 @@ async def generate_synthetic_dataset(dataset_name: str, columns_to_sample: List[
         batch = sampled_data[i:i + SYNTH_GEN_BATCH_SIZE]
         tasks = [process_row(row) for row in batch]
         results = await asyncio.gather(*tasks)
-        logger.info(f"Additional synthetic data point example: {results[0]}")
+        if results:
+            logger.info(f"Additional synthetic data point example: {results[0]}")
         synthetic_dataset.extend([result for result in results if result is not None])
 
     return synthetic_dataset

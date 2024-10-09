@@ -4,7 +4,7 @@ from typing import List
 from datasets import load_dataset, DatasetDict, Dataset
 import datasets
 from fiber.logging_utils import get_logger
-from validator.synth.synth import generate_synthetic_data_from_examples
+from validator.synth.synth import generate_synthetic_dataset
 import validator.constants as cst
 
 logger = get_logger(__name__)
@@ -32,8 +32,9 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
     num_samples = min(cst.MAX_SYNTH_DATA_POINTS, int(len(dataset) * cst.ADDITIONAL_SYNTH_DATA_PERCENTAGE))
     logger.info(f"Generating {num_samples} additional synthetic data points")
     sampled_data = dataset.shuffle(seed=42).select(range(num_samples))
-
-    synthetic_data = await generate_synthetic_data_from_examples(sampled_data, columns_to_sample)
+    sampled_data = sampled_data.remove_columns([col for col in sampled_data.column_names if col not in columns_to_sample])
+    sampled_data_list = [sample for sample in sampled_data]
+    synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
 
 def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None) -> None:
@@ -42,15 +43,15 @@ def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None
     dataset_dict.push_to_hub(repo_name, token=token, private=True)
     logger.info("Upload complete")
 
-def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> Dataset:
+async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> Dataset:
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict['train']
     test_dataset = dataset_dict['test']
-
+    
     synthetic_data = []
     if cst.GET_SYNTH_DATA:
         logger.info("Generating additional synthetic data")
-        synthetic_data = asyncio.run(get_additional_synth_data(test_dataset, columns_to_sample))
+        synthetic_data = await get_additional_synth_data(test_dataset, columns_to_sample)
         if synthetic_data:
             synthetic_dataset = datasets.Dataset.from_list(synthetic_data)
             combined_test_dataset = datasets.concatenate_datasets([test_dataset, synthetic_dataset])
@@ -63,5 +64,4 @@ def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str
         combined_test_dataset = test_dataset
 
     upload_train_to_hf(train_dataset, repo_name, cst.HF_TOKEN)
-    # Save test dataset (with synthetic data) somewhere is the final step here for evaluation
     return combined_test_dataset
