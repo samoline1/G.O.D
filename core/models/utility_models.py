@@ -24,6 +24,12 @@ class JobStatus(str, Enum):
     FAILED = "Failed"
     NOT_FOUND = "Not Found"
 
+class TaskStatus(str, Enum):
+    CREATED = "Created"
+    RUNNING = "Running"
+    COMPLETED = "Completed"
+    FAILED = "Failed"
+    NOT_FOUND = "Not Found"
 
 class CustomDatasetType(BaseModel):
     system_prompt: str | None = None
@@ -35,7 +41,6 @@ class CustomDatasetType(BaseModel):
     format: str | None = None
     no_input_format: str | None = None
     field: str | None = None
-
 
 class Job(BaseModel):
     job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))

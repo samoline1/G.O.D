@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from core.utils import validate_dataset
-from core.models.utility_models import FileFormat
-from core.models.payload_models import EvaluationRequest, EvaluationResponse
+from core.models.utility_models import FileFormat, TaskStatus
+from core.models.payload_models import EvaluationRequest, EvaluationResponse, TaskRequest, TaskResponse
 from fiber.logging_utils import get_logger
 from validator.evaluation.docker_evaluation import run_evaluation_docker
+from validator.evaluation.task_prep import prepare_task
+import uuid
 
 logger = get_logger(__name__)
 
@@ -39,7 +41,16 @@ async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
         logger.error(f"Error during evaluation: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+async def create_task(request: TaskRequest) -> TaskResponse:
+    task_id = str(uuid.uuid4())
+    columns = [request.system, request.instruction, request.input, request.output]
+    test_dataset, synthetic_data = await prepare_task(request.dataset_name, columns, request.model_repo)
+    # create a job in the database
+
+    return TaskResponse(task_id=task_id, status=TaskStatus.CREATED)
+
 def factory():
     router = APIRouter()
     router.add_api_route("/evaluate/", evaluate_model, methods=["POST"])
+    router.add_api_route("/create_task/", create_task, methods=["POST"])
     return router

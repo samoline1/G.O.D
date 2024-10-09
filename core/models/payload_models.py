@@ -1,7 +1,7 @@
 from typing import Any
 from pydantic import BaseModel, Field
 
-from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat, JobStatus
+from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat, JobStatus, TaskStatus
 
 
 class CapacityResponse(BaseModel):
@@ -45,3 +45,17 @@ class EvaluationResult(BaseModel):
     is_finetune: bool
     eval_loss: float
     perplexity: float
+
+class TaskRequest(BaseModel):
+    dataset_name: str
+    system: str
+    instruction: str
+    input: str
+    output: str
+    model_repo: str
+    hours_to_complete: int
+
+class TaskResponse(BaseModel):
+    task_id: str
+    status: TaskStatus
+
