@@ -52,29 +52,16 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
     if cst.GET_SYNTH_DATA:
         logger.info("Generating additional synthetic data")
         synthetic_data = await get_additional_synth_data(test_dataset, columns_to_sample)
-        if synthetic_data:
-            logger.info(f"Synthetic data example: {synthetic_data[0]}")
-            if len(synthetic_data) > 1:
-                logger.info(f"Synthetic data example2: {synthetic_data[1]}")
-            synthetic_dataset = datasets.Dataset.from_list(synthetic_data)
-            combined_test_dataset = datasets.concatenate_datasets([test_dataset, synthetic_dataset])
-            logger.info(f"Combined test dataset size: {len(combined_test_dataset)}")
-            logger.info(f"Original test dataset size: {len(test_dataset)}, Synthetic data size: {len(synthetic_data)}")
+        synthetic_dataset = datasets.Dataset.from_list(synthetic_data)
+        logger.info("First 5 examples from original test dataset:")
+        for i, example in enumerate(test_dataset.select(range(5))):
+            logger.info(f"Example {i + 1}: {example}")
             
-            # Verify the combination
-            logger.info("First 5 examples from combined dataset:")
-            for i, example in enumerate(combined_test_dataset.select(range(5))):
-                logger.info(f"Example {i + 1}: {example}")
-            
-            logger.info("Last 5 examples from combined dataset:")
-            for i, example in enumerate(combined_test_dataset.select(range(len(combined_test_dataset)-5, len(combined_test_dataset)))):
-                logger.info(f"Example {i + 1}: {example}")
-        else:
-            combined_test_dataset = test_dataset
-            logger.warning("No synthetic data generated. Using original test dataset.")
+        logger.info("First 5 examples from synthetic dataset:")
+        for i, example in enumerate(synthetic_dataset.select(range(5))):
+            logger.info(f"Example {i + 1}: {example}")
     else:
         logger.info("Skipping synthetic data generation")
-        combined_test_dataset = test_dataset
 
     upload_train_to_hf(train_dataset, repo_name, cst.HUGGINGFACE_TOKEN)
-    return combined_test_dataset
+    return test_dataset, synthetic_data
