@@ -49,8 +49,13 @@ async def create_task(request: TaskRequest) -> TaskResponse:
 
     return TaskResponse(task_id=task_id, status=TaskStatus.CREATED)
 
+async def get_task_status(task_id: str) -> TaskResponse:
+    # get the task from the database
+    return TaskResponse(task_id=task_id, status=TaskStatus.RUNNING)
+
 def factory():
     router = APIRouter()
     router.add_api_route("/evaluate/", evaluate_model, methods=["POST"])
     router.add_api_route("/create_task/", create_task, methods=["POST"])
+    router.add_api_route("/get_task_status/", get_task_status, methods=["GET"])
     return router
