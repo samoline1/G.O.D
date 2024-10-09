@@ -43,8 +43,8 @@ async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
 
 async def create_task(request: TaskRequest) -> TaskResponse:
     task_id = str(uuid.uuid4())
-    columns = [request.system, request.instruction, request.input, request.output]
-    test_dataset, synthetic_data = await prepare_task(request.dataset_name, columns, request.model_repo)
+    columns = [request.system_col, request.instruction_col, request.input_col, request.output_col]
+    test_dataset, synthetic_data = await prepare_task(request.ds_repo, columns, request.model_repo)
     # create a job in the database
 
     return TaskResponse(task_id=task_id, status=TaskStatus.CREATED)

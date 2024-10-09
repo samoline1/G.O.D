@@ -47,11 +47,11 @@ class EvaluationResult(BaseModel):
     perplexity: float
 
 class TaskRequest(BaseModel):
-    dataset_name: str
-    system: str
-    instruction: str
-    input: str
-    output: str
+    ds_repo: str
+    system_col: str
+    instruction_col: str
+    input_col: str
+    output_col: str
     model_repo: str
     hours_to_complete: int
 
