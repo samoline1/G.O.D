@@ -63,5 +63,5 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
         logger.info("Skipping synthetic data generation")
         combined_test_dataset = test_dataset
 
-    upload_train_to_hf(train_dataset, repo_name, cst.HF_TOKEN)
+    upload_train_to_hf(train_dataset, repo_name, cst.HUGGINGFACE_TOKEN)
     return combined_test_dataset
