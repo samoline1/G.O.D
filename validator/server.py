@@ -47,11 +47,11 @@ async def create_task(request: TaskRequest) -> TaskResponse:
     test_dataset, synthetic_data = await prepare_task(request.ds_repo, columns, request.model_repo)
     # create a job in the database
 
-    return TaskResponse(task_id=task_id, status=TaskStatus.CREATED)
+    return TaskResponse(task_id=task_id, status=TaskStatus.PENDING)
 
 async def get_task_status(task_id: str) -> TaskResponse:
     # get the task from the database
-    return TaskResponse(task_id=task_id, status=TaskStatus.RUNNING)
+    return TaskResponse(task_id=task_id, status=TaskStatus.IDLE)
 
 def factory():
     router = APIRouter()

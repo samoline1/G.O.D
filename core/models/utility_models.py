@@ -25,11 +25,12 @@ class JobStatus(str, Enum):
     NOT_FOUND = "Not Found"
 
 class TaskStatus(str, Enum):
-    CREATED = "Created"
-    RUNNING = "Running"
-    COMPLETED = "Completed"
-    FAILED = "Failed"
-    NOT_FOUND = "Not Found"
+    PENDING = "pending"
+    IDLE = "idle"
+    SUCCESS = "success"
+    EVALUATING = "evaluating"
+    TRAINING = "training"
+    FAILURE = "failure"
 
 class CustomDatasetType(BaseModel):
     system_prompt: str | None = None
