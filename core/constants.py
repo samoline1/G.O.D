@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
+VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
 
 CONFIG_DIR = "./core/config/"
 OUTPUT_DIR = "./core/outputs/"
@@ -13,16 +14,3 @@ VALI_CONFIG_PATH = "validator/test_axolotl.yml"
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 WANDB_TOKEN = os.getenv("WANDB_TOKEN")
 
-VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
-
-CONTAINER_EVAL_RESULTS_PATH = "/app/evaluation_results.json"
-
-
-PROMPT_GEN_ENDPOINT = "https://api.corcel.io/v1/chat/completions"
-PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
-PROMPT_PATH = "validator/prompts.yml"
-PERCENTAGE_SYNTH = 0.1 
-
-SYNTH_BATCH_SIZE = 3
-SYNTH_TEMPERATURE = 0.3
-SYNTH_MODEL = "llama-3-1-8b"

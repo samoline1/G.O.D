@@ -58,5 +58,5 @@ class Message(BaseModel):
     content: str
 
 class Prompts(BaseModel):
-    snyth_data_creation_sys: str
-    snyth_data_creation_prompt: str
+    synth_data_creation_sys: str
+    synth_data_creation_prompt: str

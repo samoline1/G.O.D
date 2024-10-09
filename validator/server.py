@@ -3,7 +3,7 @@ from core.utils import validate_dataset
 from core.models.utility_models import FileFormat
 from core.models.payload_models import EvaluationRequest, EvaluationResponse
 from fiber.logging_utils import get_logger
-from validator.evaluation.docker_evaluation import run_evaluation_docker  # Import the function
+from validator.evaluation.docker_evaluation import run_evaluation_docker
 
 logger = get_logger(__name__)
 
@@ -27,7 +27,6 @@ async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
         raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        # Call the docker evaluation function
         eval_results = run_evaluation_docker(
             dataset=request.dataset,
             model=request.model,
