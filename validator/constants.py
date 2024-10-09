@@ -13,4 +13,4 @@ SYNTH_MODEL = "llama-3-1-8b"
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
 PROMPT_GEN_ENDPOINT = "https://api.corcel.io/v1/chat/completions"
 PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
-PROMPT_PATH = "validator/prompts.ymll"
+PROMPT_PATH = "validator/prompts.yml"

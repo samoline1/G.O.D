@@ -55,10 +55,13 @@ def _load_sse_jsons(chunk: str) -> List[dict[str, Any]]:
 
 def create_messages_from_row(row: dict, prompts: Prompts) -> List[Message]:
     messages = []
-    system_message = Message(role=Role.SYSTEM, content=prompts.syth_data_creation_sys)
+    system_message = Message(role=Role.SYSTEM, content=prompts.synth_data_creation_sys) 
     messages.append(system_message)
     schema = json.dumps({key: value for key, value in row.items()})
-    user_message = Message(role=Role.USER, content=prompts.syth_data_creation_prompt.format(schema=schema))
+    user_message = Message(
+        role=Role.USER,
+        content=prompts.synth_data_creation_prompt.format(schema=schema)  
+    )
     messages.append(user_message)
     return messages
 
