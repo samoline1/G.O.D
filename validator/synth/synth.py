@@ -84,6 +84,7 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
         try:
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
             json_synthetic_data_point = json.loads(synthetic_data_point)
+            logger.info(f"The keys are {json_synthetic_data_point.keys()}, and the row keys are {row.keys()}")
             if check_the_synthetic_data(json_synthetic_data_point, row.keys()):
                 return json_synthetic_data_point
         except json.JSONDecodeError:
