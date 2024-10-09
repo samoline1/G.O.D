@@ -54,10 +54,10 @@ Example request:
 ```
 
 ##### Process:
-1. Validates the input parameters (dataset_validation.py)
-2. Creates a job configuration file job_handler.py)
-3. Enqueues the job for processing (training_worker.py)
-4. Starts a Docker container to run the training process (job_handler.py)
+1. Validates the input parameters 
+2. Creates a job configuration file 
+3. Enqueues the job for processing 
+4. Starts a Docker container to run the training process 
 
 ### 2. Evaluate  (Validators Only)
 
