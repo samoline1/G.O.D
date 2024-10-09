@@ -62,12 +62,12 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
             logger.info(f"Original test dataset size: {len(test_dataset)}, Synthetic data size: {len(synthetic_data)}")
             
             # Verify the combination
-            logger.info(f"First 5 examples from combined dataset:")
-            for i, example in enumerate(combined_test_dataset[:5]):
+            logger.info("First 5 examples from combined dataset:")
+            for i, example in enumerate(combined_test_dataset.select(range(5))):
                 logger.info(f"Example {i + 1}: {example}")
             
-            logger.info(f"Last 5 examples from combined dataset:")
-            for i, example in enumerate(combined_test_dataset[-5:]):
+            logger.info("Last 5 examples from combined dataset:")
+            for i, example in enumerate(combined_test_dataset.select(range(len(combined_test_dataset)-5, len(combined_test_dataset)))):
                 logger.info(f"Example {i + 1}: {example}")
         else:
             combined_test_dataset = test_dataset
