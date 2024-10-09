@@ -69,9 +69,9 @@ test_run_eval - does a full evaluation test and gets back the loss
 
 
 ##### Process for eval:
-1. Loads the fine-tuned model and original tokenizer (endpoints.py)
-2. Checks if the provided model is likely a fine-tune of the original model based on model parameters (checking.py)
-3. Performs evaluation using a test dataset and gets loss and perplexity (checking.py)
+1. Loads the fine-tuned model and original tokenizer 
+2. Checks if the provided model is likely a fine-tune of the original model based on model parameters
+3. Performs evaluation using a test dataset and gets loss and perplexity
 
 ##### Response:
 - `is_finetune`: Boolean indicating if the model appears to be a fine-tune
@@ -80,8 +80,8 @@ test_run_eval - does a full evaluation test and gets back the loss
 ## Additional Info 
 
 - Miners use a custom `TrainingWorker` class to manage the job queue and process training jobs asynchronously.
-- Docker is used by miners to isolate the training environment and ensure consistent execution across different systems.
-- Validators use the Axolotl framework directly to load and process datasets, and perform custom evaluation loops to calculate loss and perplexity. I needed to write the validation loop to work with the Axolotl framework since the dataset stuff was all handled in the lib, making it easier to work with. 
+- Docker is used by both miners and validators (one each) 
+- Validators use the Axolotl framework to load and process datasets, and perform custom evaluation loops to calculate loss and perplexity. I needed to write the validation loop to work with the Axolotl framework since the dataset stuff was all handled in the lib, making it easier to work with. 
 - The hf repo will write to hub_model_id which is inside the configs/base.yml file. 
 
 
