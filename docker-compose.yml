@@ -1,0 +1,58 @@
+services:
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: dockerfiles/Dockerfile
+  #   depends_on:
+  #     dbmate:
+  #       condition: service_completed_successfully
+  #     redis:
+  #       condition: service_started
+  #   networks:
+  #     - postgres_network
+  #     - redis_network
+  #   entrypoint: ["python", "-u", "/app/src/main.py"]
+  #   env_file:
+  #     - .prod.env
+  #   container_name: api
+  #   deploy:
+  #     restart_policy:
+  #       condition: on-failure
+
+  postgresql:
+    image: postgres:latest
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:5432:5432"
+    env_file:
+      - .vali.env
+
+  dbmate:
+    image: amacneil/dbmate
+    volumes:
+      - ./src/db:/db
+    command: --wait up
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    env_file:
+      - .vali.env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB}?sslmode=disable
+
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "127.0.0.1:6379:6379"
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  postgres_data:

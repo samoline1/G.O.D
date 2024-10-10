@@ -27,10 +27,6 @@ tasks:
     cmds:
       - LOCALHOST=true ENV_FILE=.vali.env python -m validator.control_node.src.set_weights.calculate_and_schedule_weights
 
-  dev_setup:
-    cmds:
-      - docker compose --env-file .vali.env -f docker-compose.yml -f docker-compose.dev.yml --profile entry_node_profile up -d --build --scale entry_node=0 --scale query_node=0 --scale control_node=0 --scale weight_setter=0
-
   m1_dev:
     cmds:
       - ENV=DEV uvicorn miner.server:app --reload --host 0.0.0.0 --port 7999 --env-file .1.env --log-level debug
@@ -39,3 +35,15 @@ tasks:
     cmds:
       - ENV=DEV uvicorn miner.server:app --reload --host 0.0.0.0 --port 4002 --env-file .2.env --log-level debug
 
+
+  dev_setup:
+    cmds:
+      - docker compose --env-file .vali.env -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+
+  validator:
+    cmds:
+      - ENV_FILE=.vali.env uvicorn --factory validator.asgi:factory --reload --host 0.0.0.0 --port 9001 --env-file .vali.env
+
+  miner:
+    cmds:
+      - docker compose --env-file .vali.env -f docker-compose.yml -f docker-compose.dev.yml up -d --build
