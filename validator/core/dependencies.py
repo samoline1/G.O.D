@@ -6,7 +6,7 @@ from fastapi import Security
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.security import HTTPBearer
 
-from src.core.config import Config
+from validator.core.config import Config
 
 
 auth_scheme = HTTPBearer()

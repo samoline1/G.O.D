@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     port INTEGER NOT NULL,
     symmetric_key TEXT NOT NULL,
     network FLOAT NOT NULL,
-    trust FLOAT NOT NULL,
-    vtrust FLOAT NOT NULL,
+    trust FLOAT,
+    vtrust FLOAT,
     stake FLOAT NOT NULL,
     created_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

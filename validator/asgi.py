@@ -14,6 +14,8 @@ from loguru import logger
 from validator.core.config import factory_config
 from validator.core.cycle import init_validator_cycle
 from validator.endpoints.health import factory_router as health_router
+from validator.endpoints.nodes import factory_router as nodes_router
+from validator.endpoints.tasks import factory_router as tasks_router
 
 
 @asynccontextmanager
@@ -36,6 +38,8 @@ def factory() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
 
     app.include_router(health_router())
+    app.include_router(tasks_router())
+    app.include_router(nodes_router())
 
     app.add_middleware(
         CORSMiddleware,

@@ -5,7 +5,6 @@ from validator.db.database import PSQLDB
 
 
 async def add_task(
-        task_id: str,
         model_id: str,
         ds_id: str,
         system: str,
@@ -13,15 +12,15 @@ async def add_task(
         input_data: str,
         status: str,
         psql_db: PSQLDB
-) -> None:
+) -> str:
     async with await psql_db.connection() as connection:
         connection: Connection
-        await connection.execute(
+        task_id = await connection.fetchval(
             """
-            INSERT INTO tasks (task_id, model_id, ds_id, system, instruction, input, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO tasks (model_id, ds_id, system, instruction, input, status)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING task_id
             """,
-            task_id,
             model_id,
             ds_id,
             system,
@@ -29,41 +28,36 @@ async def add_task(
             input_data,
             status,
         )
-        logger.info(f"Added new task {task_id}")
+        return task_id
 
 
 async def add_node(
-        node_id: str,
         coldkey: str,
         ip: str,
         ip_type: str,
         port: int,
         symmetric_key: str,
         network: float,
-        trust: float,
-        vtrust: float,
         stake: float,
         psql_db: PSQLDB
-) -> None:
+) -> str:
     async with await psql_db.connection() as connection:
         connection: Connection
-        await connection.execute(
+        node_id = await connection.fetchval(
             """
-            INSERT INTO nodes (node_id, coldkey, ip, ip_type, port, symmetric_key, network, trust, vtrust, stake)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            INSERT INTO nodes (coldkey, ip, ip_type, port, symmetric_key, network, stake)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING node_id
             """,
-            node_id,
             coldkey,
             ip,
             ip_type,
             port,
             symmetric_key,
             network,
-            trust,
-            vtrust,
-            stake,
+            stake
         )
-        logger.info(f"Added new node {node_id}")
+        return node_id
 
 
 async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> None:
@@ -80,19 +74,21 @@ async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> No
         logger.info(f"Assigned node {node_id} to task {task_id}")
 
 
-async def add_submission(task_id: str, node_id: str, repo: str, psql_db: PSQLDB) -> None:
+async def add_submission(task_id: str, node_id: str, repo: str, psql_db: PSQLDB) -> str:
     async with await psql_db.connection() as connection:
         connection: Connection
-        await connection.execute(
+        submission_id = await connection.fetchval(
             """
             INSERT INTO submissions (task_id, node_id, repo)
             VALUES ($1, $2, $3)
+            RETURNING submission_id
             """,
             task_id,
             node_id,
-            repo,
+            repo
         )
-        logger.info(f"Added new submission for task {task_id} from node {node_id}")
+        logger.info(f"submission received: {submission_id} for task: {task_id} from node: {node_id}")
+        return submission_id
 
 
 async def get_task(task_id: str, psql_db: PSQLDB):
