@@ -13,8 +13,12 @@ def calculate_linear_score(rank: int, total_miners: int) -> float:
         return 0
     return 1 - cts.LOWEST_SCORE_FOR_TOP_MINERS * (rank / cutoff)
 
+def calculate_work_score(task: Task):
+    return task.competition_time / cts.MAX_COMPETITION_HOURS
+
 def calculate_score(test_results: List[Tuple[str, float]], synth_results: List[Tuple[str, float]], task: Task) -> Dict[str, float]:
-    competition_weighting = task.competition_time / cts.MAX_COMPETITION_HOURS
+    work_score = calculate_work_score(task)
+
     num_miners = len(test_results)
 
     synth_ranks = {miner_id: rank for rank, (miner_id, _) in enumerate(synth_results)}
@@ -28,7 +32,7 @@ def calculate_score(test_results: List[Tuple[str, float]], synth_results: List[T
         if synth_ranks[miner_id] == 0:
             test_score *= cts.PENALISATION_FACTOR_FOR_HIGH_SYNTH_LOSS
 
-        score = (cts.TEST_SCORE_WEIGHTING * test_score + (1 - cts.TEST_SCORE_WEIGHTING) * synth_score) * competition_weighting
+        score = (cts.TEST_SCORE_WEIGHTING * test_score + (1 - cts.TEST_SCORE_WEIGHTING) * synth_score) * work_score
         scores[miner_id] = score
 
     return scores
@@ -49,11 +53,13 @@ async def evaluate_and_score(task: Task, config) -> Tuple[Dict[str, float], Dict
     for miner in miner_pool:
         submission_repo = get_miner_latest_submission(task.task_id, miner.id, config.psql_db)
 
-        synth_loss, is_finetune = run_evaluation_docker(dataset=task.synthetic_data,
-                                                        file_format=FileFormat.HF,
-                                                        original_model=task.model_id,
-                                                        model=submission_repo,
-                                                        dataset_type=dataset_type)
+        evaluation_params = {
+                'file_format': FileFormat.HF,
+                'original_model': task.model_id,
+                'model': submission_repo,
+                'dataset_type': dataset_type
+                }
+        synth_loss, is_finetune = run_evaluation_docker(dataset=task.synthetic_data, **evaluation_params)
         test_loss, _ = run_evaluation_docker(dataset=task.test_data, **evaluation_params)
 
         task_results[miner.id] = {
