@@ -1,18 +1,15 @@
+from typing import List
+from typing import Optional
+from uuid import UUID
+
 from asyncpg.connection import Connection
 from loguru import logger
 
+from validator.core.schemas import Task
 from validator.db.database import PSQLDB
 
 
-async def add_task(
-        model_id: str,
-        ds_id: str,
-        system: str,
-        instruction: str,
-        input_data: str,
-        status: str,
-        psql_db: PSQLDB
-) -> str:
+async def add_task(task: Task, psql_db: PSQLDB) -> Task:
     async with await psql_db.connection() as connection:
         connection: Connection
         task_id = await connection.fetchval(
@@ -21,15 +18,39 @@ async def add_task(
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING task_id
             """,
-            model_id,
-            ds_id,
-            system,
-            instruction,
-            input_data,
+            task.model_id,
+            task.ds_id,
+            task.system,
+            task.instruction,
+            task.input,
+            task.status
+        )
+
+        return await get_task(task_id, psql_db)
+
+async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        row = await connection.fetchrow(
+            """
+            SELECT * FROM tasks WHERE task_id = $1
+            """,
+            task_id,
+        )
+        if row:
+            return Task(**dict(row))
+        return None
+
+async def get_tasks_by_status(status: str, psql_db: PSQLDB) -> List[Task]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        rows = await connection.fetch(
+            """
+            SELECT * FROM tasks WHERE status = $1
+            """,
             status,
         )
-        return task_id
-
+        return [Task(**dict(row)) for row in rows]
 
 async def add_node(
         coldkey: str,
@@ -91,37 +112,33 @@ async def add_submission(task_id: str, node_id: str, repo: str, psql_db: PSQLDB)
         return submission_id
 
 
-async def get_task(task_id: str, psql_db: PSQLDB):
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        return await connection.fetchrow(
-            """
-            SELECT * FROM tasks WHERE task_id = $1
-            """,
-            task_id,
-        )
+async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
+    # Fetch the current task
+    existing_task = await get_task(updated_task.task_id, psql_db)
+    if not existing_task:
+        raise ValueError("Task not found")
 
-async def get_tasks_by_status(status: str, psql_db: PSQLDB):
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        return await connection.fetch(
-            """
-            SELECT * FROM tasks WHERE status = $1
-            """,
-            status,
-        )
+    updates = {}
+    for field, value in updated_task.dict(exclude_unset=True).items():
+        if getattr(existing_task, field) != value:
+            updates[field] = value
 
-async def update_task_columns(task_id: str, updates: dict, psql_db: PSQLDB) -> None:
+    if not updates:
+        return existing_task
+
+    set_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(updates.keys())])
+    values = list(updates.values())
+    query = f"""
+        UPDATE tasks
+        SET {set_clause}, updated_timestamp = CURRENT_TIMESTAMP
+        WHERE task_id = $1
+    """
+
     async with await psql_db.connection() as connection:
         connection: Connection
-        set_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(updates.keys())])
-        values = list(updates.values())
-        query = f"""
-            UPDATE tasks
-            SET {set_clause}, updated_timestamp = CURRENT_TIMESTAMP
-            WHERE task_id = $1
-        """
-        await connection.execute(query, task_id, *values)
+        await connection.execute(query, updated_task.task_id, *values)
+
+    return await get_task(updated_task.task_id, psql_db)
 
 async def get_node(node_id: str, psql_db: PSQLDB):
     async with await psql_db.connection() as connection:
