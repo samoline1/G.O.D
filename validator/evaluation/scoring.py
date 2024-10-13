@@ -8,13 +8,13 @@ import core.constants as cts
 import numpy as np
 
 def calculate_linear_score(rank: int, total_miners: int) -> float:
-    cutoff = int(total_miners * cts.TOP_SYNTH_PERCENT_CUTOFF) # if you have a synth loss > 75% then we want to penalise you to avoid the issue of overfitting to the test set
+    cutoff = int(total_miners * cts.TOP_SYNTH_PERCENT_CUTOFF) # if you have a synth loss > some percent% then we want to penalise you to avoid the issue of overfitting to the test set
     if rank >= cutoff:
         return 0
     return 1 - cts.LOWEST_SCORE_FOR_TOP_MINERS * (rank / cutoff)
 
 def calculate_work_score(task: Task):
-    return task.competition_time / cts.MAX_COMPETITION_HOURS
+    return task.hours_to_complete / cts.MAX_COMPETITION_HOURS
 
 def calculate_score(test_results: List[Tuple[str, float]], synth_results: List[Tuple[str, float]], task: Task) -> Dict[str, float]:
     work_score = calculate_work_score(task)

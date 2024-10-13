@@ -23,10 +23,10 @@ def run_task_prep(task: Task) -> Task:
 def select_miner_pool(task: Task, miners: List[Node]):
     random.shuffle(miners)
     selected_miners = []
-    task_details_for_miner = MinerTaskRequst(hf_training_repo = task.hf_training_repo, model = task.model_id) # things we give to miner to ask if they want to accept the job
+    task_details_for_miner = MinerTaskRequst(hf_training_repo = task.hf_training_repo, model = task.model_id, hours_to_complete: task.hours_to_complete) # things we give to miner to ask if they want to accept the job
     while len(selected_miners) < task.num_miners_required and miners:
         miner = miners.pop(0)
-        # TODO: implement the below
+        # TODO: implement the below 'miner accepts'
         if miner_accepts(task_details_for_miner):
             selected_miners.append(miner.node_id)
     # How will this be added to the ds?  As the IDs right?
