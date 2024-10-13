@@ -7,7 +7,7 @@ from validator import constants as cst
 from fiber.logging_utils import get_logger
 from core.models.utility_models import DatasetType, CustomDatasetType, FileFormat
 from typing import Union
-from core.docker_utils import stream_logs  
+from core.docker_utils import stream_logs
 import threading
 
 logger = get_logger(__name__)
@@ -59,7 +59,7 @@ def run_evaluation_docker(
             raise Exception(f"Container exited with status {result['StatusCode']}")
 
 
-        # Confession, this is a bit of an llm hack, I had issues pulling from the path directly and 
+        # Confession, this is a bit of an llm hack, I had issues pulling from the path directly and
         # llm said this was a better solution and faster ... it works so llm knows best
         # TODO: come back to this and make it more readible / actually understand it
         tar_stream, _ = container.get_archive(cst.CONTAINER_EVAL_RESULTS_PATH)

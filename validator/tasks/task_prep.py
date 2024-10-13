@@ -11,7 +11,7 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
         test_size = cst.TRAIN_TEST_SPLIT_PERCENTAGE
     logger.info(f"Loading dataset '{dataset_name}'")
     dataset = load_dataset(dataset_name)
-    
+
     if isinstance(dataset, DatasetDict):
         combined_dataset = concatenate_datasets([split for split in dataset.values()])
     else:
@@ -19,7 +19,7 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
 
     logger.info(f"Combined dataset size: {len(combined_dataset)}")
     logger.info(f"Splitting combined dataset into train and test with test size {test_size}")
-    
+
     split_dataset = combined_dataset.train_test_split(test_size=test_size, shuffle=True, seed=42)
     logger.info(f"Train set size: {len(split_dataset['train'])}")
     logger.info(f"Test set size: {len(split_dataset['test'])}")
@@ -40,11 +40,11 @@ def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None
     dataset_dict.push_to_hub(repo_name, token=token, private=True)
     logger.info("Upload complete")
 
-async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> Dataset:
+async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> tuple[Dataset, Dataset]:
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict['train']
     test_dataset = dataset_dict['test']
-    
+
     synthetic_data = []
     if cst.GET_SYNTH_DATA:
         logger.info("Generating additional synthetic data")
@@ -53,7 +53,7 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
         logger.info("First 2 examples from original test dataset:")
         for i, example in enumerate(test_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
-            
+
         logger.info("First 2 examples from synthetic dataset:")
         for i, example in enumerate(synthetic_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
