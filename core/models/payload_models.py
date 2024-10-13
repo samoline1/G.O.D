@@ -59,3 +59,6 @@ class TaskResponse(BaseModel):
     task_id: str
     status: TaskStatus
 
+class MinerTaskRequst(BaseModel):
+    hf_training_repo: str
+    model: str

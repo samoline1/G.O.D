@@ -14,6 +14,8 @@ VALI_CONFIG_PATH = "validator/test_axolotl.yml"
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 WANDB_TOKEN = os.getenv("WANDB_TOKEN")
 
+# Task Stuff
+MINIMUM_MINER_POOL = 4 # we need at least 4 miners
 
 # scoring stuff
 MAX_COMPETITION_HOURS = 10

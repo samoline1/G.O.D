@@ -46,3 +46,7 @@ class Submission(BaseModel):
     repo: str
     created_on: Optional[datetime]
     updated_on: Optional[datetime]
+
+class MinerTaskRequst(BaseModel):
+    hf_training_repo: str
+    model: str
