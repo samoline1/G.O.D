@@ -3,9 +3,10 @@ from typing import Optional
 from uuid import UUID
 
 from asyncpg.connection import Connection
-from loguru import logger
 
-from validator.core.schemas import Task
+from validator.core.models import Node
+from validator.core.models import Submission
+from validator.core.models import Task
 from validator.db.database import PSQLDB
 
 
@@ -52,16 +53,7 @@ async def get_tasks_by_status(status: str, psql_db: PSQLDB) -> List[Task]:
         )
         return [Task(**dict(row)) for row in rows]
 
-async def add_node(
-        coldkey: str,
-        ip: str,
-        ip_type: str,
-        port: int,
-        symmetric_key: str,
-        network: float,
-        stake: float,
-        psql_db: PSQLDB
-) -> str:
+async def add_node(node: Node, psql_db: PSQLDB) -> Node:
     async with await psql_db.connection() as connection:
         connection: Connection
         node_id = await connection.fetchval(
@@ -70,15 +62,56 @@ async def add_node(
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING node_id
             """,
-            coldkey,
-            ip,
-            ip_type,
-            port,
-            symmetric_key,
-            network,
-            stake
+            node.coldkey,
+            node.ip,
+            node.ip_type,
+            node.port,
+            node.symmetric_key,
+            node.network,
+            node.stake
         )
-        return node_id
+        return await get_node(node_id, psql_db)
+
+async def get_node(node_id: UUID, psql_db: PSQLDB) -> Optional[Node]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        row = await connection.fetchrow(
+            """
+            SELECT * FROM nodes WHERE node_id = $1
+            """,
+            node_id,
+        )
+        if row:
+            return Node(**dict(row))
+        return None
+
+async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        submission_id = await connection.fetchval(
+            """
+            INSERT INTO submissions (task_id, node_id, repo)
+            VALUES ($1, $2, $3)
+            RETURNING submission_id
+            """,
+            submission.task_id,
+            submission.node_id,
+            submission.repo
+        )
+        return await get_submission(submission_id, psql_db)
+
+async def get_submission(submission_id: UUID, psql_db: PSQLDB) -> Optional[Submission]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        row = await connection.fetchrow(
+            """
+            SELECT * FROM submissions WHERE submission_id = $1
+            """,
+            submission_id,
+        )
+        if row:
+            return Submission(**dict(row))
+        return None
 
 
 async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> None:
@@ -92,28 +125,9 @@ async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> No
             task_id,
             node_id,
         )
-        logger.info(f"Assigned node {node_id} to task {task_id}")
-
-
-async def add_submission(task_id: str, node_id: str, repo: str, psql_db: PSQLDB) -> str:
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        submission_id = await connection.fetchval(
-            """
-            INSERT INTO submissions (task_id, node_id, repo)
-            VALUES ($1, $2, $3)
-            RETURNING submission_id
-            """,
-            task_id,
-            node_id,
-            repo
-        )
-        logger.info(f"submission received: {submission_id} for task: {task_id} from node: {node_id}")
-        return submission_id
 
 
 async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
-    # Fetch the current task
     existing_task = await get_task(updated_task.task_id, psql_db)
     if not existing_task:
         raise ValueError("Task not found")
@@ -140,40 +154,32 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
 
     return await get_task(updated_task.task_id, psql_db)
 
-async def get_node(node_id: str, psql_db: PSQLDB):
+async def get_all_miners(psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
-        return await connection.fetchrow(
-            """
-            SELECT * FROM nodes WHERE node_id = $1
-            """,
-            node_id,
-        )
-
-async def get_all_miners(psql_db: PSQLDB):
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        return await connection.fetch(
+        rows = await connection.fetch(
             """
             SELECT * FROM nodes
             WHERE trust IS NOT NULL
             """
         )
+        return [Node(**dict(row)) for row in rows]
 
-async def get_all_validators(psql_db: PSQLDB):
+async def get_all_validators(psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
-        return await connection.fetch(
+        rows = await connection.fetch(
             """
             SELECT * FROM nodes
             WHERE vtrust IS NOT NULL
             """
         )
+        return [Node(**dict(row)) for row in rows]
 
-async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB):
+async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
-        return await connection.fetch(
+        rows = await connection.fetch(
             """
             SELECT nodes.* FROM nodes
             JOIN task_nodes ON nodes.node_id = task_nodes.node_id
@@ -181,11 +187,13 @@ async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB):
             """,
             task_id,
         )
+        return [Node(**dict(row)) for row in rows]
 
-async def get_miners_assigned_to_task(task_id: str, psql_db: PSQLDB):
+
+async def get_miners_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
-        return await connection.fetch(
+        rows = await connection.fetch(
             """
             SELECT nodes.* FROM nodes
             JOIN task_nodes ON nodes.node_id = task_nodes.node_id
@@ -194,23 +202,23 @@ async def get_miners_assigned_to_task(task_id: str, psql_db: PSQLDB):
             """,
             task_id,
         )
+        return [Node(**dict(row)) for row in rows]
 
-
-async def get_submission(task_id: str, node_id: str, psql_db: PSQLDB):
+async def get_submissions_by_task(task_id: UUID, psql_db: PSQLDB) -> List[Submission]:
     async with await psql_db.connection() as connection:
         connection: Connection
-        return await connection.fetchrow(
+        rows = await connection.fetch(
             """
-            SELECT * FROM submissions WHERE task_id = $1 AND node_id = $2
+            SELECT * FROM submissions WHERE task_id = $1
             """,
             task_id,
-            node_id,
         )
+        return [Submission(**dict(row)) for row in rows]
 
-async def get_miner_latest_submission(task_id: str, node_id: str, psql_db: PSQLDB):
+async def get_miner_latest_submission(task_id: str, node_id: str, psql_db: PSQLDB) -> Optional[Submission]:
     async with await psql_db.connection() as connection:
         connection: Connection
-        return await connection.fetchrow(
+        row = await connection.fetchrow(
             """
             SELECT * FROM submissions
             WHERE task_id = $1
@@ -221,6 +229,9 @@ async def get_miner_latest_submission(task_id: str, node_id: str, psql_db: PSQLD
             task_id,
             node_id,
         )
+        if row:
+            return Submission(**dict(row))
+        return None
 
 async def is_miner_assigned_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> bool:
     async with await psql_db.connection() as connection:
