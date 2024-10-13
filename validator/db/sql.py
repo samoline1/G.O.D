@@ -1,7 +1,7 @@
 from asyncpg.connection import Connection
 from loguru import logger
 
-from src.db.database import PSQLDB
+from validator.db.database import PSQLDB
 
 
 async def add_task(
