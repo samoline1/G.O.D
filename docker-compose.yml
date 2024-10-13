@@ -33,10 +33,10 @@ services:
     env_file:
       - .vali.env
 
-  dbmate:
+  dbmate_validator:
     image: amacneil/dbmate
     volumes:
-      - ./src/db:/db
+      - ./validator/db:/db
     command: --wait up
     depends_on:
       postgresql:
