@@ -24,7 +24,7 @@ def calculate_score(test_results: List[Tuple[str, float]], synth_results: List[T
         test_score = calculate_linear_score(test_rank, num_miners)
         synth_score = calculate_linear_score(synth_ranks[miner_id], num_miners)
 
-        # Penalize high loss synthetic performers, you test score will drop by half
+        # Penalize high loss synthetic performers, you test score will drop by some factor
         if synth_ranks[miner_id] == 0:
             test_score *= cts.PENALISATION_FACTOR_FOR_HIGH_SYNTH_LOSS
 
