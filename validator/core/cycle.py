@@ -6,9 +6,6 @@ from validator.db import sql
 
 
 async def validator_cycle(config):
-    """
-    A simple validator cycle that prints "Hello, World!" every 5 seconds.
-    """
     try:
         while True:
             logger.info("Validator Heartbeat! Its alive!")
