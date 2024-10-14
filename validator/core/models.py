@@ -19,6 +19,7 @@ class Task(BaseModel):
     synthetic_data: Optional[str]
     hf_training_repo: Optional[str]
     miner_scores: Optional[List[float]]
+    hours_to_complete: int
     created_timestamp: Optional[datetime]
     updated_timestamp: Optional[datetime]
     started_timestamp: Optional[datetime]
@@ -46,3 +47,4 @@ class Submission(BaseModel):
     repo: str
     created_on: Optional[datetime]
     updated_on: Optional[datetime]
+

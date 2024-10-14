@@ -1,18 +1,7 @@
-from typing import Any
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat, JobStatus, TaskStatus
-
-
-class CapacityResponse(BaseModel):
-    capacities: dict[str, float]
-
-
-class CapacityPayload(BaseModel):
-    task_configs: list[dict[str, Any]]
-
-
-class TuningPayload(BaseModel): ...
 
 
 class TrainRequest(BaseModel):
@@ -22,7 +11,6 @@ class TrainRequest(BaseModel):
     model: str = Field(..., description="Name or path of the model to be trained")
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
-
 
 class TrainResponse(BaseModel):
     message: str
@@ -46,6 +34,10 @@ class EvaluationResult(BaseModel):
     eval_loss: float
     perplexity: float
 
+class MinerTaskRequst(BaseModel):
+    hf_training_repo: str
+    model: str
+
 class TaskRequest(BaseModel):
     ds_repo: str
     system_col: str
@@ -55,7 +47,25 @@ class TaskRequest(BaseModel):
     model_repo: str
     hours_to_complete: int
 
-class TaskResponse(BaseModel):
+
+class SubmitTaskSubmissionRequest(BaseModel):
     task_id: str
-    status: TaskStatus
+    node_id: str
+    repo: str
+
+class TaskResponse(BaseModel):
+    success: bool
+    task_id: str
+    message: Optional[str] = None
+
+class TaskStatusResponse(BaseModel):
+    success: bool
+    task_id: str
+    status: str
+
+class SubmissionResponse(BaseModel):
+    success: bool
+    message: str
+    submission_id: Optional[str] = None
+
 

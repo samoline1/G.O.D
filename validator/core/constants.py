@@ -8,3 +8,4 @@ VERIFIED = "verified"
 REDIS_KEY_COLDKEY_STAKE = "coldkey_stake"
 API_KEY = "api_key"
 COLDKEY = "coldkey"
+
