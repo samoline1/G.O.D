@@ -1,11 +1,13 @@
-from validator.evaluation.docker_evaluation import run_evaluation_docker
-from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat
-from core.models.payload_models import EvaluationResult
 from fiber.logging_utils import get_logger
+
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import FileFormat
+from validator.evaluation.docker_evaluation import run_evaluation_docker
+
 
 logger = get_logger(__name__)
 
-if __name__ == "__main__":
+def test():
     custom_dataset_type = CustomDatasetType(
         system_prompt="you are helpful",
         system_format="{system}",
@@ -20,6 +22,6 @@ if __name__ == "__main__":
         model="unsloth/Llama-3.2-3B-Instruct",
         original_model="unsloth/Llama-3.2-3B-Instruct",
         dataset_type=custom_dataset_type,
-        file_format=FileFormat.HF
+        file_format=FileFormat.JSON
     )
     logger.info(f"Evaluation results: {results}")

@@ -1,14 +1,19 @@
-import docker
-import json
 import io
+import json
 import tarfile
-from core.models.payload_models import EvaluationResult
-from validator import constants as cst
-from fiber.logging_utils import get_logger
-from core.models.utility_models import DatasetType, CustomDatasetType, FileFormat
-from typing import Union
-from core.docker_utils import stream_logs
 import threading
+from typing import Union
+
+import docker
+from fiber.logging_utils import get_logger
+
+from core import constants as cst
+from core.docker_utils import stream_logs
+from core.models.payload_models import EvaluationResult
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import DatasetType
+from core.models.utility_models import FileFormat
+
 
 logger = get_logger(__name__)
 
@@ -61,7 +66,7 @@ def run_evaluation_docker(
 
         # Confession, this is a bit of an llm hack, I had issues pulling from the path directly and
         # llm said this was a better solution and faster ... it works so llm knows best
-        # TODO: come back to this and make it more readible / actually understand it
+        # TODO: come back to this and make it more readable / actually understand it
         tar_stream, _ = container.get_archive(cst.CONTAINER_EVAL_RESULTS_PATH)
 
         file_like_object = io.BytesIO()
