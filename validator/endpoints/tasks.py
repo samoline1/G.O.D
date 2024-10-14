@@ -38,13 +38,13 @@ async def create_task(
         end_timestamp=end_timestamp
     )
 
-    task_id = await sql.add_task(
+    task = await sql.add_task(
         task,
         config.psql_db
     )
 
-    logger.info(f"Task {task_id} created with end_timestamp: {end_timestamp}.")
-    return NewTaskResponse(success=True, task_id=task_id)
+    logger.info(task.task_id)
+    return NewTaskResponse(success=True, task_id=task.task_id)
 
 async def get_task_status(
     task_id: UUID,
