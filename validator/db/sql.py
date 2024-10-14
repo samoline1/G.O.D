@@ -282,3 +282,15 @@ async def submission_repo_is_unique(repo: str, psql_db: PSQLDB) -> bool:
             repo,
         )
         return result is None
+
+async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        rows = await connection.fetch(
+            """
+            SELECT * FROM tasks
+            WHERE status = 'training'
+            AND NOW() > end_timestamp
+            """
+        )
+        return [Task(**dict(row)) for row in rows]
