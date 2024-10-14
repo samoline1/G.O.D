@@ -54,7 +54,7 @@ async def evaluate_and_score(task: Task, config) -> Tuple[Dict[str, float], Dict
         submission_repo = get_miner_latest_submission(task.task_id, miner.id, config.psql_db)
 
         evaluation_params = {
-                'file_format': FileFormat.HF,
+                'file_format': FileFormat.JSON,
                 'original_model': task.model_id,
                 'model': submission_repo,
                 'dataset_type': dataset_type
