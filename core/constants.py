@@ -16,6 +16,7 @@ WANDB_TOKEN = os.getenv("WANDB_TOKEN")
 
 # Task Stuff
 MINIMUM_MINER_POOL = 4 # we need at least 4 miners
+REPO_OWNER = 'cwaud' # please change from mine :D
 
 # scoring stuff
 MAX_COMPETITION_HOURS = 10

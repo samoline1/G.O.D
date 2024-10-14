@@ -49,7 +49,7 @@ async def tune_model(
     return {"message": "Training job enqueued.", "job_id": job.job_id}
 
 
-async def task_offer(request: MinerTaskRequst):
+async def task_offer(request: MinerTaskRequst) -> bool:
     # this is where you would decide if you want to accept or reject the offer
     import random
     return random.random() > 0.2

@@ -40,7 +40,15 @@ def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None
     dataset_dict.push_to_hub(repo_name, token=token, private=True)
     logger.info("Upload complete")
 
-async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> tuple[Dataset, Dataset]:
+
+def change_to_json_format(dataset: Dataset, columns: List[str]):
+    return [
+        {col: row[col] for col in columns}
+        for row in dataset
+    ]
+
+
+async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> tuple[List[dict], List[dict]]:
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict['train']
     test_dataset = dataset_dict['test']
@@ -61,4 +69,8 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
         logger.info("Skipping synthetic data generation")
 
     upload_train_to_hf(train_dataset, repo_name, cst.HUGGINGFACE_TOKEN)
-    return test_dataset, synthetic_data
+
+    test_data_json = change_to_json_format(test_dataset, columns_to_sample)
+    synthetic_data_json = change_to_json_format(synthetic_data, columns_to_sample) if isinstance(synthetic_data, list) else []
+
+    return test_data_json, synthetic_data_json

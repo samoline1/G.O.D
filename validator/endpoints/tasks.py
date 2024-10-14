@@ -9,6 +9,7 @@ from validator.core.dependencies import get_config
 from validator.db import sql
 
 
+# TODO request bodies should all be pydantic
 async def create_task(
     model_id: str = Body(..., embed=True),
     ds_id: str = Body(..., embed=True),
@@ -31,6 +32,7 @@ async def get_task_status(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
+    # TODO: reponses should be pydantic
     return {"success": True, "task_id": task_id, "status": task["status"]}
 
 
@@ -40,8 +42,17 @@ async def submit_task_submission(
     repo: str = Body(..., embed=True),
     config: Config = Depends(get_config),
 ):
-    submission_id = await sql.add_submission(task_id, node_id, repo, config.psql_db)
-    return {"success": True, "task_id": task_id, "node_id": node_id, "submission_id": submission_id}
+
+    # TODO: This needs implementing in the db side
+    is_unique = await sql.submission_repo_is_unique(repo, config.psql_db)
+    is_miner_assigned_to_task = await sql.is_miner_assigned_to_task(task_id, node_id, config.psql_db)
+    if not is_unique:
+        return {"success": False, "message": "Submission with this repository already exists."}
+    elif not is_miner_assigned_to_task:
+        return {"success": False, "message": "You are not registered as assigned to this task."}
+    else:
+        submission_id = await sql.add_submission(task_id, node_id, repo, config.psql_db)
+        return {"success": True, "message": "sucess"}
 
 
 
