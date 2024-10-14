@@ -269,3 +269,16 @@ async def get_synthetic_set_for_task(task_id: str, psql_db: PSQLDB):
             """,
             task_id,
         )
+
+async def submission_repo_is_unique(repo: str, psql_db: PSQLDB) -> bool:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        result = await connection.fetchval(
+            """
+            SELECT 1 FROM submissions
+            WHERE repo = $1
+            LIMIT 1
+            """,
+            repo,
+        )
+        return result is None
