@@ -59,6 +59,8 @@ async def evaluate_and_score(task: Task, config) -> Tuple[Dict[str, float], Dict
                 'model': submission_repo,
                 'dataset_type': dataset_type
                 }
+        # TODO: rn we're adding the actual dataset to this call which is fine, but what will need to happen inside the run_evaluation_docker, if we are passing in the actual file
+        # is to create storage and save the data to that location in the container
         synth_loss, is_finetune = run_evaluation_docker(dataset=task.synthetic_data, **evaluation_params)
         test_loss, _ = run_evaluation_docker(dataset=task.test_data, **evaluation_params)
 
