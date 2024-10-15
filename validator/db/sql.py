@@ -269,3 +269,28 @@ async def get_synthetic_set_for_task(task_id: str, psql_db: PSQLDB):
             """,
             task_id,
         )
+
+async def submission_repo_is_unique(repo: str, psql_db: PSQLDB) -> bool:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        result = await connection.fetchval(
+            """
+            SELECT 1 FROM submissions
+            WHERE repo = $1
+            LIMIT 1
+            """,
+            repo,
+        )
+        return result is None
+
+async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        rows = await connection.fetch(
+            """
+            SELECT * FROM tasks
+            WHERE status = 'training'
+            AND NOW() > end_timestamp
+            """
+        )
+        return [Task(**dict(row)) for row in rows]

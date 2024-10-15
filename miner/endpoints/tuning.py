@@ -1,21 +1,27 @@
-from fastapi import Depends, HTTPException
-
-from core.models import payload_models
+from fastapi import Depends
+from fastapi import HTTPException
 from fastapi.routing import APIRouter
 from fiber.logging_utils import get_logger
 
-from core.models.payload_models import  TrainResponse, MinerTaskRequst, MinerTaskResponse
-from core.models.utility_models import FileFormat, JobStatus
-from core.utils import validate_dataset
 from fiber.miner.core.configuration import Config
 from fiber.miner.dependencies import get_config
+
+from core.models.payload_models import MinerTaskRequst
+from core.models.payload_models import MinerTaskResponse
+from core.models.payload_models import TrainRequest
+
+from core.models.payload_models import TrainResponse
+from core.models.utility_models import FileFormat
+from core.utils import validate_dataset
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
+
+
 logger = get_logger(__name__)
 
 async def tune_model(
-    decrypted_payload: payload_models.TrainRequest,
+    decrypted_payload: TrainRequest,
     config: Config = Depends(get_config),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
