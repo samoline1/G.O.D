@@ -7,8 +7,8 @@ from validator.db import sql
 from validator.tasks.task_prep import prepare_task
 from validator.core.models import Task, Node
 import validator.core.constants as cst
-from core.models.payload_models import MinerTaskRequst, TaskRequest
-from core.models.utility_models import TaskStatus
+from core.models.payload_models import MinerTaskRequst, TaskRequest, TrainRequest
+from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
 # TODO: we shouldn't be importing these but calling the endpoint
 from miner.endpoints.tuning import  task_offer, tune_model
 import core.constants as cst
@@ -40,13 +40,19 @@ def select_miner_pool(task: Task, miners: List[Node]):
     return task
 
 async def start_miners(task: Task, miners : List[Node]):
-    task_request_body = TaskRequest(ds_repo = task.hf_training_repo,
-                                    system_col = task.system,
-                                    input_col = task.input,
-                                    instruction_col = task.instruction,
-                                    output_col = task.output,
-                                    model_repo = task.model_id,
-                                    hours_to_complete = task.hours_to_complete
+    dataset_type = CustomDatasetType(
+            field_system = task.system,
+            field_input = task.input,
+            field_output = task.output,
+            field_instruction = task.instruction
+            )
+
+    task_request_body = TrainRequest(dataset = task.hf_training_repo,
+                 model = task.model_id,
+                 dataset_type= dataset_type,
+                 file_format= FileFormat.HF,
+                 job_id = task.task_id
+                 )
                                     )
     for miner in miners:
         # TODO: rather than calling the function directly, we should be calling the endpoint given the miner url etc

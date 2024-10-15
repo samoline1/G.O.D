@@ -1,11 +1,12 @@
 from typing import Any, Optional
+from uuid import UUID
 from pydantic import BaseModel, Field
 
 from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat, JobStatus, TaskStatus
 
 
 class TrainRequest(BaseModel):
-    dataset: str = Field(
+    dataset: UUID = Field(
         ..., description="Path to the dataset file or Hugging Face dataset name"
     )
     model: str = Field(..., description="Name or path of the model to be trained")
