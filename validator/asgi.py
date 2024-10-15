@@ -16,7 +16,10 @@ from validator.core.cycle import init_validator_cycle
 from validator.endpoints.health import factory_router as health_router
 from validator.endpoints.nodes import factory_router as nodes_router
 from validator.endpoints.tasks import factory_router as tasks_router
+from validator.tests.test_run_evaluation import test
 
+
+test()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
