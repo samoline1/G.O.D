@@ -3,12 +3,14 @@ import datetime
 import random
 from typing import List
 
-from loguru import logger
+from loguru import logger ## We should be using the fiber logger throughout
 
 import validator.core.constants as cst
+from core.constants import REPO_OWNER, MINIMUM_MINER_POOL
 from core.models.payload_models import MinerTaskRequst
-from core.models.payload_models import TaskRequest
-from core.models.utility_models import TaskStatus
+from core.models.payload_models import TrainRequest
+from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
+
 
 # TODO: we shouldn't be importing these but calling the endpoint
 from miner.endpoints.tuning import task_offer
@@ -19,9 +21,8 @@ from validator.db import sql
 from validator.evaluation.scoring import evaluate_and_score
 from validator.tasks.task_prep import prepare_task
 
-
 def run_task_prep(task: Task) -> Task:
-    output_task_repo_name = f'{cst.REPO_OWNER}/{task.id}'
+    output_task_repo_name = f'{REPO_OWNER}/{task.task_id}'
     test_data, synth_data = prepare_task(
         dataset_name=task.repo_name,
         columns_to_sample=[
@@ -50,7 +51,7 @@ def select_miner_pool(task: Task, miners: List[Node]):
         # TODO: right now I just call the miner function, need to instead call the miner api
         if task_offer(task_details_for_miner):
             selected_miners.append(miner.node_id)
-    if len(selected_miners) < cst.MINIMUM_MINER_POOL:
+    if len(selected_miners) < MINIMUM_MINER_POOL:
         task.status = TaskStatus.FAILURE
 
     # TODO: how do you want to miners to be saved into the assigned miners
@@ -71,9 +72,8 @@ async def start_miners(task: Task, miners : List[Node]):
                  model = task.model_id,
                  dataset_type= dataset_type,
                  file_format= FileFormat.HF,
-                 job_id = task.task_id
+                 task_id = task.task_id
                  )
-                                    )
     for miner in miners:
         # TODO: rather than calling the function directly, we should be calling the endpoint given the miner url etc
         await tune_model(task_request_body) # ( will return true when started so doesn't matter we are awaiting for testing)

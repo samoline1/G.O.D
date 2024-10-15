@@ -12,25 +12,25 @@ from core.models.utility_models import TaskStatus
 
 
 class TrainRequest(BaseModel):
-    dataset: UUID = Field(
+    dataset: str = Field(
         ..., description="Path to the dataset file or Hugging Face dataset name"
     )
     model: str = Field(..., description="Name or path of the model to be trained")
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
-    job_id: str
+    task_id: UUID
 
 class TrainResponse(BaseModel):
     message: str
-    job_id: str
+    task_id: UUID
 
 
 class JobStatusPayload(BaseModel):
-    job_id: str
+    task_id: UUID
 
 
 class JobStatusResponse(BaseModel):
-    job_id: str
+    task_id: UUID
     status: JobStatus
 
 
