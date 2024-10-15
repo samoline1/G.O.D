@@ -11,6 +11,7 @@ class TrainRequest(BaseModel):
     model: str = Field(..., description="Name or path of the model to be trained")
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
+    job_id: str
 
 class TrainResponse(BaseModel):
     message: str
@@ -37,6 +38,12 @@ class EvaluationResult(BaseModel):
 class MinerTaskRequst(BaseModel):
     hf_training_repo: str
     model: str
+    hours_to_complete: int
+
+class MinerTaskResponse(BaseModel):
+    message: str
+    accepted: bool
+
 
 class TaskRequest(BaseModel):
     ds_repo: str

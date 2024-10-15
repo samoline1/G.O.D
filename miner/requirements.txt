@@ -4,7 +4,6 @@ pydantic==2.7.0
 python-dotenv==1.0.0
 pandas==2.2.3
 PyYAML==6.0
-docker==6.0.0
 huggingface-hub==0.14.1
-datasets==2.14.4  
+datasets==2.14.4
 docker==7.1.0

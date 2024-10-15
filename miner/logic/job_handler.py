@@ -6,7 +6,7 @@ from core.models.utility_models import Job, DatasetType, FileFormat, CustomDatas
 from core import constants as cst
 from core.config.config_handler import create_dataset_entry, save_config, update_model_info
 from fiber.logging_utils import get_logger
-from core.docker_utils import stream_logs  
+from core.docker_utils import stream_logs
 
 logger = get_logger(__name__)
 
@@ -34,10 +34,10 @@ def _load_and_modify_config(
     return config
 
 def create_job(
-    dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
+        job_id: str, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
 ) -> Job:
     return Job(
-        dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format
+        job_id=job_id, dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format
     )
 
 def start_tuning_container(job: Job):

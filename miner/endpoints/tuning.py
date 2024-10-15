@@ -4,7 +4,7 @@ from core.models import payload_models
 from fastapi.routing import APIRouter
 from fiber.logging_utils import get_logger
 
-fsrom core.models.payload_models import JobStatusResponse, TrainResponse, MinerTaskRequst
+from core.models.payload_models import  TrainResponse, MinerTaskRequst, MinerTaskResponse
 from core.models.utility_models import FileFormat, JobStatus
 from core.utils import validate_dataset
 from fiber.miner.core.configuration import Config
@@ -38,6 +38,7 @@ async def tune_model(
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
+        job_id= decrypted_payload.job_id,
         dataset=decrypted_payload.dataset,
         model=decrypted_payload.model,
         dataset_type=decrypted_payload.dataset_type,
@@ -48,11 +49,10 @@ async def tune_model(
     return {"message": "Training job enqueued.", "job_id": job.job_id}
 
 
-async def task_offer(request: MinerTaskRequst) -> bool:
-    # this is where you would decide if you want to accept or reject the offer
+async def task_offer(request: MinerTaskRequst) -> MinerTaskResponse:
     import random
-    return random.random() > 0.2
-
+    accepted = random.random() > 0.2
+    return MinerTaskResponse(message="Task offer response", accepted=accepted)
 
 def factory_router() -> APIRouter:
     router = APIRouter()
@@ -61,10 +61,10 @@ def factory_router() -> APIRouter:
         task_offer,
         tags=["Subnet"],
         methods=["POST"],
-        response_model=TrainResponse,
+        response_model=MinerTaskResponse
     )
     router.add_api_route(
-        "/train/",
+        "/start_training/",
         tune_model,
         tags=["Subnet"],
         methods=["POST"],
