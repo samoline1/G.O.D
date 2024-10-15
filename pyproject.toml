@@ -20,6 +20,8 @@ dependencies = [
     "python-dotenv==1.0.1",
     "redis==5.0.8",
     "uvicorn==0.31.0",
+    "datasets",
+    "docker",
     "fiber @ git+https://github.com/rayonlabs/fiber.git@optional-packages",
 ]
 

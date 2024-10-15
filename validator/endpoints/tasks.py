@@ -1,14 +1,22 @@
-from core.models.utility_models import TaskStatus
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Optional
+from datetime import datetime
+from datetime import timedelta
+from uuid import UUID
 
+from fastapi import APIRouter
+from fastapi import Depends
+from fastapi import HTTPException
 from loguru import logger
-from validator.core.models import Task
+
+from core.models.payload_models import NewTaskRequest
+from core.models.payload_models import NewTaskResponse
+from core.models.payload_models import TaskStatusResponse
+from core.models.payload_models import TaskSubmissionRequest
+from core.models.payload_models import TaskSubmissionResponse
+from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_config
+from validator.core.models import Task
 from validator.db import sql
-from core.models.payload_models import NewTaskRequest, NewTaskResponse, TaskStatusResponse, TaskSubmissionRequest, TaskSubmissionResponse
 
 
 async def create_task(
@@ -16,30 +24,36 @@ async def create_task(
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
 
-    task = Task(model_id=request.model_repo,
-         ds_id = request.ds_repo,
-         system =request.system_col,
-         instruction= request.instruction_col,
-         input= request.input_col,
-         output = request.output_col,
-         hours_to_complete= request.hours_to_complete,
-         status=TaskStatus.PENDING
-         )
-    task_id = await sql.add_task(
+    current_time = datetime.utcnow()
+    end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
+
+    task = Task(
+        model_id=request.model_repo,
+        ds_id=request.ds_repo,
+        system=request.system_col,
+        instruction=request.instruction_col,
+        input=request.input_col,
+        output=request.output_col,
+        status=TaskStatus.PENDING,
+        end_timestamp=end_timestamp
+    )
+
+    task = await sql.add_task(
         task,
         config.psql_db
     )
-    logger.info(f"Task {task_id} created.")
-    return NewTaskResponse(success=True, task_id=task_id)
+
+    logger.info(task.task_id)
+    return NewTaskResponse(success=True, task_id=task.task_id)
 
 async def get_task_status(
-    task_id: str, # should this not be a UUID?
+    task_id: UUID,
     config: Config = Depends(get_config),
 ) -> TaskStatusResponse:
     task = await sql.get_task(task_id, config.psql_db)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
-    return TaskStatusResponse(success=True, task_id=task_id, status=task["status"])
+    return TaskStatusResponse(success=True, task_id=task_id, status=task.status)
 
 async def submit_task_submission(
     request: TaskSubmissionRequest,

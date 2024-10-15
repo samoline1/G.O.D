@@ -1,8 +1,14 @@
-from typing import Any, Optional
+from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
 
-from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat, JobStatus, TaskStatus
+from pydantic import BaseModel
+from pydantic import Field
+
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import DatasetType
+from core.models.utility_models import FileFormat
+from core.models.utility_models import JobStatus
+from core.models.utility_models import TaskStatus
 
 
 class TrainRequest(BaseModel):
@@ -66,14 +72,38 @@ class TaskResponse(BaseModel):
     task_id: str
     message: Optional[str] = None
 
-class TaskStatusResponse(BaseModel):
-    success: bool
-    task_id: str
-    status: str
+
 
 class SubmissionResponse(BaseModel):
     success: bool
     message: str
     submission_id: Optional[str] = None
 
+class NewTaskRequest(BaseModel):
+    model_repo: str
+    ds_repo: str
+    system_col: str
+    instruction_col: str
+    input_col: Optional[str] = None
+    output_col: Optional[str] = None
+    hours_to_complete: Optional[float] = None
 
+
+class NewTaskResponse(BaseModel):
+    success: bool
+    task_id: UUID
+
+class TaskStatusResponse(BaseModel):
+    success: bool
+    task_id: UUID
+    status: TaskStatus
+
+class TaskSubmissionRequest(BaseModel):
+    task_id: UUID
+    node_id: UUID
+    repo: str
+
+class TaskSubmissionResponse(BaseModel):
+    success: bool
+    message: str
+    submission_id: Optional[UUID] = None
