@@ -97,14 +97,14 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
     test_json_path = await save_json_to_temp_file(test_data_json, prefix="test_data_")
     synth_json_path = await save_json_to_temp_file(synthetic_data_json, prefix="synth_data_") if synthetic_data else None
 
-    test_json_url = await upload_json_to_minio(test_json_path, "my-bucket", f"{dataset_name}_test_data.json")
+    test_json_url = await upload_json_to_minio(test_json_path, "tuning", f"{dataset_name}_test_data.json")
     synth_json_url = await upload_json_to_minio(
         synth_json_path,
-        "my-bucket",
+        "tuning",
         f"{dataset_name}_synth_data.json") if synthetic_data else None
 
     os.remove(test_json_path)
     if synth_json_path:
         os.remove(synth_json_path)
 
-    return test_json_url, synth_json_url
+    return test_json_url.strip('"'), synth_json_url.strip('"')
