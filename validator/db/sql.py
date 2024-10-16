@@ -15,8 +15,8 @@ async def add_task(task: Task, psql_db: PSQLDB) -> Task:
         connection: Connection
         task_id = await connection.fetchval(
             """
-            INSERT INTO tasks (model_id, ds_id, system, instruction, input, status)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO tasks (model_id, ds_id, system, instruction, input, status, hours_to_complete)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING task_id
             """,
             task.model_id,
@@ -24,7 +24,8 @@ async def add_task(task: Task, psql_db: PSQLDB) -> Task:
             task.system,
             task.instruction,
             task.input,
-            task.status
+            task.status,
+            task.hours_to_complete
         )
 
         return await get_task(task_id, psql_db)
@@ -41,6 +42,9 @@ async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
         if row:
             return Task(**dict(row))
         return None
+
+
+
 
 async def get_tasks_by_status(status: str, psql_db: PSQLDB) -> List[Task]:
     async with await psql_db.connection() as connection:
@@ -127,32 +131,48 @@ async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> No
         )
 
 
+
 async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
     existing_task = await get_task(updated_task.task_id, psql_db)
     if not existing_task:
         raise ValueError("Task not found")
 
     updates = {}
-    for field, value in updated_task.dict(exclude_unset=True).items():
+    for field, value in updated_task.dict(exclude_unset=True, exclude={'assigned_miners'}).items():
         if getattr(existing_task, field) != value:
             updates[field] = value
 
-    if not updates:
-        return existing_task
-
-    set_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(updates.keys())])
-    values = list(updates.values())
-    query = f"""
-        UPDATE tasks
-        SET {set_clause}, updated_timestamp = CURRENT_TIMESTAMP
-        WHERE task_id = $1
-    """
-
     async with await psql_db.connection() as connection:
         connection: Connection
-        await connection.execute(query, updated_task.task_id, *values)
+        async with connection.transaction():
+            # Update the tasks table
+            if updates:
+                set_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(updates.keys())])
+                values = list(updates.values())
+                query = f"""
+                    UPDATE tasks
+                    SET {set_clause}, updated_timestamp = CURRENT_TIMESTAMP
+                    WHERE task_id = $1
+                """
+                await connection.execute(query, updated_task.task_id, *values)
+
+            # Update the task_nodes table
+            if updated_task.assigned_miners is not None:
+                # Remove existing assignments
+                await connection.execute(
+                    "DELETE FROM task_nodes WHERE task_id = $1",
+                    updated_task.task_id
+                )
+
+                # Add new assignments
+                if updated_task.assigned_miners:
+                    await connection.executemany(
+                        "INSERT INTO task_nodes (task_id, node_id) VALUES ($1, $2)",
+                        [(updated_task.task_id, miner_id) for miner_id in updated_task.assigned_miners]
+                    )
 
     return await get_task(updated_task.task_id, psql_db)
+
 
 async def get_all_miners(psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:

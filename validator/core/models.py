@@ -10,14 +10,15 @@ class Task(BaseModel):
     task_id: Optional[UUID] = None
     model_id: str
     ds_id: str
-    system: str
-    instruction: str
     input: str
-    output: Optional[str] = None
     status: str
+    system: Optional[str] = None
+    instruction: Optional[str] = None
+    output: Optional[str] = None
     test_data: Optional[str] = None
     synthetic_data: Optional[str] = None
     hf_training_repo: Optional[str] = None
+    assigned_miners : Optional[List[UUID]] = None
     miner_scores: Optional[List[float]] = None
     created_timestamp: Optional[datetime] = None
     updated_timestamp: Optional[datetime] = None

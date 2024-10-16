@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
-from loguru import logger
+from fiber.logging_utils import get_logger
 
 from core.models.payload_models import NewTaskRequest
 from core.models.payload_models import NewTaskResponse
@@ -18,6 +18,7 @@ from validator.core.dependencies import get_config
 from validator.core.models import Task
 from validator.db import sql
 
+logger = get_logger(__name__)
 
 async def create_task(
     request: NewTaskRequest,
@@ -35,7 +36,8 @@ async def create_task(
         input=request.input_col,
         output=request.output_col,
         status=TaskStatus.PENDING,
-        end_timestamp=end_timestamp
+        end_timestamp=end_timestamp,
+        hours_to_complete=request.hours_to_complete
     )
 
     task = await sql.add_task(

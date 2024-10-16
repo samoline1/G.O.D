@@ -3,7 +3,7 @@ import datetime
 import random
 from typing import List
 
-from loguru import logger ## We should be using the fiber logger throughout
+from fiber.logging_utils import get_logger
 
 import validator.core.constants as cst
 from core.constants import REPO_OWNER, MINIMUM_MINER_POOL
@@ -21,24 +21,23 @@ from validator.db import sql
 from validator.evaluation.scoring import evaluate_and_score
 from validator.tasks.task_prep import prepare_task
 
-def run_task_prep(task: Task) -> Task:
-    output_task_repo_name = f'{REPO_OWNER}/{task.task_id}'
-    test_data, synth_data = prepare_task(
-        dataset_name=task.repo_name,
-        columns_to_sample=[
-            task.system,
-            task.instruction,
-            task.input_data,
-            task.output
-        ],
-        repo_name=output_task_repo_name
-    )
+import json
+logger = get_logger(__name__)
+
+NUM_MINERS_REQUIRED = 1 # dev temp
+async def run_task_prep(task: Task) -> Task:
+    output_task_repo_name = f"{REPO_OWNER}/{task.ds_id.replace('/', '_')}"
+    columns_to_sample = [task.system, task.instruction, task.input, task.output]
+    # only non-null
+    columns_to_sample = list(filter(None, columns_to_sample))
+    test_data, synth_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample, repo_name=output_task_repo_name)
+    task.hf_training_repo = output_task_repo_name
     task.status =  TaskStatus.TRAINING
-    task.synthetic_data = synth_data
-    task.test_data = test_data
+    task.synthetic_data = json.dumps(synth_data)
+    task.test_data = json.dumps(test_data)
     return task
 
-def select_miner_pool(task: Task, miners: List[Node]):
+async def select_miner_pool(task: Task, miners: List[Node]):
     random.shuffle(miners)
     selected_miners = []
     task_details_for_miner = MinerTaskRequst(
@@ -46,12 +45,16 @@ def select_miner_pool(task: Task, miners: List[Node]):
         model = task.model_id,
         hours_to_complete = task.hours_to_complete
     ) # things we give to miner to ask if they want to accept the job
-    while len(selected_miners) < task.num_miners_required and miners:
-        miner = miners.pop(0)
+    while len(selected_miners) < MINIMUM_MINER_POOL and miners:
+        miner = miners.pop(1)
         # TODO: right now I just call the miner function, need to instead call the miner api
-        if task_offer(task_details_for_miner):
+        logger.info('LOOKING FOR MINERS')
+        response = await task_offer(task_details_for_miner)
+        if response:
+            logger.info(f'Miner {miner.node_id}  the task')
             selected_miners.append(miner.node_id)
     if len(selected_miners) < MINIMUM_MINER_POOL:
+        logger.info('THERE WAS A PROBLEM - NOT ENOUGH MINERS')
         task.status = TaskStatus.FAILURE
 
     # TODO: how do you want to miners to be saved into the assigned miners
@@ -85,14 +88,15 @@ async def validator_cycle(config):
             logger.info("Validator Heartbeat! Its alive!")
             tasks = await sql.get_tasks_by_status(TaskStatus.PENDING, config.psql_db)
             for task in tasks:
-                task = run_task_prep(task)
+                task = await run_task_prep(task)
                 miner_pool = await sql.get_all_miners(config.psql_db)
-                task = select_miner_pool(task, miner_pool)
+                task = await select_miner_pool(task, miner_pool)
+                await sql.update_task(task, config.psql_db)
                 if task.status == TaskStatus.TRAINING:
                     task.started_timestamp =  datetime.datetime.now()
                     await start_miners(task, miner_pool)
             # TODO: this needs implementing
-            completed_tasks = await sql.get_tasks_by_status('complete', config.psql_db)
+            completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
             for completed_task in completed_tasks:
                 await evaluate_and_score(completed_task, config)
             await asyncio.sleep(5)

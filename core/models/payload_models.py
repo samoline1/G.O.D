@@ -82,11 +82,11 @@ class SubmissionResponse(BaseModel):
 class NewTaskRequest(BaseModel):
     model_repo: str
     ds_repo: str
-    system_col: str
-    instruction_col: str
-    input_col: Optional[str] = None
+    input_col: str
+    hours_to_complete: int
+    system_col: Optional[str] = None
+    instruction_col: Optional[str] = None
     output_col: Optional[str] = None
-    hours_to_complete: Optional[float] = None
 
 
 class NewTaskResponse(BaseModel):

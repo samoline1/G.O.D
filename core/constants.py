@@ -15,7 +15,7 @@ HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 WANDB_TOKEN = os.getenv("WANDB_TOKEN")
 
 # Task Stuff
-MINIMUM_MINER_POOL = 4 # we need at least 4 miners
+MINIMUM_MINER_POOL = 1 # we need at least 4 miners
 REPO_OWNER = 'cwaud' # please change from mine :D
 
 # scoring stuff

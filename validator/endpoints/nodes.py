@@ -1,13 +1,14 @@
 from fastapi import APIRouter
 from fastapi import Body
 from fastapi import Depends
-from loguru import logger
+from fiber.logging_utils import get_logger
 
 from validator.core.config import Config
 from validator.core.dependencies import get_config
 from validator.db import sql
 
 
+logger = get_logger(__name__)
 async def add_node(
     coldkey: str = Body(..., embed=True),
     ip: str = Body(..., embed=True),
