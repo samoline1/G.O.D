@@ -16,7 +16,7 @@ def _load_and_modify_config(
     model: str,
     dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
-    task_id: UUID
+    task_id: str
 ) -> dict:
     """
     Loads the config template and modifies it to create a new job config.

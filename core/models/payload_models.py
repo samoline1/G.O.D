@@ -18,7 +18,7 @@ class TrainRequest(BaseModel):
     model: str = Field(..., description="Name or path of the model to be trained")
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
-    task_id: UUID
+    task_id: str
 
 class TrainResponse(BaseModel):
     message: str

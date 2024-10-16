@@ -2,8 +2,8 @@ import asyncio
 import datetime
 import random
 from typing import List
+from uuid import UUID
 
-from fiber.logging_utils import get_logger
 
 import validator.core.constants as cst
 from core.constants import REPO_OWNER, MINIMUM_MINER_POOL
@@ -22,6 +22,10 @@ from validator.evaluation.scoring import evaluate_and_score
 from validator.tasks.task_prep import prepare_task
 
 import json
+
+from validator.utils.call_endpoint import process_stream
+
+from fiber.logging_utils import get_logger
 logger = get_logger(__name__)
 
 NUM_MINERS_REQUIRED = 1 # dev temp
@@ -46,10 +50,11 @@ async def select_miner_pool(task: Task, miners: List[Node]):
         hours_to_complete = task.hours_to_complete
     ) # things we give to miner to ask if they want to accept the job
     while len(selected_miners) < MINIMUM_MINER_POOL and miners:
-        miner = miners.pop(1)
+        miner = miners.pop(0)
         # TODO: right now I just call the miner function, need to instead call the miner api
         logger.info('LOOKING FOR MINERS')
-        response = await task_offer(task_details_for_miner)
+        response = await task_offer(miner, task_details_for_miner)
+        logger.info(f'The response was {response}')
         if response:
             logger.info(f'Miner {miner.node_id}  the task')
             selected_miners.append(miner.node_id)
@@ -60,10 +65,11 @@ async def select_miner_pool(task: Task, miners: List[Node]):
     # TODO: how do you want to miners to be saved into the assigned miners
     # - it's ok to pass the entire miner object? better to just give the ids?
     task.assigned_miners = selected_miners
+    logger.info(f'So we have {selected_miners} assigned to the task')
 
     return task
 
-async def start_miners(task: Task, miners : List[Node]):
+async def start_miners(task: Task, miners : List[UUID], config):
     dataset_type = CustomDatasetType(
             field_system = task.system,
             field_input = task.input,
@@ -75,11 +81,16 @@ async def start_miners(task: Task, miners : List[Node]):
                  model = task.model_id,
                  dataset_type= dataset_type,
                  file_format= FileFormat.HF,
-                 task_id = task.task_id
+                 task_id = str(task.task_id)
                  )
-    for miner in miners:
-        # TODO: rather than calling the function directly, we should be calling the endpoint given the miner url etc
-        await tune_model(task_request_body) # ( will return true when started so doesn't matter we are awaiting for testing)
+    logger.info(f'Task is ready  for  {len(miners)} miners - lets ping them')
+
+    for miner_id in miners:
+        miner = await sql.get_node(miner_id, config.psql_db)
+        url = f"{miner.ip}:{miner.port}/start_training/"
+        response = await process_stream(url, None, task_request_body.model_dump())
+        logger.info(f"The response we got from {miner.node_id} was {response}")
+        return response
 
 
 async def validator_cycle(config):
@@ -92,9 +103,11 @@ async def validator_cycle(config):
                 miner_pool = await sql.get_all_miners(config.psql_db)
                 task = await select_miner_pool(task, miner_pool)
                 await sql.update_task(task, config.psql_db)
+                logger.info(f'So now we have a task {task}')
                 if task.status == TaskStatus.TRAINING:
+                    logger.info(f"Asking miners to begin training!")
                     task.started_timestamp =  datetime.datetime.now()
-                    await start_miners(task, miner_pool)
+                    await start_miners(task, task.assigned_miners, config)
             # TODO: this needs implementing
             completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
             for completed_task in completed_tasks:

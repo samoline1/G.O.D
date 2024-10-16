@@ -1,3 +1,5 @@
+import json
+
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
@@ -14,6 +16,8 @@ from core.utils import validate_dataset
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
+from validator.core.models import Node
+from validator.utils.call_endpoint import process_non_stream
 
 
 logger = get_logger(__name__)
@@ -55,10 +59,9 @@ async def tune_model(
     return {"message": "Training job enqueued.", "task_id": job.job_id}
 
 
-async def task_offer(request: MinerTaskRequst) -> MinerTaskResponse:
-    import random
-    accepted = random.random() > 0.2
-    return MinerTaskResponse(message="Task offer response", accepted=accepted)
+async def task_offer(miner: Node, request: MinerTaskRequst) -> MinerTaskResponse:
+    url = f"{miner.ip}:{miner.port}/task_offer/"
+    return await process_non_stream(url, None, request.model_dump())
 
 def factory_router() -> APIRouter:
     router = APIRouter()

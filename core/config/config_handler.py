@@ -40,7 +40,7 @@ def create_dataset_entry(
 
     return dataset_entry
 
-def update_model_info(config: dict, model: str, job_id: UUID):
+def update_model_info(config: dict, model: str, job_id: str):
     config["base_model"] = model
     config["wandb_runid"] =  job_id
 
