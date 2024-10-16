@@ -1,5 +1,6 @@
 import threading
 import queue
+from uuid import UUID
 import docker
 from core.models.utility_models import Job, JobStatus
 from fiber.logging_utils import get_logger
@@ -9,6 +10,7 @@ logger = get_logger(__name__)
 
 class TrainingWorker:
     def __init__(self):
+        logger.info('STARTING A TRAINING WORKER')
         self.job_queue: queue.Queue[Job] = queue.Queue()
         self.job_store: dict[str, Job] = {}
         self.thread = threading.Thread(target=self._worker, daemon=True)
@@ -32,10 +34,10 @@ class TrainingWorker:
 
     def enqueue_job(self, job: Job):
         self.job_queue.put(job)
-        self.job_store[job.job_id] = job
+        self.job_store[job.task_id] = job
 
-    def get_status(self, job_id: str) -> JobStatus:
-        job = self.job_store.get(job_id)
+    def get_status(self, task_id: UUID) -> JobStatus:
+        job = self.job_store.get(task_id)
         return job.status if job else "Not Found"
 
     def shutdown(self):

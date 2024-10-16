@@ -1,4 +1,5 @@
 import os
+from uuid import UUID
 import yaml
 import docker
 from docker.errors import DockerException
@@ -15,7 +16,7 @@ def _load_and_modify_config(
     model: str,
     dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
-    job_id: str,
+    task_id: UUID
 ) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
@@ -28,31 +29,31 @@ def _load_and_modify_config(
     dataset_entry = create_dataset_entry(dataset, dataset_type, file_format)
     config["datasets"].append(dataset_entry)
 
-    update_model_info(config, model, job_id)
+    update_model_info(config, model, task_id)
     config["mlflow_experiment_name"] = dataset
 
     return config
 
 def create_job(
-        job_id: str, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
+        task_id: UUID, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
 ) -> Job:
     return Job(
-        job_id=job_id, dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format
+        task_id=task_id, dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format
     )
 
 def start_tuning_container(job: Job):
-    config_filename = f"{job.job_id}.yml"
+    config_filename = f"{job.task_id}.yml"
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
 
     config = _load_and_modify_config(
-        job.dataset, job.model, job.dataset_type, job.file_format, job.job_id
+        job.dataset, job.model, job.dataset_type, job.file_format, job.task_id
     )
     save_config(config, config_path)
 
     docker_env = {
         "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
         "WANDB_TOKEN": cst.WANDB_TOKEN,
-        "JOB_ID": job.job_id,
+        "JOB_ID": job.task_id,
         "DATASET_TYPE": job.dataset_type.value if isinstance(job.dataset_type, DatasetType) else "custom",
         "DATASET_FILENAME": os.path.basename(job.dataset) if job.file_format != FileFormat.HF else "",
     }

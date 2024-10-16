@@ -25,6 +25,8 @@ async def tune_model(
     config: Config = Depends(get_config),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
+    logger.info("Starting model tuning.")
+    logger.info(f"Job recieved is {decrypted_payload}")
     if not decrypted_payload.dataset or not decrypted_payload.model:
         raise HTTPException(status_code=400, detail="Dataset and model are required.")
 
@@ -44,15 +46,16 @@ async def tune_model(
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
-        job_id= decrypted_payload.job_id,
+        task_id= decrypted_payload.task_id,
         dataset=decrypted_payload.dataset,
         model=decrypted_payload.model,
         dataset_type=decrypted_payload.dataset_type,
         file_format=decrypted_payload.file_format,
     )
+    logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)
 
-    return {"message": "Training job enqueued.", "job_id": job.job_id}
+    return {"message": "Training job enqueued.", "job_id": job.task_id}
 
 
 async def task_offer(request: MinerTaskRequst) -> MinerTaskResponse:
