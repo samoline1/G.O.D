@@ -34,10 +34,10 @@ class TrainingWorker:
 
     def enqueue_job(self, job: Job):
         self.job_queue.put(job)
-        self.job_store[job.task_id] = job
+        self.job_store[job.job_id] = job
 
-    def get_status(self, task_id: UUID) -> JobStatus:
-        job = self.job_store.get(task_id)
+    def get_status(self, job_id: UUID) -> JobStatus:
+        job = self.job_store.get(job_id)
         return job.status if job else "Not Found"
 
     def shutdown(self):

@@ -46,7 +46,7 @@ async def tune_model(
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
-        task_id= decrypted_payload.task_id,
+        job_id= decrypted_payload.task_id,
         dataset=decrypted_payload.dataset,
         model=decrypted_payload.model,
         dataset_type=decrypted_payload.dataset_type,
@@ -55,7 +55,7 @@ async def tune_model(
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)
 
-    return {"message": "Training job enqueued.", "job_id": job.task_id}
+    return {"message": "Training job enqueued.", "task_id": job.job_id}
 
 
 async def task_offer(request: MinerTaskRequst) -> MinerTaskResponse:
