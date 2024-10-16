@@ -1,0 +1,18 @@
+FROM winglian/axolotl-cloud:main-latest
+
+WORKDIR /app
+
+COPY validator/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV HUGGINGFACE_TOKEN=""
+ENV JOB_ID=""
+ENV DATASET=""
+ENV MODEL=""
+ENV ORIGINAL_MODEL=""
+ENV DATASET_TYPE=""
+ENV FILE_FORMAT=""
+
+CMD ["python", "-m", "validator.evaluation.eval"]

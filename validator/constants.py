@@ -1,0 +1,15 @@
+import os
+from core.constants import HUGGINGFACE_TOKEN
+
+TEST_SIZE = 0.1
+TRAIN_TEST_SPLIT_PERCENTAGE = 0.1
+GET_SYNTH_DATA = True
+MAX_SYNTH_DATA_POINTS = 1000
+ADDITIONAL_SYNTH_DATA_PERCENTAGE = 0.1
+SYNTH_GEN_BATCH_SIZE = 3
+SYNTH_MODEL_TEMPERATURE = 0.3
+SYNTH_MODEL = "llama-3-1-8b"
+CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
+PROMPT_GEN_ENDPOINT = "https://api.corcel.io/v1/chat/completions"
+PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
+PROMPT_PATH = "validator/prompts.yml"
