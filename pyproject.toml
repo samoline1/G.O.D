@@ -23,6 +23,7 @@ dependencies = [
     "datasets",
     "docker",
     "pandas",
+    "minio",
     "fiber @ git+https://github.com/rayonlabs/fiber.git@optional-packages",
 ]
 
