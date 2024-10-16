@@ -3,8 +3,6 @@ from fastapi import HTTPException
 from fastapi.routing import APIRouter
 from fiber.logging_utils import get_logger
 
-from fiber.miner.core.configuration import Config
-from fiber.miner.dependencies import get_config
 
 from core.models.payload_models import MinerTaskRequst
 from core.models.payload_models import MinerTaskResponse
@@ -22,7 +20,6 @@ logger = get_logger(__name__)
 
 async def tune_model(
     decrypted_payload: TrainRequest,
-    config: Config = Depends(get_config),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     logger.info("Starting model tuning.")
@@ -46,7 +43,7 @@ async def tune_model(
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
-        job_id= decrypted_payload.task_id,
+        job_id= str(decrypted_payload.task_id),
         dataset=decrypted_payload.dataset,
         model=decrypted_payload.model,
         dataset_type=decrypted_payload.dataset_type,

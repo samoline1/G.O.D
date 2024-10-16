@@ -44,7 +44,7 @@ class CustomDatasetType(BaseModel):
     field: str | None = None
 
 class Job(BaseModel):
-    job_id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     dataset: str
     model: str
     dataset_type: DatasetType | CustomDatasetType

@@ -35,7 +35,7 @@ def _load_and_modify_config(
     return config
 
 def create_job(
-        job_id: UUID, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
+        job_id: str, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
 ) -> Job:
     return Job(
         job_id=job_id, dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format
