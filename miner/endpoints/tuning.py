@@ -58,10 +58,22 @@ async def tune_model(
 
     return {"message": "Training job enqueued.", "task_id": job.job_id}
 
+async def get_latest_model_submission(task_id: str):
+    # TODO: Implement a proper lookup mechanism for model submissions
+    try:
+        # Placeholder: Return a fixed model name
+        return 'cwaud/test'
+    except Exception as e:
+        logger.error(f"Error retrieving latest model submission for task {task_id}: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"No model submission found for task {task_id}")
 
-async def task_offer(miner: Node, request: MinerTaskRequst) -> MinerTaskResponse:
-    url = f"{miner.ip}:{miner.port}/task_offer/"
-    return await process_non_stream(url, None, request.model_dump())
+
+async def task_offer(request: MinerTaskRequst) -> MinerTaskResponse:
+    if request.hours_to_complete < 100:
+        return MinerTaskResponse(message='Yes', accepted=True)
+    else:
+        return MinerTaskResponse(message='I only accept small jobs', accepted=False)
+
 
 def factory_router() -> APIRouter:
     router = APIRouter()
@@ -71,6 +83,15 @@ def factory_router() -> APIRouter:
         tags=["Subnet"],
         methods=["POST"],
         response_model=MinerTaskResponse
+    )
+    router.add_api_route(
+        "/get_latest_model_submission/{task_id}",
+        get_latest_model_submission,
+        tags=["Subnet"],
+        methods=["GET"],
+        response_model=str,
+        summary="Get Latest Model Submission",
+        description="Retrieve the latest model submission for a given task ID"
     )
     router.add_api_route(
         "/start_training/",

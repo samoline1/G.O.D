@@ -7,13 +7,12 @@ from uuid import UUID
 
 import validator.core.constants as cst
 from core.constants import REPO_OWNER, MINIMUM_MINER_POOL
-from core.models.payload_models import MinerTaskRequst
+from core.models.payload_models import MinerTaskRequst, MinerTaskResponse
 from core.models.payload_models import TrainRequest
 from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
 
 
 # TODO: we shouldn't be importing these but calling the endpoint
-from miner.endpoints.tuning import task_offer
 from miner.endpoints.tuning import tune_model
 from validator.core.models import Node
 from validator.core.models import Task
@@ -23,7 +22,7 @@ from validator.tasks.task_prep import prepare_task
 
 import json
 
-from validator.utils.call_endpoint import process_stream
+from validator.utils.call_endpoint import process_non_stream, process_stream
 
 from fiber.logging_utils import get_logger
 logger = get_logger(__name__)
@@ -41,6 +40,12 @@ async def run_task_prep(task: Task) -> Task:
     task.test_data = json.dumps(test_data)
     return task
 
+
+async def make_offer(miner: Node, request: MinerTaskRequst) -> MinerTaskResponse:
+    url = f"{miner.ip}:{miner.port}/task_offer/"
+    return await process_non_stream(url, None, request.model_dump())
+
+
 async def select_miner_pool(task: Task, miners: List[Node]):
     random.shuffle(miners)
     selected_miners = []
@@ -51,9 +56,8 @@ async def select_miner_pool(task: Task, miners: List[Node]):
     ) # things we give to miner to ask if they want to accept the job
     while len(selected_miners) < MINIMUM_MINER_POOL and miners:
         miner = miners.pop(0)
-        # TODO: right now I just call the miner function, need to instead call the miner api
         logger.info('LOOKING FOR MINERS')
-        response = await task_offer(miner, task_details_for_miner)
+        response = await make_offer(miner, task_details_for_miner)
         logger.info(f'The response was {response}')
         if response:
             logger.info(f'Miner {miner.node_id}  the task')
@@ -107,6 +111,8 @@ async def validator_cycle(config):
                 if task.status == TaskStatus.TRAINING:
                     logger.info(f"Asking miners to begin training!")
                     task.started_timestamp =  datetime.datetime.now()
+                    task.end_timestamp = task.started_timestamp +  datetime.timedelta(hours=task.hours_to_complete)
+                    await sql.update_task(task, config.psql_db)
                     await start_miners(task, task.assigned_miners, config)
             # TODO: this needs implementing
             completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
