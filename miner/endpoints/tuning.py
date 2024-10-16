@@ -1,15 +1,14 @@
 import json
+import os
 
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
 from fiber.logging_utils import get_logger
 
-
 from core.models.payload_models import MinerTaskRequst
 from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequest
-
 from core.models.payload_models import TrainResponse
 from core.models.utility_models import FileFormat
 from core.utils import validate_dataset
@@ -18,26 +17,46 @@ from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
 from validator.core.models import Node
 from validator.utils.call_endpoint import process_non_stream
+from validator.utils.minio import async_minio_client
 
 
 logger = get_logger(__name__)
+
+async def download_s3_file(dataset_path: str) -> str:
+
+    logger.info(dataset_path)
+    bucket_name = "tuning"
+    object_name = dataset_path
+
+    local_file_path = os.path.join("/tmp", os.path.basename(dataset_path))
+
+    await async_minio_client.download_file(bucket_name, object_name, local_file_path)
+    return local_file_path
 
 async def tune_model(
     decrypted_payload: TrainRequest,
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     logger.info("Starting model tuning.")
-    logger.info(f"Job recieved is {decrypted_payload}")
+    logger.info(f"Job received is {decrypted_payload}")
+
     if not decrypted_payload.dataset or not decrypted_payload.model:
         raise HTTPException(status_code=400, detail="Dataset and model are required.")
 
     try:
+        logger.info(decrypted_payload.file_format)
         if decrypted_payload.file_format != FileFormat.HF:
-            is_valid = validate_dataset(
+            if decrypted_payload.file_format == FileFormat.S3:
+                decrypted_payload.dataset = await download_s3_file(decrypted_payload.dataset)
+                logger.info(decrypted_payload.dataset)
+                decrypted_payload.file_format = FileFormat.JSON
+
+            is_valid = await validate_dataset(
                 decrypted_payload.dataset,
                 decrypted_payload.dataset_type,
                 decrypted_payload.file_format,
             )
+
             if not is_valid:
                 raise HTTPException(
                     status_code=400,

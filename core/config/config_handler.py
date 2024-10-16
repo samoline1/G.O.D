@@ -1,8 +1,12 @@
-from uuid import UUID
-import yaml
 import os
+from uuid import UUID
 
-from core.models.utility_models import DatasetType, FileFormat, CustomDatasetType
+import yaml
+
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import DatasetType
+from core.models.utility_models import FileFormat
+
 
 def create_dataset_entry(
     dataset: str,
@@ -14,13 +18,20 @@ def create_dataset_entry(
 
     Args:
         dataset (str): The path or identifier of the dataset.
-        dataset_type (DatasetType | CustomDatasetType): The type of the dataset, a simple example would be INSTRUCT which will have columns [INSTRUCTION, INPUT, OUTPUT]
-        file_format (FileFormat): The format of the dataset file - HF, JSON, CSV - HF is a dataset on Hugging Face, JSON and CSV are local files
+        dataset_type (DatasetType | CustomDatasetType): The type of the dataset,
+        a simple example would be INSTRUCT which will have columns [INSTRUCTION, INPUT, OUTPUT]
+        file_format (FileFormat): The format of the dataset file - HF, JSON, CSV -
+        HF is a dataset on Hugging Face, JSON and CSV are local files
 
     Returns:
-        dict: A dictionary containing the dataset entry information, this is basically the dataset information, how it should be parsed by the axolotl library
+        dict: A dictionary containing the dataset entry information,
+        this is basically the dataset information, how it should be parsed by the axolotl library
     """
+
     dataset_entry = {"path": dataset}
+
+    if file_format == FileFormat.JSON:
+        dataset_entry = {"path": f"/workspace/input_data/{os.path.basename(dataset)}"}
 
     if isinstance(dataset_type, DatasetType):
         dataset_entry["type"] = dataset_type.value
