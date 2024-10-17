@@ -1,6 +1,8 @@
 import json
 import os
+from urllib.parse import urlparse
 
+import aiohttp
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
@@ -22,15 +24,19 @@ from validator.utils.minio import async_minio_client
 
 logger = get_logger(__name__)
 
-async def download_s3_file(dataset_path: str) -> str:
+async def download_s3_file(file_url: str) -> str:
+    parsed_url = urlparse(file_url)
+    file_name = os.path.basename(parsed_url.path)
+    local_file_path = os.path.join("/tmp", file_name)
 
-    logger.info(dataset_path)
-    bucket_name = "tuning"
-    object_name = dataset_path
+    async with aiohttp.ClientSession() as session:
+        async with session.get(file_url) as response:
+            if response.status == 200:
+                with open(local_file_path, 'wb') as f:
+                    f.write(await response.read())
+            else:
+                raise Exception(f"Failed to download file: {response.status}")
 
-    local_file_path = os.path.join("/tmp", os.path.basename(dataset_path))
-
-    await async_minio_client.download_file(bucket_name, object_name, local_file_path)
     return local_file_path
 
 async def tune_model(

@@ -24,7 +24,7 @@ async def save_json_to_temp_file(data: List[dict], prefix: str) -> str:
 
 async def upload_json_to_minio(file_path: str, bucket_name: str, object_name: str) -> str:
     await async_minio_client.upload_file(bucket_name, object_name, file_path)
-    return async_minio_client.get_public_url(bucket_name, object_name)
+    return await async_minio_client.get_presigned_url(bucket_name, object_name)
 
 def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     if test_size is None:
