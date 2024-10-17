@@ -1,10 +1,30 @@
+import json
+import os
+import tempfile
 from typing import List
-from datasets import load_dataset, DatasetDict, Dataset, concatenate_datasets
+
+from datasets import Dataset
+from datasets import DatasetDict
+from datasets import concatenate_datasets
+from datasets import load_dataset
 from fiber.logging_utils import get_logger
-from validator.synth.synth import generate_synthetic_dataset
+
 import validator.constants as cst
+from validator.synth.synth import generate_synthetic_dataset
+from validator.utils.minio import async_minio_client
+
 
 logger = get_logger(__name__)
+
+async def save_json_to_temp_file(data: List[dict], prefix: str) -> str:
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json", prefix=prefix)
+    with open(temp_file.name, 'w') as f:
+        json.dump(data, f, indent=2)
+    return temp_file.name
+
+async def upload_json_to_minio(file_path: str, bucket_name: str, object_name: str) -> str:
+    await async_minio_client.upload_file(bucket_name, object_name, file_path)
+    return await async_minio_client.get_presigned_url(bucket_name, object_name)
 
 def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     if test_size is None:
@@ -72,6 +92,19 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
     upload_train_to_hf(train_dataset, repo_name, cst.HUGGINGFACE_TOKEN)
 
     test_data_json = change_to_json_format(test_dataset, columns_to_sample)
-    synthetic_data_json = change_to_json_format(synthetic_data, columns_to_sample) if isinstance(synthetic_data, list) else []
+    synthetic_data_json = change_to_json_format(synthetic_data, columns_to_sample) if synthetic_data else []
 
-    return test_data_json, synthetic_data_json
+    test_json_path = await save_json_to_temp_file(test_data_json, prefix="test_data_")
+    synth_json_path = await save_json_to_temp_file(synthetic_data_json, prefix="synth_data_") if synthetic_data else None
+
+    test_json_url = await upload_json_to_minio(test_json_path, "tuning", f"{dataset_name}_test_data.json")
+    synth_json_url = await upload_json_to_minio(
+        synth_json_path,
+        "tuning",
+        f"{dataset_name}_synth_data.json") if synthetic_data else None
+
+    os.remove(test_json_path)
+    if synth_json_path:
+        os.remove(synth_json_path)
+
+    return test_json_url.strip('"'), synth_json_url.strip('"')
