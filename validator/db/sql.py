@@ -130,15 +130,13 @@ async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> No
             node_id,
         )
 
-
-
 async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
     existing_task = await get_task(updated_task.task_id, psql_db)
     if not existing_task:
         raise ValueError("Task not found")
 
     updates = {}
-    for field, value in updated_task.dict(exclude_unset=True, exclude={'assigned_miners'}).items():
+    for field, value in updated_task.dict(exclude_unset=True, exclude={'assigned_miners', 'updated_timestamp'}).items():
         if getattr(existing_task, field) != value:
             updates[field] = value
 
@@ -151,10 +149,20 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
                 values = list(updates.values())
                 query = f"""
                     UPDATE tasks
-                    SET {set_clause}, updated_timestamp = CURRENT_TIMESTAMP
+                    SET {set_clause}{', ' if updates else ''}updated_timestamp = CURRENT_TIMESTAMP
                     WHERE task_id = $1
+                    RETURNING *
                 """
                 await connection.execute(query, updated_task.task_id, *values)
+            else:
+                # If there are no other updates, just update the timestamp
+                query = """
+                    UPDATE tasks
+                    SET updated_timestamp = CURRENT_TIMESTAMP
+                    WHERE task_id = $1
+                    RETURNING *
+                """
+                await connection.execute(query, updated_task.task_id)
 
             # Update the task_nodes table
             if updated_task.assigned_miners is not None:
@@ -163,7 +171,6 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
                     "DELETE FROM task_nodes WHERE task_id = $1",
                     updated_task.task_id
                 )
-
                 # Add new assignments
                 if updated_task.assigned_miners:
                     await connection.executemany(
