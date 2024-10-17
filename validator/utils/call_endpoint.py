@@ -38,6 +38,18 @@ async def process_non_stream(base_url: str, token: str, payload: dict[str, Any])
         response.raise_for_status()
         return response.json()
 
+async def process_non_stream_get(base_url: str, token: str) -> dict[str, Any]:
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    logger.info(f'The GET request URL is {base_url}')
+    async with httpx.AsyncClient(timeout=120) as client:
+        response = await client.get(base_url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
 async def _process_response(response: httpx.Response) -> AsyncGenerator[str, None]:
     async for line in response.aiter_lines():
         try:

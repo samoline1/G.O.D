@@ -6,7 +6,7 @@ from validator.core.models import Task
 import core.constants as cts
 import numpy as np
 
-from validator.utils.call_endpoint import process_non_stream
+from validator.utils.call_endpoint import process_non_stream, process_non_stream_get
 
 from fiber.logging_utils import get_logger
 logger = get_logger(__name__)
@@ -145,8 +145,8 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
 
     for miner in miner_pool:
         try:
-            url = f"{miner.url}:{miner.port}/get_miner_latest_submission/{task.task_id}"
-            submission_repo = await process_non_stream(url, None, None)
+            url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
+            submission_repo = await process_non_stream_get(url, None)
             evaluation_params = {
                 'file_format': FileFormat.JSON,
                 'original_model': task.model_id,
