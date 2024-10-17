@@ -174,8 +174,8 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
                 'dataset_type': dataset_type
             }
 
-            synthetic_data_filepath = download_s3_file(task.synthetic_data)
-            test_data_filepath = download_s3_file(task.test_data)
+            synthetic_data_filepath = await download_s3_file(task.synthetic_data)
+            test_data_filepath = await download_s3_file(task.test_data)
 
             synth_loss, is_finetune = await run_evaluation_docker(dataset=synthetic_data_filepath, **evaluation_params)
             test_loss, _ = await run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)

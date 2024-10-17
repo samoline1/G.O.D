@@ -77,7 +77,7 @@ async def start_miners(task: Task, miners : List[UUID], config):
             field_instruction = task.instruction
             )
 
-    task_request_body = TrainRequest(dataset = task.hf_training_repo,
+    task_request_body = TrainRequest(dataset = task.ds_id,
                  model = task.model_id,
                  dataset_type= dataset_type,
                  file_format= FileFormat.HF,
