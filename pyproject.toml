@@ -24,6 +24,7 @@ dependencies = [
     "docker",
     "pandas",
     "minio",
+    "scipy",
     "fiber @ git+https://github.com/rayonlabs/fiber.git@optional-packages",
 ]
 

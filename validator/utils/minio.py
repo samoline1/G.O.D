@@ -3,7 +3,6 @@ import datetime
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-from loguru import logger
 from minio import Minio
 
 
@@ -15,7 +14,6 @@ class AsyncMinioClient:
         self.executor = ThreadPoolExecutor()
 
     async def upload_file(self, bucket_name, object_name, file_path):
-        # await self.ensure_bucket_exists(bucket_name)
         func = self.client.fput_object
         args = (bucket_name, object_name, file_path)
         return await self.loop.run_in_executor(self.executor, func, *args)
@@ -56,11 +54,5 @@ class AsyncMinioClient:
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-
-
-logger.info(MINIO_ENDPOINT)
-logger.info(MINIO_ACCESS_KEY)
-logger.info(MINIO_SECRET_KEY)
-
 
 async_minio_client = AsyncMinioClient(endpoint=MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY)
