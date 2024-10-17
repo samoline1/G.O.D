@@ -1,5 +1,4 @@
-from typing import List
-from typing import Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from asyncpg.connection import Connection
@@ -321,3 +320,59 @@ async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
             """
         )
         return [Task(**dict(row)) for row in rows]
+
+async def set_task_node_quality_score(task_id: UUID, node_id: UUID, quality_score: float, psql_db: PSQLDB) -> None:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        await connection.execute(
+            """
+            INSERT INTO task_nodes (task_id, node_id, quality_score)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (task_id, node_id) DO UPDATE
+            SET quality_score = $3
+            """,
+            task_id,
+            node_id,
+            quality_score
+        )
+
+async def get_task_node_quality_score(task_id: UUID, node_id: UUID, psql_db: PSQLDB) -> Optional[float]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        score = await connection.fetchval(
+            """
+            SELECT quality_score
+            FROM task_nodes
+            WHERE task_id = $1 AND node_id = $2
+            """,
+            task_id,
+            node_id
+        )
+        return score
+
+async def get_all_quality_scores_for_task(task_id: UUID, psql_db: PSQLDB) -> Dict[UUID, float]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        rows = await connection.fetch(
+            """
+            SELECT node_id, quality_score
+            FROM task_nodes
+            WHERE task_id = $1 AND quality_score IS NOT NULL
+            """,
+            task_id
+        )
+        return {row['node_id']: row['quality_score'] for row in rows}
+
+async def set_multiple_task_node_quality_scores(task_id: UUID, quality_scores: Dict[UUID, float], psql_db: PSQLDB) -> None:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        async with connection.transaction():
+            await connection.executemany(
+                """
+                INSERT INTO task_nodes (task_id, node_id, quality_score)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (task_id, node_id) DO UPDATE
+                SET quality_score = EXCLUDED.quality_score
+                """,
+                [(task_id, node_id, score) for node_id, score in quality_scores.items()]
+            )

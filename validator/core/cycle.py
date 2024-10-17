@@ -113,7 +113,10 @@ async def validator_cycle(config):
             # TODO: this needs implementing
             completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
             for completed_task in completed_tasks:
-                await evaluate_and_score(completed_task, config)
+                try:
+                    await evaluate_and_score(completed_task, config)
+                except Exception as e:
+                    logger.info(f"There was an error with validation {e}")
             await asyncio.sleep(5)
     except asyncio.CancelledError:
         logger.info("Validator cycle cancelled, shutting down...")
