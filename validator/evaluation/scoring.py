@@ -1,20 +1,40 @@
-from core.models.utility_models import CustomDatasetType, FileFormat
+import os
+from typing import Dict
+from urllib.parse import urlparse
+
+import aiohttp
 from typing import Dict, Tuple, List
 from validator.db.sql import get_miners_assigned_to_task
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.core.models import Task
 import core.constants as cts
 import numpy as np
-
+from fiber.logging_utils import get_logger
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import FileFormat
 from validator.utils.call_endpoint import process_non_stream, process_non_stream_get
 
-from fiber.logging_utils import get_logger
+
 logger = get_logger(__name__)
 
-import numpy as np
 from scipy.stats import gmean
 
 
+async def download_s3_file(file_url: str) -> str:
+    parsed_url = urlparse(file_url)
+    file_name = os.path.basename(parsed_url.path)
+    local_file_path = os.path.join("/tmp", file_name)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(file_url) as response:
+            if response.status == 200:
+                with open(local_file_path, 'wb') as f:
+                    f.write(await response.read())
+            else:
+                raise Exception(f"Failed to download file: {response.status}")
+
+    return local_file_path
+  
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     """
     Calculate a weighted average of test and synthetic losses.
@@ -153,9 +173,19 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
                 'model': submission_repo,
                 'dataset_type': dataset_type
             }
-            synth_loss, is_finetune = run_evaluation_docker(dataset=task.synthetic_data, **evaluation_params)
-            test_loss, _ = run_evaluation_docker(dataset=task.test_data, **evaluation_params)
-            task_results.append([miner.node_id, synth_loss, test_loss, is_finetune])
+
+            synthetic_data_filepath = download_s3_file(task.synthetic_data)
+            test_data_filepath = download_s3_file(task.test_data)
+
+            synth_loss, is_finetune = await run_evaluation_docker(dataset=synthetic_data_filepath, **evaluation_params)
+            test_loss, _ = await run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
+
+            if is_finetune:
+                weighted_loss = cts.TEST_SCORE_WEIGHTING * test_loss + (1 - cts.TEST_SCORE_WEIGHTING) * synth_loss
+                task_results[miner.node_id] = 1 / weighted_loss
+            else:
+                task_results[miner.node_id] = 0.0
+
         except Exception as e:
             logger.info(f'There was an issue with scoring {e}')
 

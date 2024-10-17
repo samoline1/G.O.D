@@ -1,13 +1,21 @@
 import os
 from uuid import UUID
-import yaml
+
 import docker
+import yaml
 from docker.errors import DockerException
-from core.models.utility_models import Job, DatasetType, FileFormat, CustomDatasetType
-from core import constants as cst
-from core.config.config_handler import create_dataset_entry, save_config, update_model_info
 from fiber.logging_utils import get_logger
+
+from core import constants as cst
+from core.config.config_handler import create_dataset_entry
+from core.config.config_handler import save_config
+from core.config.config_handler import update_model_info
 from core.docker_utils import stream_logs
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import DatasetType
+from core.models.utility_models import FileFormat
+from core.models.utility_models import Job
+
 
 logger = get_logger(__name__)
 
@@ -50,6 +58,10 @@ def start_tuning_container(job: Job):
     )
     save_config(config, config_path)
 
+    logger.info(config)
+
+    logger.info(os.path.basename(job.dataset) if job.file_format != FileFormat.HF else "")
+
     docker_env = {
         "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
         "WANDB_TOKEN": cst.WANDB_TOKEN,
@@ -75,6 +87,7 @@ def start_tuning_container(job: Job):
 
         if job.file_format != FileFormat.HF:
             dataset_dir = os.path.dirname(os.path.abspath(job.dataset))
+            logger.info(dataset_dir)
             volume_bindings[dataset_dir] = {
                 "bind": "/workspace/input_data",
                 "mode": "ro",

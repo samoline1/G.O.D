@@ -1,15 +1,20 @@
-import pandas as pd
 import json
-from core.models.utility_models import DatasetType, FileFormat
+
+import pandas as pd
+from loguru import logger
+
+from core.models.utility_models import DatasetType
+from core.models.utility_models import FileFormat
 
 
-def validate_dataset(
+async def validate_dataset(
     dataset_path: str, dataset_type: DatasetType, file_format: FileFormat
 ) -> bool:
     try:
         if file_format == FileFormat.CSV:
             df = pd.read_csv(dataset_path)
         elif file_format == FileFormat.JSON:
+            logger.info("now is json")
             with open(dataset_path, "r") as f:
                 data = json.load(f)
             df = pd.DataFrame(data)
