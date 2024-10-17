@@ -20,7 +20,8 @@ REPO_OWNER = 'cwaud' # please change from mine :D
 
 # scoring stuff
 MAX_COMPETITION_HOURS = 10
-TOP_SYNTH_PERCENT_CUTOFF = 0.75 # if your loss is in the top % then you will get a reduced score
-PENALISATION_FACTOR_FOR_HIGH_SYNTH_LOSS = 0.5
+SOFTMAX_TEMPERATURE = 0.5
 TEST_SCORE_WEIGHTING = 0.8 # synth will be (1 - this)
-LOWEST_SCORE_FOR_TOP_MINERS = 0.5
+#TOP_SYNTH_PERCENT_CUTOFF = 0.75 # if your loss is in the top % then you will get a reduced score
+#PENALISATION_FACTOR_FOR_HIGH_SYNTH_LOSS = 0.5
+#LOWEST_SCORE_FOR_TOP_MINERS = 0.5
