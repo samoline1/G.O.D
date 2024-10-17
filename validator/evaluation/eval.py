@@ -209,8 +209,8 @@ def main():
         dataset_type = CustomDatasetType.model_validate_json(dataset_type_str)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    finetuned_model = AutoModelForCausalLM.from_pretrained(model).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(original_model)
+    finetuned_model = AutoModelForCausalLM.from_pretrained(model, token=os.environ.get('HUGGINGFACE_TOKEN')).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(original_model, token=os.environ.get('HUGGINGFACE_TOKEN'))
 
     is_finetune = model_is_a_finetune(original_model, finetuned_model)
 
