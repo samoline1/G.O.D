@@ -49,7 +49,7 @@ def change_to_json_format(dataset: Dataset, columns: List[str]):
 
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> tuple[List[dict], List[dict]]:
-    logger.info(f"Prepareing {dataset_name}")
+    logger.info(f"Preparing {dataset_name}")
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict['train']
     test_dataset = dataset_dict['test']

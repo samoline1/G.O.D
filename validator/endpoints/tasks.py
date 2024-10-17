@@ -48,6 +48,7 @@ async def create_task(
     logger.info(task.task_id)
     return NewTaskResponse(success=True, task_id=task.task_id)
 
+
 async def get_task_status(
     task_id: UUID,
     config: Config = Depends(get_config),

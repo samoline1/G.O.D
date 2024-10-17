@@ -5,15 +5,12 @@ from typing import List
 from uuid import UUID
 
 
-import validator.core.constants as cst
 from core.constants import REPO_OWNER, MINIMUM_MINER_POOL
 from core.models.payload_models import MinerTaskRequst, MinerTaskResponse
 from core.models.payload_models import TrainRequest
 from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
 
 
-# TODO: we shouldn't be importing these but calling the endpoint
-from miner.endpoints.tuning import tune_model
 from validator.core.models import Node
 from validator.core.models import Task
 from validator.db import sql
@@ -27,7 +24,6 @@ from validator.utils.call_endpoint import process_non_stream, process_stream
 from fiber.logging_utils import get_logger
 logger = get_logger(__name__)
 
-NUM_MINERS_REQUIRED = 1 # dev temp
 async def run_task_prep(task: Task) -> Task:
     output_task_repo_name = f"{REPO_OWNER}/{task.ds_id.replace('/', '_')}"
     columns_to_sample = [task.system, task.instruction, task.input, task.output]
