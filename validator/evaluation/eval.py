@@ -224,7 +224,8 @@ def main():
 
     results['is_finetune'] = is_finetune
 
-    output_file = cst.CONTAINER_EVAL_RESULTS_PATH
+    output_file = "/aplp/evaluation_results.json"
+
     with open(output_file, "w") as f:
         json.dump(results, f)
 
