@@ -34,7 +34,7 @@ def _load_and_update_evaluation_config(
         file_format=file_format,
     )
     config_dict["datasets"] = [dataset_entry]
-    update_model_info(config_dict, language_model)
+    update_model_info(config_dict, language_model, "")
     return DictDefault(config_dict)
 
 
