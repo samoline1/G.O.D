@@ -74,8 +74,8 @@ class Node(BaseModel):
     port: int
     symmetric_key: str
     network: float
-    trust: Optional[float]
-    vtrust: Optional[float]
+    trust: Optional[float] = 0.0
+    vtrust: Optional[float] = 0.0
     stake: float
     created_timestamp: Optional[datetime]
     updated_timestamp: Optional[datetime]
