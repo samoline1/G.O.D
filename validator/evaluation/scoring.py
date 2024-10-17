@@ -34,7 +34,7 @@ async def download_s3_file(file_url: str) -> str:
                 raise Exception(f"Failed to download file: {response.status}")
 
     return local_file_path
-  
+
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     """
     Calculate a weighted average of test and synthetic losses.
@@ -166,7 +166,7 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
     for miner in miner_pool:
         try:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
-            submission_repo = await process_non_stream_get(url, "")
+            submission_repo = await process_non_stream_get(url, None)
             evaluation_params = {
                 'file_format': FileFormat.JSON,
                 'original_model': task.model_id,
