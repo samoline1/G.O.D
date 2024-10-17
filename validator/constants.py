@@ -1,5 +1,5 @@
 import os
-from core.constants import HUGGINGFACE_TOKEN
+from core.constants import HUGGINGFACE_TOKEN, VALI_CONFIG_PATH
 
 TEST_SIZE = 0.1
 TRAIN_TEST_SPLIT_PERCENTAGE = 0.1
