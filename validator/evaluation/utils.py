@@ -7,7 +7,7 @@ logger = get_logger(__name__)
 def model_is_a_finetune(
     original_repo: str, finetuned_model: AutoModelForCausalLM
 ) -> bool:
-    original_config = AutoConfig.from_pretrained(original_repo)
+    original_config = AutoConfig.from_pretrained(original_repo, token = os.environ.get('HUGGINGFACE_TOKEN'))
     finetuned_config = finetuned_model.config
 
     if hasattr(finetuned_model, "name_or_path"):

@@ -146,7 +146,7 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
     for miner in miner_pool:
         try:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
-            submission_repo = await process_non_stream_get(url, None)
+            submission_repo = await process_non_stream_get(url, "")
             evaluation_params = {
                 'file_format': FileFormat.JSON,
                 'original_model': task.model_id,
