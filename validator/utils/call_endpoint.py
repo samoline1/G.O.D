@@ -29,6 +29,7 @@ async def process_non_stream(base_url: str, token: str, payload: dict[str, Any])
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}",
     }
+    json_data = json.dumps(payload)
 
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(base_url, content=json_data.encode('utf-8'), headers=headers)
