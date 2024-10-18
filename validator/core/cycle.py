@@ -24,7 +24,7 @@ from validator.utils.call_endpoint import process_non_stream, process_stream
 from fiber.logging_utils import get_logger
 logger = get_logger(__name__)
 
-async def run_task_prep(task: Task) -> Task:
+async def _run_task_prep(task: Task) -> Task:
     output_task_repo_name = f"{REPO_OWNER}/{task.ds_id.replace('/', '_')}"
     columns_to_sample = [task.system, task.instruction, task.input, task.output]
     # only non-null
@@ -37,7 +37,7 @@ async def run_task_prep(task: Task) -> Task:
     return task
 
 
-async def make_offer(miner: Node, request: MinerTaskRequst) -> MinerTaskResponse:
+async def _make_offer(miner: Node, request: MinerTaskRequst) -> MinerTaskResponse:
     url = f"{miner.ip}:{miner.port}/task_offer/"
     return await process_non_stream(url, None, request.model_dump())
 
@@ -53,7 +53,7 @@ async def select_miner_pool(task: Task, miners: List[Node]):
     while len(selected_miners) < MINIMUM_MINER_POOL and miners:
         miner = miners.pop(0)
         logger.info('LOOKING FOR MINERS')
-        response = await make_offer(miner, task_details_for_miner)
+        response = await _make_offer(miner, task_details_for_miner)
         logger.info(f'The response was {response}')
         if response:
             logger.info(f'Miner {miner.node_id}  the task')
@@ -99,7 +99,7 @@ async def validator_cycle(config):
             logger.info("Validator Heartbeat! Its alive!")
             tasks = await sql.get_tasks_by_status(TaskStatus.PENDING, config.psql_db)
             for task in tasks:
-                task = await run_task_prep(task)
+                task = await _run_task_prep(task)
                 miner_pool = await sql.get_all_miners(config.psql_db)
                 task = await select_miner_pool(task, miner_pool)
                 await sql.update_task(task, config.psql_db)

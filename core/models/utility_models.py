@@ -42,7 +42,7 @@ class CustomDatasetType(BaseModel):
     field_instruction: str | None = None
     field_input: str | None = None
     field_output: str | None = None
-    format: str | None = "User: {instruction} {input} \n Assistant: "
+    format: str | None = None
     no_input_format: str | None = "{instruction} "
     field: str | None = None
 
