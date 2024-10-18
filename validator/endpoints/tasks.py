@@ -42,6 +42,9 @@ async def create_task(
         hours_to_complete=request.hours_to_complete
     )
 
+
+    logger.info(f"The Taks is {task}")
+
     task = await sql.add_task(
         task,
         config.psql_db
