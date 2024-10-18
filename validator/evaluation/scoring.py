@@ -135,7 +135,6 @@ def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, b
        (Lower scale factor due to already spread out scores)
 
     """
-    logger.info(miner_results)
     weighted_losses = [calculate_weighted_loss(test_loss, synth_loss)
                        for _, test_loss, synth_loss, _ in miner_results]
     min_loss, max_loss = min(weighted_losses), max(weighted_losses)
@@ -202,8 +201,6 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
 
         except Exception as e:
             logger.info(f'There was an issue with scoring {e}')
-
-    logger.info(task_results)
 
     raw_scores = score_adjustment(task_results)
     relative_scores = calculate_relative_scores(raw_scores)
