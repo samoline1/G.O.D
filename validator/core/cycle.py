@@ -133,7 +133,7 @@ async def process_ready_to_train_tasks(config):
             task.started_timestamp = datetime.datetime.now()
             task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
             logger.info(task)
-            assigned_miners = sql.get_miners_assigned_to_task(task.task_id, config.psql_db)
+            assigned_miners = await sql.get_miners_assigned_to_task(task.task_id, config.psql_db)
             await sql.update_task(task, config.psql_db)
             await start_miners(task, assigned_miners, config)
         except Exception as e:
