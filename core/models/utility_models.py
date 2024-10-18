@@ -43,7 +43,7 @@ class CustomDatasetType(BaseModel):
     field_input: str | None = None
     field_output: str | None = None
     format: str | None = None
-    no_input_format: str | None = "{instruction} "
+    no_input_format: str | None = None
     field: str | None = None
 
 class Job(BaseModel):
