@@ -71,8 +71,6 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
         batch = sampled_data[i:i + SYNTH_GEN_BATCH_SIZE]
         tasks = [process_row(row) for row in batch]
         results = await asyncio.gather(*tasks)
-        if results:
-            logger.info(f"Additional synthetic data point example: {results[0]}")
         synthetic_dataset.extend([result for result in results if result is not None])
 
     return synthetic_dataset

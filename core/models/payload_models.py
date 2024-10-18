@@ -85,8 +85,8 @@ class NewTaskRequest(BaseModel):
     input_col: str
     hours_to_complete: int
     system_col: Optional[str] = None
-    instruction_col: Optional[str] = None
     output_col: Optional[str] = None
+    instruction_col: Optional[str] = None
 
 
 class NewTaskResponse(BaseModel):
