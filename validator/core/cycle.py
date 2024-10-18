@@ -29,8 +29,8 @@ async def run_task_prep(task: Task) -> Task:
     columns_to_sample = [task.system, task.instruction, task.input, task.output]
     # only non-null
     columns_to_sample = list(filter(None, columns_to_sample))
-    test_data, synth_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample, repo_name=output_task_repo_name)
-    task.hf_training_repo = output_task_repo_name
+    test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample, repo_name=output_task_repo_name)
+    task.hf_training_repo = train_data
     task.status =  TaskStatus.TRAINING
     task.synthetic_data = json.dumps(synth_data)
     task.test_data = json.dumps(test_data)
@@ -77,10 +77,10 @@ async def start_miners(task: Task, miners : List[UUID], config):
             field_instruction = task.instruction
             )
 
-    task_request_body = TrainRequest(dataset = task.ds_id,
+    task_request_body = TrainRequest(dataset = task.hf_training_repo,
                  model = task.model_id,
                  dataset_type= dataset_type,
-                 file_format= FileFormat.HF,
+                 file_format= FileFormat.S3,
                  task_id = str(task.task_id)
                  )
     logger.info(f'Task is ready  for  {len(miners)} miners - lets ping them')
