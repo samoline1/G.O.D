@@ -6,6 +6,9 @@ import yaml
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
+from fiber.logging_utils import get_logger
+logger = get_logger(__name__)
+
 
 
 def create_dataset_entry(
@@ -39,9 +42,10 @@ def create_dataset_entry(
         custom_type_dict = {
             key: value
             for key, value in dataset_type.model_dump().items()
-            if value is not None and (key != "field" or value != "")
+            if value is not None
         }
         dataset_entry["type"] = custom_type_dict
+        logger.info(f'This is the dataset type {custom_type_dict}')
     else:
         raise ValueError("Invalid dataset_type provided.")
 

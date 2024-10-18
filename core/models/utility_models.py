@@ -36,7 +36,7 @@ class TaskStatus(str, Enum):
 
 class CustomDatasetType(BaseModel):
     system_prompt: str | None = None
-    system_format: str | None = "{system}"
+    system_format: str | None = None
     field_system: str | None = None
     field_instruction: str | None = None
     field_input: str | None = None
