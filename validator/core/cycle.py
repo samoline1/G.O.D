@@ -32,8 +32,8 @@ async def run_task_prep(task: Task) -> Task:
     test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample, repo_name=output_task_repo_name)
     task.hf_training_repo = train_data
     task.status =  TaskStatus.TRAINING
-    task.synthetic_data = json.dumps(synth_data)
-    task.test_data = json.dumps(test_data)
+    task.synthetic_data = synth_data
+    task.test_data = test_data
     return task
 
 
@@ -110,7 +110,7 @@ async def validator_cycle(config):
                     task.end_timestamp = task.started_timestamp +  datetime.timedelta(hours=task.hours_to_complete)
                     await sql.update_task(task, config.psql_db)
                     await start_miners(task, task.assigned_miners, config)
-            # TODO: this needs implementing
+
             completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
             for completed_task in completed_tasks:
                 try:
