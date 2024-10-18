@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 async def save_json_to_temp_file(data: List[dict], prefix: str) -> str:
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json", prefix=prefix)
     with open(temp_file.name, 'w') as f:
-        json.dump(data, f, indent=2)
+        json.dump(data, f)
     return temp_file.name
 
 async def upload_json_to_minio(file_path: str, bucket_name: str, object_name: str) -> str:
@@ -60,12 +60,13 @@ def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None
     dataset_dict.push_to_hub(repo_name, token=token, private=True)
     logger.info("Upload complete")
 
+
 def change_to_json_format(dataset: Dataset, columns: List[str]):
-    formatted_data = []
-    for row in dataset:
-        example = {col: row[col] for col in columns if col in row}
-        formatted_data.append(json.dumps(example))
-    return "\n".join(formatted_data)
+    logger.info(f"HERE  ARE THE COLUMNS {columns}")
+    return [
+        {col: row[col] for col in columns}
+        for row in dataset
+    ]
 
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> tuple[str, str, str]:
