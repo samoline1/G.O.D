@@ -60,13 +60,12 @@ def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None
     dataset_dict.push_to_hub(repo_name, token=token, private=True)
     logger.info("Upload complete")
 
-
 def change_to_json_format(dataset: Dataset, columns: List[str]):
-    ds = [
-        {col: row[col] for col in columns}
-        for row in dataset
-    ]
-    return "\n".join(ds)
+    formatted_data = []
+    for row in dataset:
+        example = {col: row[col] for col in columns if col in row}
+        formatted_data.append(json.dumps(example))
+    return "\n".join(formatted_data)
 
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> tuple[str, str, str]:
