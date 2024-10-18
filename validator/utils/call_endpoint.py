@@ -17,7 +17,6 @@ async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> 
     }
 
     json_data = json.dumps(payload)
-    logger.info(json_data)
 
     async with httpx.AsyncClient(timeout=120) as client:
         async with client.stream("POST", base_url, content=json_data.encode('utf-8'), headers=headers) as response:
@@ -31,7 +30,6 @@ async def process_non_stream(base_url: str, token: str, payload: dict[str, Any])
         "Authorization": f"Bearer {token}",
     }
 
-    json_data = json.dumps(payload)
     logger.info(f'The payload and url is {base_url}, {json_data}')
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(base_url, content=json_data.encode('utf-8'), headers=headers)
@@ -44,7 +42,6 @@ async def process_non_stream_get(base_url: str, token: str) -> dict[str, Any]:
         "Authorization": f"Bearer {token}",
     }
 
-    logger.info(f'The GET request URL is {base_url}')
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.get(base_url, headers=headers)
         response.raise_for_status()
