@@ -33,7 +33,7 @@ def _load_and_update_evaluation_config(
         dataset_type=dataset_type,
         file_format=file_format,
     )
-    config_dict["datasets"] = ["/workspace/input_data/" + str(dataset_entry)]
+    config_dict["datasets"] = [dataset_entry]
     update_model_info(config_dict, language_model, "")
     return DictDefault(config_dict)
 
