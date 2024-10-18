@@ -30,7 +30,6 @@ async def process_non_stream(base_url: str, token: str, payload: dict[str, Any])
         "Authorization": f"Bearer {token}",
     }
 
-    logger.info(f'The payload and url is {base_url}, {json_data}')
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(base_url, content=json_data.encode('utf-8'), headers=headers)
         response.raise_for_status()
