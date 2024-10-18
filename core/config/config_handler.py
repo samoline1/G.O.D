@@ -51,7 +51,7 @@ def create_dataset_entry(
 
     if file_format != FileFormat.HF:
         dataset_entry["ds_type"] = file_format.value
-        dataset_entry["data_files"] = [os.path.basename(dataset)]
+        dataset_entry["data_files"] = [dataset_entry['path']]
 
     return dataset_entry
 
