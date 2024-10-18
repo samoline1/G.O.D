@@ -10,7 +10,7 @@ from validator.core.models import Task
 import core.constants as cts
 import numpy as np
 from fiber.logging_utils import get_logger
-from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import CustomDatasetType, TaskStatus
 from core.models.utility_models import FileFormat
 from validator.utils.call_endpoint import process_non_stream, process_non_stream_get
 
@@ -198,7 +198,8 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
     raw_scores = score_adjustment(task_results)
     relative_scores = calculate_relative_scores(raw_scores)
     logger.info(f"The final scores are {relative_scores} from the raw scores of {task_results}")
-    for miner_id, score in relative_scores:
+    for miner_id, score in relative_scores.items():
        await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
+    task.status = TaskStatus.SUCCESS
 
     return relative_scores
