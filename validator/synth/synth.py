@@ -6,7 +6,7 @@ from datasets import load_dataset
 from core.models.utility_models import Message, Role, Prompts
 from fiber.logging_utils import get_logger
 import asyncio
-from validator.constants import PROMPT_PATH, ADDITIONAL_SYNTH_DATA_PERCENTAGE, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, SYNTH_GEN_BATCH_SIZE, SYNTH_MODEL_TEMPERATURE, SYNTH_MODEL
+from validator.core.constants import PROMPT_PATH, ADDITIONAL_SYNTH_DATA_PERCENTAGE, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, SYNTH_GEN_BATCH_SIZE, SYNTH_MODEL_TEMPERATURE, SYNTH_MODEL
 from validator.utils.call_endpoint import process_stream
 
 logger = get_logger(__name__)

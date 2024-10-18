@@ -8,6 +8,7 @@ from miner.logic.job_handler import start_tuning_container
 
 logger = get_logger(__name__)
 
+# one of the only classes I promise
 class TrainingWorker:
     def __init__(self):
         logger.info('STARTING A TRAINING WORKER')

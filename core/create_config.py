@@ -7,6 +7,7 @@ from typing import Callable, Any
 import random
 
 # Lots of this was taken from sn19, some of which might not be needed, will come back to clean one we have an end2end
+# right now we're not using any of this - just here for shitz and gigz apparently
 
 def generate_secure_password(length: int = 16) -> str:
     alphabet = string.ascii_letters + string.digits

@@ -3,8 +3,6 @@ from dataclasses import dataclass
 
 import httpx
 from dotenv import load_dotenv
-from fiber import SubstrateInterface
-from fiber.chain import interface
 from redis.asyncio import Redis
 
 from validator.db.database import PSQLDB
