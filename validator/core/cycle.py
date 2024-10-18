@@ -73,7 +73,7 @@ async def select_miner_pool(task: Task, miners: List[Node]):
     task.status = TaskStatus.MINERS_SELECTED
     return task
 
-async def start_miners(task: Task, miners : List[UUID], config):
+async def start_miners(task: Task, miners : List[Node], config):
     dataset_type = CustomDatasetType(
             field_system = task.system,
             field_input = task.input,
@@ -88,8 +88,7 @@ async def start_miners(task: Task, miners : List[UUID], config):
                  task_id = str(task.task_id)
                  )
 
-    for miner_id in miners:
-        miner = await sql.get_node(miner_id, config.psql_db)
+    for miner in miners:
         url = f"{miner.ip}:{miner.port}/start_training/"
         response = await process_stream(url, None, task_request_body.model_dump())
         logger.info(f"The response we got from {miner.node_id} was {response}")
@@ -134,8 +133,9 @@ async def process_ready_to_train_tasks(config):
             task.started_timestamp = datetime.datetime.now()
             task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
             logger.info(task)
+            assigned_miners = sql.get_miners_assigned_to_task(task.task_id, config.psql_db)
             await sql.update_task(task, config.psql_db)
-            await start_miners(task, task.assigned_miners, config)
+            await start_miners(task, assigned_miners, config)
         except Exception as e:
             logger.error(f"Error starting training for task {task.task_id}: {e}", exc_info=True)
             task.status = TaskStatus.FAILURE

@@ -136,7 +136,7 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
         raise ValueError("Task not found")
 
     updates = {}
-    for field, value in updated_task.dict(exclude_unset=True, exclude={'updated_timestamp'}).items():
+    for field, value in updated_task.dict(exclude_unset=True, exclude={'assigned_miners', 'updated_timestamp'}).items():
         if getattr(existing_task, field) != value:
             updates[field] = value
 
