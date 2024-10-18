@@ -317,7 +317,7 @@ async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
             """
             SELECT * FROM tasks
             WHERE status = 'training'
-            AND NOW() > end_timestamp
+            AND NOW() AT TIME ZONE 'UTC' > end_timestamp AT TIME ZONE 'UTC'
             """
         )
         return [Task(**dict(row)) for row in rows]
