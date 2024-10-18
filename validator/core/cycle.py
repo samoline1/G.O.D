@@ -114,7 +114,9 @@ async def validator_cycle(config):
             completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
             for completed_task in completed_tasks:
                 try:
-                    await evaluate_and_score(completed_task, config)
+                    task = await evaluate_and_score(completed_task, config)
+                    await sql.update_task(task, config.psql_db)
+
                 except Exception as e:
                     logger.error(f"There was an error with validation: {e}", exc_info=True)
             await asyncio.sleep(5)

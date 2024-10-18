@@ -153,7 +153,7 @@ def score_adjustment(miner_results: List[Tuple[str, float, float, bool]]) -> Dic
         task_results[miner_id] = calculate_scaled_score(weighted_loss, is_finetune, scale_factor)
     return task_results
 
-async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
+async def evaluate_and_score(task: Task, config) -> Task:
     miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
     task_results = []
     dataset_type = CustomDatasetType(
@@ -202,4 +202,4 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
        await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
     task.status = TaskStatus.SUCCESS
 
-    return relative_scores
+    return task
