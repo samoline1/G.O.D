@@ -36,7 +36,7 @@ async def _run_task_prep(task: Task) -> Task:
     columns_to_sample = list(filter(None, columns_to_sample))
     test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample, repo_name=output_task_repo_name)
     task.hf_training_repo = train_data
-    task.status =  TaskStatus.TRAINING
+    task.status =  TaskStatus.READY
     task.synthetic_data = synth_data
     task.test_data = test_data
     return task
@@ -126,7 +126,7 @@ async def process_miner_selected_tasks(config):
     await asyncio.gather(*[prep_task(task) for task in miner_selected_tasks[:cst.MAX_CONCURRENT_TASK_PREPS]])
 
 async def process_ready_to_train_tasks(config):
-    ready_to_train_tasks = await sql.get_tasks_by_status(TaskStatus.TRAINING, config.psql_db)
+    ready_to_train_tasks = await sql.get_tasks_by_status(TaskStatus.READY, config.psql_db)
 
     async def start_training(task):
         try:
