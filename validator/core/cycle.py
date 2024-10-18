@@ -90,7 +90,6 @@ async def start_miners(task: Task, miners : List[UUID], config):
                  file_format= FileFormat.S3,
                  task_id = str(task.task_id)
                  )
-    logger.info(f'Task is ready  for  {len(miners)} miners - lets ping them')
 
     for miner_id in miners:
         miner = await sql.get_node(miner_id, config.psql_db)
