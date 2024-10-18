@@ -1,5 +1,4 @@
 import os
-from uuid import UUID
 
 import yaml
 
@@ -60,5 +59,6 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
     config["wandb_runid"] =  job_id
 
 def save_config(config: dict, config_path: str):
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
     with open(config_path, "w") as file:
         yaml.dump(config, file)
