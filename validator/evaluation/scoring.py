@@ -189,20 +189,16 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
             logger.info(f"The losses that we have out from {miner.node_id} are synth: {synth_loss} and test {test_loss}")
             logger.info(f"The perplexities that we have out from {miner.node_id} are synth: {synth_perplexity} and test {test_perplexity}")
 
-            if is_test_finetune:
-                task_results.append((miner.node_id, test_loss, synth_loss, is_test_finetune))
+            task_results.append((miner.node_id, test_loss, synth_loss, is_test_finetune))
 
-                # right so, ive commented this to just pass through the synth loss test loss and finetune like the score_adjustment method expects.
-                weighted_loss = cts.TEST_SCORE_WEIGHTING * test_loss + (1 - cts.TEST_SCORE_WEIGHTING) * synth_loss
-                await set_task_node_quality_score(task.task_id, miner.node_id, weighted_loss, config.psql_db)
-
-            else:
-                task_results[miner.node_id] = 0.0
 
         except Exception as e:
             logger.info(f'There was an issue with scoring {e}')
 
     raw_scores = score_adjustment(task_results)
     relative_scores = calculate_relative_scores(raw_scores)
+    logger.info(f"The final scores are {relative_scores} from the raw scores of {task_results}")
+    for miner_id, score in relative_scores:
+       await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
 
     return relative_scores
