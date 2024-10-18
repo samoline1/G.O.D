@@ -62,10 +62,11 @@ def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None
 
 
 def change_to_json_format(dataset: Dataset, columns: List[str]):
-    return [
+   ds = [
         {col: row[col] for col in columns}
         for row in dataset
     ]
+    return "\n".join(ds)
 
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> tuple[str, str, str]:
