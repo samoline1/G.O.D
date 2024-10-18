@@ -62,7 +62,7 @@ def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None
 
 
 def change_to_json_format(dataset: Dataset, columns: List[str]):
-   ds = [
+    ds = [
         {col: row[col] for col in columns}
         for row in dataset
     ]
