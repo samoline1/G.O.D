@@ -1,13 +1,11 @@
 import os
+from uuid import UUID
 
 import yaml
 
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
-from fiber.logging_utils import get_logger
-logger = get_logger(__name__)
-
 
 
 def create_dataset_entry(
@@ -44,13 +42,12 @@ def create_dataset_entry(
             if value is not None
         }
         dataset_entry["type"] = custom_type_dict
-        logger.info(f'This is the dataset type {custom_type_dict}')
     else:
         raise ValueError("Invalid dataset_type provided.")
 
     if file_format != FileFormat.HF:
         dataset_entry["ds_type"] = file_format.value
-        dataset_entry["data_files"] = [dataset_entry['path']]
+        dataset_entry["data_files"] = [os.path.basename(dataset)]
 
     return dataset_entry
 
@@ -59,6 +56,5 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
     config["wandb_runid"] =  job_id
 
 def save_config(config: dict, config_path: str):
-    os.makedirs(os.path.dirname(config_path), exist_ok=True)
     with open(config_path, "w") as file:
         yaml.dump(config, file)

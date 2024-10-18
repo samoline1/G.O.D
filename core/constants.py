@@ -9,7 +9,6 @@ VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
 
 CONFIG_DIR = "./core/config/"
-CONFIG_STORAGE_DIR = './training_configs/'
 OUTPUT_DIR = "./core/outputs/"
 
 CONFIG_TEMPLATE_PATH = CONFIG_DIR + 'base.yml'

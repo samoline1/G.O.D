@@ -78,7 +78,7 @@ async def tune_model(
 async def get_latest_model_submission(task_id: str) -> str:
     try:
         config_filename = f"{task_id}.yml"
-        config_path = os.path.join(cst.CONFIG_STORAGE_DIR, config_filename)
+        config_path = os.path.join(cst.CONFIG_DIR, config_filename)
         with open(config_path, 'r') as file:
             config_data = yaml.safe_load(file)
             return config_data.get('hub_model_id', None)
