@@ -71,7 +71,6 @@ async def select_miner_pool(task: Task, miners: List[Node]):
     task.assigned_miners = selected_miners
     logger.info(f'So we have {selected_miners} assigned to the task')
     task.status = TaskStatus.MINERS_SELECTED
-
     return task
 
 async def start_miners(task: Task, miners : List[UUID], config):
@@ -104,6 +103,7 @@ async def process_pending_tasks(config):
     async def assign_miners(task):
         try:
             task = await select_miner_pool(task, miner_pool)
+            logger.info(f"After miner assignement we have {task}")
             await sql.update_task(task, config.psql_db)
         except Exception as e:
             logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
