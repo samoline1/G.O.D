@@ -62,9 +62,9 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
             if check_the_synthetic_data(json_synthetic_data_point, row.keys()):
                 return json_synthetic_data_point
         except json.JSONDecodeError:
-            logger.error(f"Error decoding synthetic data point: {synthetic_data_point}")
+            pass
         except Exception as e:
-            logger.error(f"Error generating synthetic data point: {str(e)}")
+            pass
         return None  # Return None if there's an error or invalid data
 
     for i in range(0, len(sampled_data), SYNTH_GEN_BATCH_SIZE):
