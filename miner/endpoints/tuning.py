@@ -57,17 +57,6 @@ async def tune_model(
                 logger.info(decrypted_payload.dataset)
                 decrypted_payload.file_format = FileFormat.JSON
 
-            is_valid = await validate_dataset(
-                decrypted_payload.dataset,
-                decrypted_payload.dataset_type,
-                decrypted_payload.file_format,
-            )
-
-            if not is_valid:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid dataset format for {decrypted_payload.dataset_type} dataset type.",
-                )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

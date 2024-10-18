@@ -34,6 +34,7 @@ class TaskStatus(str, Enum):
     TRAINING = "training"
     FAILURE = "failure"
 
+
 class CustomDatasetType(BaseModel):
     system_prompt: str | None = None
     system_format: str | None = None
