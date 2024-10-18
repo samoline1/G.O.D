@@ -179,6 +179,7 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
 
             synth_loss, is_finetune = await run_evaluation_docker(dataset=synthetic_data_filepath, **evaluation_params)
             test_loss, _ = await run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
+            logger.info(f"The losses that we have out from {miner.node_id} are synth: {synth_loss} and test {test_loss}")
 
             if is_finetune:
                 weighted_loss = cts.TEST_SCORE_WEIGHTING * test_loss + (1 - cts.TEST_SCORE_WEIGHTING) * synth_loss
