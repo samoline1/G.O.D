@@ -224,7 +224,14 @@ def main():
 
     results['is_finetune'] = is_finetune
 
-    output_file =  "/aplp/evaluation_results.json"
+    output_file = "/aplp/evaluation_results.json"
+    output_dir = os.path.dirname(output_file)
+
+    # Create directory if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Write the results to the file
     with open(output_file, "w") as f:
         json.dump(results, f)
 

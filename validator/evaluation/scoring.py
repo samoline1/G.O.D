@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 import aiohttp
 from typing import Dict, Tuple, List
-from validator.db.sql import get_miners_assigned_to_task
+from validator.db.sql import get_miners_assigned_to_task, set_task_node_quality_score
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.core.models import Task
 import core.constants as cts
@@ -135,6 +135,7 @@ def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, b
        (Lower scale factor due to already spread out scores)
 
     """
+    logger.info(miner_results)
     weighted_losses = [calculate_weighted_loss(test_loss, synth_loss)
                        for _, test_loss, synth_loss, _ in miner_results]
     min_loss, max_loss = min(weighted_losses), max(weighted_losses)
@@ -177,18 +178,32 @@ async def evaluate_and_score(task: Task, config) -> Dict[str, float]:
             synthetic_data_filepath = await download_s3_file(task.synthetic_data)
             test_data_filepath = await download_s3_file(task.test_data)
 
-            synth_loss, is_finetune = await run_evaluation_docker(dataset=synthetic_data_filepath, **evaluation_params)
-            test_loss, _ = await run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
-            logger.info(f"The losses that we have out from {miner.node_id} are synth: {synth_loss} and test {test_loss}")
+            is_test_finetune, synth_loss_tuple, synth_perplexity_tuple = run_evaluation_docker(dataset=synthetic_data_filepath, **evaluation_params)
+            is_synth_finetune, test_loss_tuple, test_perplexity_tuple = run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
 
-            if is_finetune:
+            synth_loss = synth_loss_tuple[1]  # Assuming ('eval_loss', value)
+            test_loss = test_loss_tuple[1]    # Assuming ('eval_loss', value)
+
+            synth_perplexity = synth_perplexity_tuple[1]  # Assuming ('perplexity', value)
+            test_perplexity = test_perplexity_tuple[1]    # Assuming ('perplexity', value)
+
+            logger.info(f"The losses that we have out from {miner.node_id} are synth: {synth_loss} and test {test_loss}")
+            logger.info(f"The perplexities that we have out from {miner.node_id} are synth: {synth_perplexity} and test {test_perplexity}")
+
+            if is_test_finetune:
+                task_results.append((miner.node_id, test_loss, synth_loss, is_test_finetune))
+
+                # right so, ive commented this to just pass through the synth loss test loss and finetune like the score_adjustment method expects.
                 weighted_loss = cts.TEST_SCORE_WEIGHTING * test_loss + (1 - cts.TEST_SCORE_WEIGHTING) * synth_loss
-                task_results[miner.node_id] = 1 / weighted_loss
+                await set_task_node_quality_score(task.task_id, miner.node_id, weighted_loss, config.psql_db)
+
             else:
                 task_results[miner.node_id] = 0.0
 
         except Exception as e:
             logger.info(f'There was an issue with scoring {e}')
+
+    logger.info(task_results)
 
     raw_scores = score_adjustment(task_results)
     relative_scores = calculate_relative_scores(raw_scores)

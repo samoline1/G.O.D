@@ -116,7 +116,7 @@ async def validator_cycle(config):
                 try:
                     await evaluate_and_score(completed_task, config)
                 except Exception as e:
-                    logger.info(f"There was an error with validation {e}")
+                    logger.error(f"There was an error with validation: {e}", exc_info=True)
             await asyncio.sleep(5)
     except asyncio.CancelledError:
         logger.info("Validator cycle cancelled, shutting down...")

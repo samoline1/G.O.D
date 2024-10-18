@@ -1,4 +1,5 @@
 import io
+import os
 import json
 import tarfile
 import threading
@@ -41,11 +42,19 @@ def run_evaluation_docker(
         "FILE_FORMAT": file_format.value,
         "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
     }
+    
+    dataset_dir = os.path.dirname(os.path.abspath(dataset))
+    volume_bindings = {}
+    volume_bindings[dataset_dir] = {
+        "bind": "/workspace/input_data",
+        "mode": "ro",
+    }
 
     try:
         container = client.containers.run(
             cst.VALIDATOR_DOCKER_IMAGE,
             environment=environment,
+            volumes=volume_bindings,
             runtime="nvidia",
             device_requests=[docker.types.DeviceRequest(
                 count=-1, capabilities=[['gpu']]
