@@ -1,5 +1,6 @@
 from datetime import datetime
 from datetime import timedelta
+from logging import log
 from uuid import UUID
 
 from fastapi import APIRouter
@@ -28,6 +29,7 @@ async def create_task(
     current_time = datetime.utcnow()
     end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
 
+    logger.info(f'The request coming in {request}')
     task = Task(
         model_id=request.model_repo,
         ds_id=request.ds_repo,
