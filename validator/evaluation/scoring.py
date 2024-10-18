@@ -97,7 +97,7 @@ def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]
     scores = np.array(list(task_scores.values()))
     geometric_mean = gmean(scores)
     relative_scores = np.where(scores > 0, scores / geometric_mean, 0)
-    return {miner_id: float(score) for miner_id, score in zip(task_scores.keys(), relative_scores)}
+    return {str(miner_id): float(score) for miner_id, score in zip(task_scores.keys(), relative_scores)}
 
 def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, bool]]) -> float:
     """
