@@ -68,8 +68,6 @@ async def select_miner_pool(task: Task, miners: List[Node]):
         logger.info('THERE WAS A PROBLEM - NOT ENOUGH MINERS')
         task.status = TaskStatus.FAILURE
 
-    # TODO: how do you want to miners to be saved into the assigned miners
-    # - it's ok to pass the entire miner object? better to just give the ids?
     task.assigned_miners = selected_miners
     logger.info(f'So we have {selected_miners} assigned to the task')
     task.status = TaskStatus.MINERS_SELECTED
@@ -135,6 +133,7 @@ async def process_ready_to_train_tasks(config):
         try:
             task.started_timestamp = datetime.datetime.now()
             task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
+            logger.info(task)
             await sql.update_task(task, config.psql_db)
             await start_miners(task, task.assigned_miners, config)
         except Exception as e:
