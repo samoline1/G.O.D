@@ -2,10 +2,9 @@ import asyncio
 import datetime
 import random
 from typing import List
-from uuid import UUID
 
 
-from core.constants import REPO_OWNER, MINIMUM_MINER_POOL
+from core.constants import MINIMUM_MINER_POOL
 from core.models.payload_models import MinerTaskRequst, MinerTaskResponse
 from core.models.payload_models import TrainRequest
 from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
@@ -17,7 +16,7 @@ from validator.db import sql
 from validator.evaluation.scoring import evaluate_and_score
 from validator.tasks.task_prep import prepare_task
 
-import validator.constants as cst
+import validator.core.constants as cst
 from validator.utils.call_endpoint import process_non_stream, process_stream
 
 from fiber.logging_utils import get_logger
@@ -25,16 +24,15 @@ from datasets import get_dataset_infos
 
 logger = get_logger(__name__)
 
-def get_total_dataset_size(repo_name: str) -> int:
+def _get_total_dataset_size(repo_name: str) -> int:
     return sum(info.dataset_size for info in get_dataset_infos(repo_name).values()
                if info.dataset_size)
 
 async def _run_task_prep(task: Task) -> Task:
-    output_task_repo_name = f"{REPO_OWNER}/{task.ds_id.replace('/', '_')}"
     columns_to_sample = [task.system, task.instruction, task.input, task.output]
     # only non-null
     columns_to_sample = list(filter(None, columns_to_sample))
-    test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample, repo_name=output_task_repo_name)
+    test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample)
     task.hf_training_repo = train_data
     task.status =  TaskStatus.READY
     task.synthetic_data = synth_data
@@ -47,12 +45,12 @@ async def _make_offer(miner: Node, request: MinerTaskRequst) -> MinerTaskRespons
     return await process_non_stream(url, None, request.model_dump())
 
 
-async def select_miner_pool(task: Task, miners: List[Node]):
+async def _select_miner_pool(task: Task, miners: List[Node]):
     random.shuffle(miners)
     selected_miners = []
-    num_rows_in_ds = get_total_dataset_size(task.ds_id)
+    ds_size = _get_total_dataset_size(task.ds_id)
     task_details_for_miner = MinerTaskRequst(
-        ds_size = num_rows_in_ds,
+        ds_size = ds_size,
         model = task.model_id,
         hours_to_complete = task.hours_to_complete
     )
@@ -73,7 +71,7 @@ async def select_miner_pool(task: Task, miners: List[Node]):
     task.status = TaskStatus.MINERS_SELECTED
     return task
 
-async def start_miners(task: Task, miners : List[Node], config):
+async def _start_miners(task: Task, miners : List[Node]):
     dataset_type = CustomDatasetType(
             field_system = task.system,
             field_input = task.input,
@@ -95,14 +93,13 @@ async def start_miners(task: Task, miners : List[Node], config):
         return response
 
 
-async def process_pending_tasks(config):
+async def _process_pending_tasks(config):
     pending_tasks = await sql.get_tasks_by_status(TaskStatus.PENDING, config.psql_db)
     miner_pool = await sql.get_all_miners(config.psql_db)
 
     async def assign_miners(task):
         try:
-            task = await select_miner_pool(task, miner_pool)
-            logger.info(f"After miner assignement we have {task}")
+            task = await _select_miner_pool(task, miner_pool)
             await sql.update_task(task, config.psql_db)
         except Exception as e:
             logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
@@ -111,7 +108,7 @@ async def process_pending_tasks(config):
 
     await asyncio.gather(*[assign_miners(task) for task in pending_tasks[:cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
 
-async def process_miner_selected_tasks(config):
+async def _process_miner_selected_tasks(config):
     miner_selected_tasks = await sql.get_tasks_by_status(TaskStatus.MINERS_SELECTED, config.psql_db)
 
     async def prep_task(task):
@@ -125,18 +122,17 @@ async def process_miner_selected_tasks(config):
 
     await asyncio.gather(*[prep_task(task) for task in miner_selected_tasks[:cst.MAX_CONCURRENT_TASK_PREPS]])
 
-async def process_ready_to_train_tasks(config):
+async def _process_ready_to_train_tasks(config):
     ready_to_train_tasks = await sql.get_tasks_by_status(TaskStatus.READY, config.psql_db)
 
     async def start_training(task):
         try:
             task.started_timestamp = datetime.datetime.now()
             task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
-            logger.info(task)
             assigned_miners = await sql.get_miners_assigned_to_task(task.task_id, config.psql_db)
             task.status = TaskStatus.TRAINING
             await sql.update_task(task, config.psql_db)
-            await start_miners(task, assigned_miners, config)
+            await _start_miners(task, assigned_miners)
         except Exception as e:
             logger.error(f"Error starting training for task {task.task_id}: {e}", exc_info=True)
             task.status = TaskStatus.FAILURE
@@ -164,9 +160,9 @@ async def validator_cycle(config):
         try:
             logger.info("Validator Heartbeat! It's alive!")
 
-            await process_pending_tasks(config)
-            await process_miner_selected_tasks(config)
-            await process_ready_to_train_tasks(config)
+            await _process_pending_tasks(config)
+            await _process_miner_selected_tasks(config)
+            await _process_ready_to_train_tasks(config)
             await process_completed_tasks(config)
 
             await asyncio.sleep(5)

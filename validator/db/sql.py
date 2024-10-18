@@ -164,10 +164,7 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
                 """
                 await connection.execute(query, updated_task.task_id)
 
-            # Update the task_nodes table
-            if updated_task.assigned_miners is not None:
-                # Remove existing assignments
-                await connection.execute(
+            await connection.execute(
                     "DELETE FROM task_nodes WHERE task_id = $1",
                     updated_task.task_id
                 )

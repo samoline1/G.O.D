@@ -23,4 +23,3 @@ if __name__ == "__main__":
 
     uvicorn.run(app, host="127.0.0.1", port=7999)
 
-    # uvicorn miner.server:app --reload --host 127.0.0.1 --port 7999 --env-file .1.env

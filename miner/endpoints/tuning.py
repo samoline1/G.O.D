@@ -1,5 +1,4 @@
 from fiber.logging_utils import get_logger
-import json
 import os
 import yaml
 from urllib.parse import urlparse
@@ -15,13 +14,9 @@ from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequest
 from core.models.payload_models import TrainResponse
 from core.models.utility_models import FileFormat
-from core.utils import validate_dataset
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
-from validator.core.models import Node
-from validator.utils.call_endpoint import process_non_stream
-from validator.utils.minio import async_minio_client
 import core.constants as cst
 
 
@@ -43,32 +38,32 @@ async def download_s3_file(file_url: str) -> str:
     return local_file_path
 
 async def tune_model(
-    decrypted_payload: TrainRequest,
+    request: TrainRequest,
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     logger.info("Starting model tuning.")
-    logger.info(f"Job received is {decrypted_payload}")
+    logger.info(f"Job received is {request}")
 
-    if not decrypted_payload.dataset or not decrypted_payload.model:
+    if not request.dataset or not request.model:
         raise HTTPException(status_code=400, detail="Dataset and model are required.")
 
     try:
-        logger.info(decrypted_payload.file_format)
-        if decrypted_payload.file_format != FileFormat.HF:
-            if decrypted_payload.file_format == FileFormat.S3:
-                decrypted_payload.dataset = await download_s3_file(decrypted_payload.dataset)
-                logger.info(decrypted_payload.dataset)
-                decrypted_payload.file_format = FileFormat.JSON
+        logger.info(request.file_format)
+        if request.file_format != FileFormat.HF:
+            if request.file_format == FileFormat.S3:
+                request.dataset = await download_s3_file(request.dataset)
+                logger.info(request.dataset)
+                request.file_format = FileFormat.JSON
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
-        job_id= str(decrypted_payload.task_id),
-        dataset=decrypted_payload.dataset,
-        model=decrypted_payload.model,
-        dataset_type=decrypted_payload.dataset_type,
-        file_format=decrypted_payload.file_format,
+        job_id= str(request.task_id),
+        dataset=request.dataset,
+        model=request.model,
+        dataset_type=request.dataset_type,
+        file_format=request.file_format,
     )
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)

@@ -4,10 +4,11 @@ from uuid import UUID
 import docker
 from core.models.utility_models import Job, JobStatus
 from fiber.logging_utils import get_logger
-from miner.logic.job_handler import start_tuning_container
+from miner.logic.job_handler import _start_tuning_container
 
 logger = get_logger(__name__)
 
+# one of the only classes I promise
 class TrainingWorker:
     def __init__(self):
         logger.info('STARTING A TRAINING WORKER')
@@ -23,7 +24,7 @@ class TrainingWorker:
             if job is None:
                 break
             try:
-                start_tuning_container(job)
+                _start_tuning_container(job)
                 job.status = JobStatus.COMPLETED
             except Exception as e:
                 logger.error(f"Error processing job {job.job_id}: {str(e)}")

@@ -9,7 +9,7 @@ from datasets import concatenate_datasets
 from datasets import load_dataset
 from fiber.logging_utils import get_logger
 
-import validator.constants as cst
+import validator.core.constants as cst
 from validator.synth.synth import generate_synthetic_dataset
 from validator.utils.minio import async_minio_client
 
@@ -54,13 +54,6 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
     synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
 
-def upload_train_to_hf(train_dataset: Dataset, repo_name: str, token: str = None) -> None:
-    logger.info(f"Uploading train dataset to Hugging Face Hub at '{repo_name}'")
-    dataset_dict = DatasetDict({'train': train_dataset})
-    dataset_dict.push_to_hub(repo_name, token=token, private=True)
-    logger.info("Upload complete")
-
-
 def change_to_json_format(dataset: Dataset, columns: List[str]):
     logger.info(f"HERE  ARE THE COLUMNS {columns}")
     return [
@@ -69,7 +62,7 @@ def change_to_json_format(dataset: Dataset, columns: List[str]):
     ]
 
 
-async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_name: str) -> tuple[str, str, str]:
+async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
     logger.info(f"Preparing {dataset_name}")
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict['train']
@@ -90,6 +83,8 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], repo_nam
     else:
         logger.info("Skipping synthetic data generation")
 
+
+    # this looks ugly
     train_data_json = change_to_json_format(train_dataset, columns_to_sample)
     test_data_json = change_to_json_format(test_dataset, columns_to_sample)
     synthetic_data_json = change_to_json_format(synthetic_data, columns_to_sample) if synthetic_data else []
