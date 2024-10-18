@@ -145,8 +145,6 @@ def _calculate_evaluation_metrics(
     }
 
 
-
-
 def evaluate_language_model_loss(
     evaluation_config: DictDefault,
     language_model: AutoModelForCausalLM,
