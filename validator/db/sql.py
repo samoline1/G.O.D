@@ -14,7 +14,7 @@ async def add_task(task: Task, psql_db: PSQLDB) -> Task:
         connection: Connection
         task_id = await connection.fetchval(
             """
-            INSERT INTO tasks (model_id, ds_id, system, instruction, input, status, hours_to_complete)
+            INSERT INTO tasks (model_id, ds_id, system, instruction, input, status, hours_to_complete, output)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING task_id
             """,
