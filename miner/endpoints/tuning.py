@@ -1,5 +1,7 @@
+from fiber.logging_utils import get_logger
 import json
 import os
+import yaml
 from urllib.parse import urlparse
 
 import aiohttp
@@ -20,6 +22,7 @@ from miner.logic.job_handler import create_job
 from validator.core.models import Node
 from validator.utils.call_endpoint import process_non_stream
 from validator.utils.minio import async_minio_client
+import core.constants as cst
 
 
 logger = get_logger(__name__)
@@ -72,11 +75,14 @@ async def tune_model(
 
     return {"message": "Training job enqueued.", "task_id": job.job_id}
 
-async def get_latest_model_submission(task_id: str):
-    # TODO: Implement a proper lookup mechanism for model submissions
+async def get_latest_model_submission(task_id: str) -> str:
     try:
-        # Placeholder: Return a fixed model name
-        return 'cwaud/test'
+        config_filename = f"{task_id}.yml"
+        config_path = os.path.join(cst.CONFIG_STORAGE_DIR, config_filename)
+        with open(config_path, 'r') as file:
+            config_data = yaml.safe_load(file)
+            return config_data.get('hub_model_id', None)
+
     except Exception as e:
         logger.error(f"Error retrieving latest model submission for task {task_id}: {str(e)}")
         raise HTTPException(status_code=404, detail=f"No model submission found for task {task_id}")
