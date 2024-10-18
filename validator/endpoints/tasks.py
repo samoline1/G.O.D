@@ -42,6 +42,9 @@ async def create_task(
         hours_to_complete=request.hours_to_complete
     )
 
+    miner_pool = await sql.get_all_miners(config.psql_db)
+    task = await select_miner_pool(task, miner_pool)
+    await sql.update_task(task, config.psql_db)
 
     logger.info(f"The Taks is {task}")
 
