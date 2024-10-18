@@ -4,7 +4,6 @@ import random
 from typing import List
 
 
-from core.constants import MINIMUM_MINER_POOL
 from core.models.payload_models import MinerTaskRequst, MinerTaskResponse
 from core.models.payload_models import TrainRequest
 from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
@@ -54,7 +53,7 @@ async def _select_miner_pool(task: Task, miners: List[Node]):
         model = task.model_id,
         hours_to_complete = task.hours_to_complete
     )
-    while len(selected_miners) < MINIMUM_MINER_POOL and miners:
+    while len(selected_miners) < cst.MINIMUM_MINER_POOL and miners:
         miner = miners.pop(0)
         logger.info('LOOKING FOR MINERS')
         response = await _make_offer(miner, task_details_for_miner)
@@ -62,7 +61,7 @@ async def _select_miner_pool(task: Task, miners: List[Node]):
         if response:
             logger.info(f'Miner {miner.node_id}  the task')
             selected_miners.append(miner.node_id)
-    if len(selected_miners) < MINIMUM_MINER_POOL:
+    if len(selected_miners) < cst.MINIMUM_MINER_POOL:
         logger.info('THERE WAS A PROBLEM - NOT ENOUGH MINERS')
         task.status = TaskStatus.FAILURE
 
