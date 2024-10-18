@@ -43,7 +43,7 @@ class EvaluationResult(BaseModel):
     perplexity: float
 
 class MinerTaskRequst(BaseModel):
-    hf_training_repo: str
+    ds_size: int
     model: str
     hours_to_complete: int
 
