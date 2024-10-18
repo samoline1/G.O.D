@@ -29,6 +29,7 @@ class JobStatus(str, Enum):
 class TaskStatus(str, Enum):
     PENDING = "pending"
     IDLE = "idle"
+    READY = "ready"
     SUCCESS = "success"
     MINERS_SELECTED = "miners_selected"
     EVALUATING = "evaluating"
