@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import List
 from typing import Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Task(BaseModel):
@@ -83,7 +83,7 @@ class Node(BaseModel):
 
 
 class Submission(BaseModel):
-    submission_id: Optional[UUID]
+    submission_id: UUID = Field(default_factory=uuid4)
     score: float
     task_id: UUID
     node_id: UUID
