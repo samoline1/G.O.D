@@ -73,6 +73,8 @@ class Task(BaseModel):
 
 
 class Node(BaseModel):
+    # This is defined in fiber already, and we do not use UUID. NODE_ID IS NOT A UUID - its a integer corresponding
+    # to the number they have on the metagraph
     node_id: Optional[UUID]
     coldkey: str
     ip: str

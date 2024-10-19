@@ -13,6 +13,7 @@ import validator.core.constants as cts
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
+from validator.core.config import Config
 from validator.core.models import Submission
 from validator.core.models import Task
 from validator.db.sql import add_submission
@@ -41,6 +42,7 @@ async def download_s3_file(file_url: str) -> str:
                 raise Exception(f"Failed to download file: {response.status}")
 
     return local_file_path
+
 
 # NOTE: doc strings are a bit long. Don't need to explain params and returns types - these
 # should be clear from the parameter names and function name
@@ -126,6 +128,8 @@ def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]
     return {str(miner_id): float(score) for miner_id, score in zip(task_scores.keys(), relative_scores)}
 
 
+# miner results name could be better? might be fine with a dataclass
+# P.S. list[tuple[]] NOT List[Tuple]
 def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, bool]]) -> float:
     """
     # NOTE: this is the same as the function name
@@ -164,6 +168,7 @@ def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, b
        (Lower scale factor due to already spread out scores)
 
     """
+    # NOTE: can we make miner_results be a dataclass or a namedtuple? Rather than needing to just *know*
     weighted_losses = [calculate_weighted_loss(test_loss, synth_loss) for _, test_loss, synth_loss, _ in miner_results]
     min_loss, max_loss = min(weighted_losses), max(weighted_losses)
 
@@ -173,6 +178,7 @@ def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, b
     return np.log(cts.TARGET_SCORE_RATIO) / (max_loss - min_loss)
 
 
+# NOTE: bad name. get_raw_scores is much better no?
 def score_adjustment(miner_results: List[Tuple[str, float, float, bool]]) -> Dict[str, float]:
     scale_factor = compute_adaptive_scale_factor(miner_results)  # see function def for details
     task_results = {}
@@ -182,10 +188,11 @@ def score_adjustment(miner_results: List[Tuple[str, float, float, bool]]) -> Dic
     return task_results
 
 
-async def evaluate_and_score(task: Task, config) -> Task:
+# config typehint missing
+async def evaluate_and_score(task: Task, config: Config) -> Task:
     miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
     task_results = []
-    submission_repos = {}
+    submission_repos = {}  # typehint?
     dataset_type = CustomDatasetType(
         field_system=task.system, field_instruction=task.instruction, field_input=task.input, field_output=task.output
     )
@@ -214,10 +221,12 @@ async def evaluate_and_score(task: Task, config) -> Task:
             is_test_finetune, synth_loss_tuple, synth_perplexity_tuple = run_evaluation_docker(
                 dataset=synthetic_data_filepath, **evaluation_params
             )
-            is_synth_finetune, test_loss_tuple, test_perplexity_tuple = run_evaluation_docker(
+            # needs to be _ if we dont use the variable (usually)
+            _, test_loss_tuple, test_perplexity_tuple = run_evaluation_docker(
                 dataset=test_data_filepath, **evaluation_params
             )
 
+            # If you need to add comments about the tuple, you should use a dataclass or namedtuple
             synth_loss = synth_loss_tuple[1]  # Assuming ('eval_loss', value)
             test_loss = test_loss_tuple[1]  # Assuming ('eval_loss', value)
 
@@ -234,14 +243,15 @@ async def evaluate_and_score(task: Task, config) -> Task:
         except Exception as e:
             logger.info(f"There was an issue with scoring {e}")
 
-    raw_scores = score_adjustment(task_results)
-    relative_scores = calculate_relative_scores(raw_scores)
+    raw_scores = score_adjustment(task_results)  # bad name
+    relative_scores = calculate_relative_scores(raw_scores)  # nice
+
     logger.info(f"The final scores are {relative_scores} from the raw scores of {task_results}")
-    logger.info(f"The sumissions are {submission_repos}")
+    logger.info(f"The sumission repos are {submission_repos}")
     for miner_id, score in relative_scores.items():
         await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
         submission = submission_repos[miner_id]
-        submission.score = score
+        submission.score = score  # this doesn't work with typehinting - its not blue
         await add_submission(submission, config.psql_db)
 
     task.status = TaskStatus.SUCCESS
