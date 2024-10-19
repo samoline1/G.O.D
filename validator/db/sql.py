@@ -1,4 +1,7 @@
-from typing import Dict, List, Optional
+import json
+from typing import Dict
+from typing import List
+from typing import Optional
 from uuid import UUID
 
 from asyncpg.connection import Connection
@@ -14,7 +17,7 @@ async def add_task(task: Task, psql_db: PSQLDB) -> Task:
         connection: Connection
         task_id = await connection.fetchval(
             """
-            INSERT INTO tasks (model_id, ds_id, system, instruction, input, status, hours_to_complete, output)
+            INSERT INTO tasks (model_id, ds_id, system, instruction, input, status, hours_to_complete, user_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING task_id
             """,
@@ -25,7 +28,7 @@ async def add_task(task: Task, psql_db: PSQLDB) -> Task:
             task.input,
             task.status,
             task.hours_to_complete,
-            task.output,
+            task.user_id
         )
 
         return await get_task(task_id, psql_db)
@@ -42,8 +45,6 @@ async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
         if row:
             return Task(**dict(row))
         return None
-
-
 
 
 async def get_tasks_by_status(status: str, psql_db: PSQLDB) -> List[Task]:
@@ -117,6 +118,29 @@ async def get_submission(submission_id: UUID, psql_db: PSQLDB) -> Optional[Submi
             return Submission(**dict(row))
         return None
 
+async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[Dict]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        rows = await connection.fetch(
+            """
+            SELECT tasks.*, json_agg(
+            json_build_object('node_id', nodes.node_id, 'coldkey', nodes.coldkey, 'trust', nodes.trust)
+            ) AS miners
+            FROM tasks
+            LEFT JOIN task_nodes ON tasks.task_id = task_nodes.task_id
+            LEFT JOIN nodes ON task_nodes.node_id = nodes.node_id
+            WHERE tasks.user_id = $1
+            GROUP BY tasks.task_id
+            """,
+            user_id,
+        )
+        return [
+            {
+                **dict(row),
+                "miners": json.loads(row["miners"]) if isinstance(row["miners"], str) else row["miners"]
+            }
+            for row in rows
+        ]
 
 async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
@@ -314,9 +338,7 @@ async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
         connection: Connection
         rows = await connection.fetch(
             """
-            SELECT * FROM tasks
-            WHERE status = 'training'
-            AND NOW() AT TIME ZONE 'UTC' > end_timestamp AT TIME ZONE 'UTC'
+
             """
         )
         return [Task(**dict(row)) for row in rows]
@@ -376,3 +398,22 @@ async def set_multiple_task_node_quality_scores(task_id: UUID, quality_scores: D
                 """,
                 [(task_id, node_id, score) for node_id, score in quality_scores.items()]
             )
+
+async def get_tasks_by_user(user_id: str, psql_db: PSQLDB) -> List[Task]:
+    async with await psql_db.connection() as connection:
+        rows = await connection.fetch(
+            """
+            SELECT * FROM tasks WHERE user_id = $1
+            """,
+            user_id,
+        )
+        return [Task(**dict(row)) for row in rows]
+
+async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
+    async with await psql_db.connection() as connection:
+        await connection.execute(
+            """
+            DELETE FROM tasks WHERE task_id = $1
+            """,
+            task_id
+        )
