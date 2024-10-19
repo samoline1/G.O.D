@@ -26,7 +26,7 @@ class Task(BaseModel):
     end_timestamp: Optional[datetime] = None
     completed_timestamp: Optional[datetime] = None
     hours_to_complete: int
-    best_submission_repo: str
+    best_submission_repo: Optional[str] = None
 
     # task = Task(
     #     model_id=request.model_repo,
