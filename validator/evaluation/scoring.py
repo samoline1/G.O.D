@@ -1,6 +1,7 @@
 import os
 from typing import Dict
 from urllib.parse import urlparse
+from datetime import datetime
 
 import aiohttp
 from typing import Dict, Tuple, List
@@ -168,7 +169,8 @@ async def evaluate_and_score(task: Task, config) -> Task:
         try:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
             submission_repo = await process_non_stream_get(url, None)
-            submission_repos[miner.node_id] = Submission(task_id=task.task_id, node_id=miner.node_id, repo=submission_repo)
+            current_time = datetime.now()
+            submission_repos[miner.node_id] = Submission(task_id=task.task_id, node_id=miner.node_id, repo=submission_repo, created_on=current_time, updated_on=current_time)
             evaluation_params = {
                 'file_format': FileFormat.JSON,
                 'original_model': task.model_id,
