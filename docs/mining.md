@@ -21,4 +21,3 @@
    ```bash
    task m1_dev
    ```
-

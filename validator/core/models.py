@@ -1,9 +1,11 @@
 from datetime import datetime
 from typing import List
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
+from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
 
 class Task(BaseModel):

@@ -1,6 +1,9 @@
 import asyncio
-from validator.evaluation.task_prep import prepare_task
+
 from fiber.logging_utils import get_logger
+
+from validator.evaluation.task_prep import prepare_task
+
 
 logger = get_logger(__name__)
 
@@ -8,9 +11,9 @@ async def main():
     dataset_name = "mhenrichsen/alpaca_2k_test"
     columns_to_sample = ['input', 'output', 'instruction', 'text']
     repo_name = "cwaud/test_ds"
-    
+
     test_dataset, synthetic_data = await prepare_task(dataset_name, columns_to_sample, repo_name)
-    
+
     logger.info(f"Test dataset size: {len(test_dataset)}")
     logger.info(f"Synthetic data size: {len(synthetic_data)}")
 

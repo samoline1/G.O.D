@@ -1,6 +1,6 @@
 import os
-import uvicorn
 
+import uvicorn
 from dotenv import load_dotenv
 
 
@@ -18,9 +18,11 @@ from validator.endpoints.health import factory_router as health_router
 from validator.endpoints.nodes import factory_router as nodes_router
 from validator.endpoints.tasks import factory_router as tasks_router
 
+
 logger = get_logger(__name__)
 
 import asyncio
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

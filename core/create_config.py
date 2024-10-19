@@ -1,17 +1,23 @@
-import os
+import argparse
+import random
+import re
 import secrets
 import string
-import re
-import argparse
-from typing import Callable, Any
-import random
+from typing import Any
+from typing import Callable
+
 
 # Lots of this was taken from sn19, some of which might not be needed, will come back to clean one we have an end2end
 # right now we're not using any of this - just here for shitz and gigz apparently
 
+
 def generate_secure_password(length: int = 16) -> str:
     alphabet = string.ascii_letters + string.digits
-    password = [secrets.choice(string.ascii_uppercase), secrets.choice(string.ascii_lowercase), secrets.choice(string.digits)]
+    password = [
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.digits),
+    ]
     password += [secrets.choice(alphabet) for _ in range(length - 3)]
     password = list(password)  # Convert to list for shuffling
     random.shuffle(password)  # Use random.shuffle instead of secrets.shuffle
@@ -66,7 +72,9 @@ def generate_miner_config(dev: bool = False) -> dict[str, Any]:
     config["WALLET_NAME"] = input("Enter wallet name (default: default): ") or "default"
     config["HOTKEY_NAME"] = input("Enter hotkey name (default: default): ") or "default"
     config["SUBTENSOR_NETWORK"] = input("Enter subtensor network (default: test): ") or "test"
-    config["SUBTENSOR_ADDRESS"] = validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
+    config["SUBTENSOR_ADDRESS"] = (
+        validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
+    )
     default_stake_threshold = "0" if config["SUBTENSOR_NETWORK"] == "test" else "1000"
     config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 19
     config["ENV"] = "dev" if dev else "prod"
@@ -94,7 +102,9 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     config["SET_METAGRAPH_WEIGHTS_WITH_HIGH_UPDATED_TO_NOT_DEREG"] = (
         "true"
         if validate_input(
-            "Set metagraph weights when updated gets really high to not dereg? (y/n): (default: n)", yes_no_validator, default="n"
+            "Set metagraph weights when updated gets really high to not dereg? (y/n): (default: n)",
+            yes_no_validator,
+            default="n",
         )
         .lower()
         .startswith("y")
@@ -104,10 +114,14 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     if dev:
         config["ENV"] = "dev"
         config["REFRESH_NODES"] = (
-            "true" if validate_input("Refresh nodes? (y/n): (default: y)", yes_no_validator).lower().startswith("y") else "false"
+            "true"
+            if validate_input("Refresh nodes? (y/n): (default: y)", yes_no_validator).lower().startswith("y")
+            else "false"
         )
         config["LOCALHOST"] = (
-            "true" if validate_input("Use localhost? (y/n): (default: y)", yes_no_validator).lower().startswith("y") else "false"
+            "true"
+            if validate_input("Use localhost? (y/n): (default: y)", yes_no_validator).lower().startswith("y")
+            else "false"
         )
     else:
         config["ENV"] = "prod"

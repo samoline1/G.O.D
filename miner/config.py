@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from functools import lru_cache
-
+from typing import TypeVar
 
 from dotenv import load_dotenv
-from typing import TypeVar
 from pydantic import BaseModel
 
 from miner.logic.training_worker import TrainingWorker
+
 
 load_dotenv()
 

@@ -1,6 +1,8 @@
 from typing import Any
-from substrateinterface import SubstrateInterface
+
 from fiber.logging_utils import get_logger
+from substrateinterface import SubstrateInterface
+
 
 logger = get_logger(__name__)
 

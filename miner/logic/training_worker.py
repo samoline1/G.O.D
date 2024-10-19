@@ -1,10 +1,14 @@
-import threading
 import queue
+import threading
 from uuid import UUID
+
 import docker
-from core.models.utility_models import Job, JobStatus
 from fiber.logging_utils import get_logger
+
+from core.models.utility_models import Job
+from core.models.utility_models import JobStatus
 from miner.logic.job_handler import start_tuning_container
+
 
 logger = get_logger(__name__)
 

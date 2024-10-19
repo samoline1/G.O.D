@@ -1,14 +1,14 @@
-from fiber.logging_utils import get_logger
 import os
-import yaml
 from urllib.parse import urlparse
 
 import aiohttp
+import yaml
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
 from fiber.logging_utils import get_logger
 
+import core.constants as cst
 from core.models.payload_models import MinerTaskRequst
 from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequest
@@ -17,7 +17,6 @@ from core.models.utility_models import FileFormat
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
-import core.constants as cst
 
 
 logger = get_logger(__name__)

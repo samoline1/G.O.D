@@ -3,23 +3,24 @@ import datetime
 import random
 from typing import List
 
+from datasets import get_dataset_infos
+from fiber.logging_utils import get_logger
 
-from core.models.payload_models import MinerTaskRequst, MinerTaskResponse
+import validator.core.constants as cst
+from core.models.payload_models import MinerTaskRequst
+from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequest
-from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
-
-
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import FileFormat
+from core.models.utility_models import TaskStatus
 from validator.core.models import Node
 from validator.core.models import Task
 from validator.db import sql
 from validator.evaluation.scoring import evaluate_and_score
 from validator.tasks.task_prep import prepare_task
+from validator.utils.call_endpoint import process_non_stream
+from validator.utils.call_endpoint import process_stream
 
-import validator.core.constants as cst
-from validator.utils.call_endpoint import process_non_stream, process_stream
-
-from fiber.logging_utils import get_logger
-from datasets import get_dataset_infos
 
 logger = get_logger(__name__)
 

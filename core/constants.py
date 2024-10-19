@@ -1,5 +1,7 @@
 import os
+
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -15,4 +17,3 @@ CONFIG_TEMPLATE_PATH = CONFIG_DIR + 'base.yml'
 
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 WANDB_TOKEN = os.getenv("WANDB_TOKEN")
-

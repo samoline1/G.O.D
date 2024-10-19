@@ -1,13 +1,23 @@
+import asyncio
 import json
-from typing import Any, List, AsyncGenerator
-import httpx
+from typing import List
+
 import yaml
 from datasets import load_dataset
-from core.models.utility_models import Message, Role, Prompts
 from fiber.logging_utils import get_logger
-import asyncio
-from validator.core.constants import PROMPT_PATH, ADDITIONAL_SYNTH_DATA_PERCENTAGE, PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, SYNTH_GEN_BATCH_SIZE, SYNTH_MODEL_TEMPERATURE, SYNTH_MODEL
+
+from core.models.utility_models import Message
+from core.models.utility_models import Prompts
+from core.models.utility_models import Role
+from validator.core.constants import ADDITIONAL_SYNTH_DATA_PERCENTAGE
+from validator.core.constants import PROMPT_GEN_ENDPOINT
+from validator.core.constants import PROMPT_GEN_TOKEN
+from validator.core.constants import PROMPT_PATH
+from validator.core.constants import SYNTH_GEN_BATCH_SIZE
+from validator.core.constants import SYNTH_MODEL
+from validator.core.constants import SYNTH_MODEL_TEMPERATURE
 from validator.utils.call_endpoint import process_stream
+
 
 logger = get_logger(__name__)
 
@@ -46,7 +56,7 @@ def check_the_synthetic_data(synthetic_data_point: dict, original_data_columns: 
 
 async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
     prompts = load_prompts()
-    logger.info(f"Creating synthetic dataset")
+    logger.info("Creating synthetic dataset")
     synthetic_dataset = []
 
     async def process_row(row):
@@ -63,7 +73,7 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
                 return json_synthetic_data_point
         except json.JSONDecodeError:
             pass
-        except Exception as e:
+        except Exception:
             pass
         return None  # Return None if there's an error or invalid data
 
@@ -74,5 +84,3 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
         synthetic_dataset.extend([result for result in results if result is not None])
 
     return synthetic_dataset
-
-

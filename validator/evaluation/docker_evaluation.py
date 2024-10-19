@@ -1,6 +1,6 @@
 import io
-import os
 import json
+import os
 import tarfile
 import threading
 from typing import Union
@@ -42,7 +42,7 @@ def run_evaluation_docker(
         "FILE_FORMAT": file_format.value,
         "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
     }
-    
+
     dataset_dir = os.path.dirname(os.path.abspath(dataset))
     volume_bindings = {}
     volume_bindings[dataset_dir] = {

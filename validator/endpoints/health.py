@@ -1,4 +1,6 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter
+from fastapi import status
+
 
 router = APIRouter()
 

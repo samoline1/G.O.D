@@ -1,5 +1,5 @@
 import os
-from core.constants import HUGGINGFACE_TOKEN
+
 
 SUCCESS = "success"
 ACCOUNT_ID = "account_id"
