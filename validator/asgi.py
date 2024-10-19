@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv(os.getenv("ENV_FILE", ".env"))
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fiber.logging_utils import get_logger
 
 from validator.core.config import factory_config
-from validator.core.cycle import init_validator_cycle
+from validator.core.cycle import init_validator_cycles
 from validator.endpoints.health import factory_router as health_router
 from validator.endpoints.nodes import factory_router as nodes_router
 from validator.endpoints.tasks import factory_router as tasks_router
@@ -21,7 +22,7 @@ from validator.endpoints.tasks import factory_router as tasks_router
 
 logger = get_logger(__name__)
 
-import asyncio
+
 
 
 @asynccontextmanager
@@ -51,9 +52,10 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up...")
     app.state.config = config
 
+    # Start the validation cycles
     try:
         logger.debug("Initializing validator cycle")
-        init_validator_cycle(config)
+        init_validator_cycles(config)
         logger.debug("Validator cycle initialized")
     except Exception as e:
         logger.error(f"Failed to initialize validator cycle: {e}")

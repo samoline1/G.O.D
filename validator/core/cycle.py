@@ -13,6 +13,7 @@ from core.models.payload_models import TrainRequest
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
+from validator.core.config import Config
 from validator.core.models import Node
 from validator.core.models import Task
 from validator.db import sql
@@ -87,8 +88,8 @@ async def _start_miners(task: Task, miners: List[Node]):
         return response
 
 
-async def _process_pending_tasks(config):
-    pending_tasks = await sql.get_tasks_by_status(TaskStatus.PENDING, config.psql_db)
+async def _process_pending_tasks(config: Config):
+    pending_tasks = await sql.get_tasks_with_status(status=TaskStatus.PENDING, psql_db=config.psql_db)
     miner_pool = await sql.get_all_miners(config.psql_db)
 
     async def assign_miners(task):
@@ -103,8 +104,8 @@ async def _process_pending_tasks(config):
     await asyncio.gather(*[assign_miners(task) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
 
 
-async def _process_miner_selected_tasks(config):
-    miner_selected_tasks = await sql.get_tasks_by_status(TaskStatus.MINERS_SELECTED, config.psql_db)
+async def _process_miner_selected_tasks(config: Config):
+    miner_selected_tasks = await sql.get_tasks_with_status(status=TaskStatus.MINERS_SELECTED, psql_db=config.psql_db)
 
     async def prep_task(task):
         try:
@@ -118,9 +119,10 @@ async def _process_miner_selected_tasks(config):
     await asyncio.gather(*[prep_task(task) for task in miner_selected_tasks[: cst.MAX_CONCURRENT_TASK_PREPS]])
 
 
-async def _process_ready_to_train_tasks(config):
-    ready_to_train_tasks = await sql.get_tasks_by_status(TaskStatus.READY, config.psql_db)
+async def _process_ready_to_train_tasks(config: Config):
+    ready_to_train_tasks = await sql.get_tasks_with_status(status=TaskStatus.READY, psql_db=config.psql_db)
 
+    # my eyes bleed, where are the typehints
     async def start_training(task):
         try:
             task.started_timestamp = datetime.datetime.now()
@@ -156,7 +158,7 @@ async def process_completed_tasks(config):
 async def validator_cycle(config):
     while True:
         try:
-            logger.info("Validator Heartbeat! It's alive!")
+            logger.info(f"Starting another validator cycle! Time: {datetime.datetime.now()}")
 
             await _process_pending_tasks(config)
             await _process_miner_selected_tasks(config)
@@ -168,5 +170,7 @@ async def validator_cycle(config):
             logger.error(f"Error in validator cycle: {e}", exc_info=True)
 
 
-def init_validator_cycle(config):
+# So this is really dangerous because you have a background task that is NEVER awaited
+# so if it errors, it will just quietly die and not bubble errors up the surface
+def init_validator_cycles(config):
     return asyncio.create_task(validator_cycle(config))

@@ -49,7 +49,7 @@ async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
         return None
 
 
-async def get_tasks_by_status(status: str, psql_db: PSQLDB) -> List[Task]:
+async def get_tasks_with_status(status: str, psql_db: PSQLDB) -> List[Task]:
     async with await psql_db.connection() as connection:
         connection: Connection
         rows = await connection.fetch(
