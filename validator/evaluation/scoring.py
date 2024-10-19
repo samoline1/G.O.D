@@ -8,7 +8,7 @@ from typing import Dict, Tuple, List
 from validator.db.sql import add_submission, get_miners_assigned_to_task, set_task_node_quality_score
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.core.models import Submission, Task
-import core.constants as cts
+import validator.core.constants as cts
 import numpy as np
 from fiber.logging_utils import get_logger
 from core.models.utility_models import CustomDatasetType, TaskStatus
