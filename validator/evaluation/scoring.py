@@ -104,9 +104,13 @@ def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor
 
 def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]:
     """
+    # NOTE: below two lines say the same thing?
+
     Normalise scores relative to their geometric mean.
 
     This function adjusts all scores so that their geometric mean becomes 1.
+
+    #NOTE: below line not needed, you explain below
     This helps in comparing scores across different tasks.
 
     By dividing each miner's score by the geometric mean of all scores for that task,
@@ -124,11 +128,12 @@ def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]
 
 def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, bool]]) -> float:
     """
+    # NOTE: this is the same as the function name
     Compute an adaptive scale factor based on the range of losses.
 
 
-    We want to calculate a scaling factor that can be applied to these scores to make them more meaningful, especially
-    when the scores are closely clustered.
+    We want to calculate a scaling factor that can be applied to these scores to make them more meaningful,   # what scores?
+    especially when the scores are closely clustered.
     For instance, if all scores fall between 0.8 and 0.85, it's difficult to distinguish performance differences.
     The function determines how much to "stretch" this range by computing a scale factor.
     This factor is calculated based on the lowest and highest scores in the set,
@@ -136,6 +141,7 @@ def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, b
     If the scores are tightly grouped, the scaling factor will be larger to amplify small differences.
     Conversely, if the scores are already well spread out, the scaling factor will be smaller.
 
+    # NOTE: Examples are GOAT - nice
     Examples:
     1. Closely clustered scores:
        miner_results = [
