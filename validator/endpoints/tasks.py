@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import Response
 from fastapi import Security
 from fastapi.security import APIKeyHeader
 from fiber.logging_utils import get_logger
@@ -33,8 +34,7 @@ async def delete_task(
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
 
-
-    user_id = authorization[len("Bearer "):]  # Extract the token
+    user_id = authorization
 
     task = await sql.get_task(task_id, config.psql_db)
 
@@ -45,7 +45,7 @@ async def delete_task(
         raise HTTPException(status_code=403, detail="Not authorized to delete this task.")
 
     await sql.delete_task(task_id, config.psql_db)
-    return NewTaskResponse(success=True)
+    return Response(success=True)
 
 async def get_tasks(
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
