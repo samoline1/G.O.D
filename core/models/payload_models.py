@@ -1,3 +1,4 @@
+from typing import List
 from typing import Optional
 from uuid import UUID
 
@@ -97,6 +98,11 @@ class TaskStatusResponse(BaseModel):
     success: bool
     task_id: UUID
     status: TaskStatus
+    miners: Optional[List]
+    model_id: str
+    dataset: str
+    created: str
+    hours_to_complete: int
 
 class TaskSubmissionRequest(BaseModel):
     task_id: UUID
