@@ -206,11 +206,12 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
 
     return await get_task(updated_task.task_id, psql_db)
 
-
+# NOTE: Why are we not happy with NULL trust?
 async def get_all_miners(psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         rows = await connection.fetch(
+            # select * :0
             """
             SELECT * FROM nodes
             WHERE trust IS NOT NULL

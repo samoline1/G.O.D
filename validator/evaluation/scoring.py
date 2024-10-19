@@ -58,6 +58,11 @@ def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
 
 def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor: float) -> float:
     """
+    Contents:
+    1.
+    2.
+    3.
+
     Calculate a score for a miner based on their weighted loss, using an exponential decay function.
 
     This function converts a loss value into a score, where lower losses result in higher scores.
@@ -84,6 +89,9 @@ def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor
     float
         The calculated score, ranging from 0 to 1. Higher scores indicate better performance.
 
+
+    Chapter 2:
+
     # NOTE: This should be obvious from the code
     Behavior:
     1. For non-finetuned models (is_finetune = False), the function always returns 0.
@@ -100,8 +108,7 @@ def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor
     desirable in machine learning contexts where small improvements in already good
     models can be significant.
     """
-    base_score = np.exp(-weighted_loss * scale_factor)
-    return base_score if is_finetune else 0.0
+    return np.exp(-weighted_loss * scale_factor) if is_finetune else 0.0
 
 
 def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]:

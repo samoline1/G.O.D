@@ -18,7 +18,7 @@ from core.models.utility_models import FileFormat
 
 logger = get_logger(__name__)
 
-
+# should be async
 def run_evaluation_docker(
     dataset: str, model: str, original_model: str, dataset_type: Union[DatasetType, CustomDatasetType], file_format: FileFormat
 ) -> EvaluationResult:
@@ -56,6 +56,7 @@ def run_evaluation_docker(
             device_requests=[docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])],
             detach=True,
         )
+        # NOTE: replace with asyncio.to_thread
 
         log_thread = threading.Thread(target=stream_logs, args=(container,))
         log_thread.start()

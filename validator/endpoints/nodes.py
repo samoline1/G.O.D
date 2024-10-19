@@ -10,7 +10,9 @@ from validator.db import sql
 
 logger = get_logger(__name__)
 
-
+# NOTE: this is only for dev purposes.
+# It's very useful and we can keep it , but only enable if
+# the env is not prod
 async def add_node(
     coldkey: str = Body(..., embed=True),
     ip: str = Body(..., embed=True),

@@ -25,13 +25,18 @@ from validator.db import sql
 
 logger = get_logger(__name__)
 
+# NOTE: please dont just dump AI code in here without thinking - this is how bugs get in
 # Define a custom security scheme for the Bearer token
 bearer_token_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 
 async def delete_task(
     task_id: UUID,
+    # What is the comment below for - its obvious right?
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
+    # Instead of the above you need to make a dependency and
+    # extract the user_id from the token, and use that here
+    # This is a byproduct of pasting gpt code
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
     if not authorization:
@@ -41,6 +46,7 @@ async def delete_task(
 
     task = await sql.get_task(task_id, config.psql_db)
 
+    # If task is none you mean?
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
@@ -64,6 +70,8 @@ async def get_tasks(
 
     logger.info(tasks_with_miners)
 
+    # Why so many magic strings? can't you keep it as a Task object?
+
     return [
         TaskStatusResponse(
             success=True,
@@ -83,6 +91,7 @@ async def get_tasks(
 
 async def create_task(
     request: NewTaskRequest,
+    # gpt code be gone plz
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
@@ -130,11 +139,13 @@ async def get_task_status(
         model_id=task.model_id,
         miners=None,
         dataset=task.hf_training_repo,
-        created=str(task.created_timestamp),
+        created=str(task.created_timestamp),  # created_at? is str() ok here?
         hours_to_complete=task.hours_to_complete,
     )
 
 
+# miners are not allowed to post to validators
+# This needs to be changed to validators asking miners for their submissions
 async def submit_task_submission(
     request: TaskSubmissionRequest,
     config: Config = Depends(get_config),
