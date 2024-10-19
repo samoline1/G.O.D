@@ -200,6 +200,7 @@ async def evaluate_and_score(task: Task, config) -> Task:
     raw_scores = score_adjustment(task_results)
     relative_scores = calculate_relative_scores(raw_scores)
     logger.info(f"The final scores are {relative_scores} from the raw scores of {task_results}")
+    logger.info(f'The sumissions are {submission_repos}')
     for miner_id, score in relative_scores.items():
        await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
        submission = submission_repos[miner_id]
