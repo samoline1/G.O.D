@@ -29,10 +29,11 @@ async def add_task(task: Task, psql_db: PSQLDB) -> Task:
             task.status,
             task.hours_to_complete,
             task.output,
-            task.user_id
+            task.user_id,
         )
 
         return await get_task(task_id, psql_db)
+
 
 async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
     async with await psql_db.connection() as connection:
@@ -59,6 +60,7 @@ async def get_tasks_by_status(status: str, psql_db: PSQLDB) -> List[Task]:
         )
         return [Task(**dict(row)) for row in rows]
 
+
 async def add_node(node: Node, psql_db: PSQLDB) -> Node:
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -74,9 +76,10 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Node:
             node.port,
             node.symmetric_key,
             node.network,
-            node.stake
+            node.stake,
         )
         return await get_node(node_id, psql_db)
+
 
 async def get_node(node_id: UUID, psql_db: PSQLDB) -> Optional[Node]:
     async with await psql_db.connection() as connection:
@@ -91,6 +94,7 @@ async def get_node(node_id: UUID, psql_db: PSQLDB) -> Optional[Node]:
             return Node(**dict(row))
         return None
 
+
 async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -102,9 +106,10 @@ async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
             """,
             submission.task_id,
             submission.node_id,
-            submission.repo
+            submission.repo,
         )
         return await get_submission(submission_id, psql_db)
+
 
 async def get_submission(submission_id: UUID, psql_db: PSQLDB) -> Optional[Submission]:
     async with await psql_db.connection() as connection:
@@ -118,6 +123,7 @@ async def get_submission(submission_id: UUID, psql_db: PSQLDB) -> Optional[Submi
         if row:
             return Submission(**dict(row))
         return None
+
 
 async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[Dict]:
     async with await psql_db.connection() as connection:
@@ -136,12 +142,10 @@ async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[D
             user_id,
         )
         return [
-            {
-                **dict(row),
-                "miners": json.loads(row["miners"]) if isinstance(row["miners"], str) else row["miners"]
-            }
+            {**dict(row), "miners": json.loads(row["miners"]) if isinstance(row["miners"], str) else row["miners"]}
             for row in rows
         ]
+
 
 async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
@@ -155,13 +159,14 @@ async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> No
             node_id,
         )
 
+
 async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
     existing_task = await get_task(updated_task.task_id, psql_db)
     if not existing_task:
         raise ValueError("Task not found")
 
     updates = {}
-    for field, value in updated_task.dict(exclude_unset=True, exclude={'assigned_miners', 'updated_timestamp'}).items():
+    for field, value in updated_task.dict(exclude_unset=True, exclude={"assigned_miners", "updated_timestamp"}).items():
         if getattr(existing_task, field) != value:
             updates[field] = value
 
@@ -191,15 +196,12 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
             # Update the task_nodes table
             if updated_task.assigned_miners is not None:
                 # Remove existing assignments
-                await connection.execute(
-                    "DELETE FROM task_nodes WHERE task_id = $1",
-                    updated_task.task_id
-                )
+                await connection.execute("DELETE FROM task_nodes WHERE task_id = $1", updated_task.task_id)
                 # Add new assignments
                 if updated_task.assigned_miners:
                     await connection.executemany(
                         "INSERT INTO task_nodes (task_id, node_id) VALUES ($1, $2)",
-                        [(updated_task.task_id, miner_id) for miner_id in updated_task.assigned_miners]
+                        [(updated_task.task_id, miner_id) for miner_id in updated_task.assigned_miners],
                     )
 
     return await get_task(updated_task.task_id, psql_db)
@@ -216,6 +218,7 @@ async def get_all_miners(psql_db: PSQLDB) -> List[Node]:
         )
         return [Node(**dict(row)) for row in rows]
 
+
 async def get_all_validators(psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -226,6 +229,7 @@ async def get_all_validators(psql_db: PSQLDB) -> List[Node]:
             """
         )
         return [Node(**dict(row)) for row in rows]
+
 
 async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
@@ -255,6 +259,7 @@ async def get_miners_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Nod
         )
         return [Node(**dict(row)) for row in rows]
 
+
 async def get_submissions_by_task(task_id: UUID, psql_db: PSQLDB) -> List[Submission]:
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -265,6 +270,7 @@ async def get_submissions_by_task(task_id: UUID, psql_db: PSQLDB) -> List[Submis
             task_id,
         )
         return [Submission(**dict(row)) for row in rows]
+
 
 async def get_miner_latest_submission(task_id: str, node_id: str, psql_db: PSQLDB) -> Optional[Submission]:
     async with await psql_db.connection() as connection:
@@ -284,6 +290,7 @@ async def get_miner_latest_submission(task_id: str, node_id: str, psql_db: PSQLD
             return Submission(**dict(row))
         return None
 
+
 async def is_miner_assigned_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> bool:
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -299,6 +306,7 @@ async def is_miner_assigned_to_task(task_id: str, node_id: str, psql_db: PSQLDB)
         )
         return result is not None
 
+
 async def get_test_set_for_task(task_id: str, psql_db: PSQLDB):
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -310,6 +318,7 @@ async def get_test_set_for_task(task_id: str, psql_db: PSQLDB):
             task_id,
         )
 
+
 async def get_synthetic_set_for_task(task_id: str, psql_db: PSQLDB):
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -320,6 +329,7 @@ async def get_synthetic_set_for_task(task_id: str, psql_db: PSQLDB):
             """,
             task_id,
         )
+
 
 async def submission_repo_is_unique(repo: str, psql_db: PSQLDB) -> bool:
     async with await psql_db.connection() as connection:
@@ -334,6 +344,7 @@ async def submission_repo_is_unique(repo: str, psql_db: PSQLDB) -> bool:
         )
         return result is None
 
+
 async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -345,6 +356,7 @@ async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
             """
         )
         return [Task(**dict(row)) for row in rows]
+
 
 async def set_task_node_quality_score(task_id: UUID, node_id: UUID, quality_score: float, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
@@ -358,8 +370,9 @@ async def set_task_node_quality_score(task_id: UUID, node_id: UUID, quality_scor
             """,
             task_id,
             node_id,
-            quality_score
+            quality_score,
         )
+
 
 async def get_task_node_quality_score(task_id: UUID, node_id: UUID, psql_db: PSQLDB) -> Optional[float]:
     async with await psql_db.connection() as connection:
@@ -371,9 +384,10 @@ async def get_task_node_quality_score(task_id: UUID, node_id: UUID, psql_db: PSQ
             WHERE task_id = $1 AND node_id = $2
             """,
             task_id,
-            node_id
+            node_id,
         )
         return score
+
 
 async def get_all_quality_scores_for_task(task_id: UUID, psql_db: PSQLDB) -> Dict[UUID, float]:
     async with await psql_db.connection() as connection:
@@ -384,9 +398,10 @@ async def get_all_quality_scores_for_task(task_id: UUID, psql_db: PSQLDB) -> Dic
             FROM task_nodes
             WHERE task_id = $1 AND quality_score IS NOT NULL
             """,
-            task_id
+            task_id,
         )
-        return {row['node_id']: row['quality_score'] for row in rows}
+        return {row["node_id"]: row["quality_score"] for row in rows}
+
 
 async def set_multiple_task_node_quality_scores(task_id: UUID, quality_scores: Dict[UUID, float], psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
@@ -399,8 +414,9 @@ async def set_multiple_task_node_quality_scores(task_id: UUID, quality_scores: D
                 ON CONFLICT (task_id, node_id) DO UPDATE
                 SET quality_score = EXCLUDED.quality_score
                 """,
-                [(task_id, node_id, score) for node_id, score in quality_scores.items()]
+                [(task_id, node_id, score) for node_id, score in quality_scores.items()],
             )
+
 
 async def get_tasks_by_user(user_id: str, psql_db: PSQLDB) -> List[Task]:
     async with await psql_db.connection() as connection:
@@ -412,11 +428,12 @@ async def get_tasks_by_user(user_id: str, psql_db: PSQLDB) -> List[Task]:
         )
         return [Task(**dict(row)) for row in rows]
 
+
 async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
         await connection.execute(
             """
             DELETE FROM tasks WHERE task_id = $1
             """,
-            task_id
+            task_id,
         )

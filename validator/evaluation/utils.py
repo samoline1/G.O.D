@@ -6,10 +6,10 @@ from transformers import AutoModelForCausalLM
 
 
 logger = get_logger(__name__)
-def model_is_a_finetune(
-    original_repo: str, finetuned_model: AutoModelForCausalLM
-) -> bool:
-    original_config = AutoConfig.from_pretrained(original_repo, token = os.environ.get('HUGGINGFACE_TOKEN'))
+
+
+def model_is_a_finetune(original_repo: str, finetuned_model: AutoModelForCausalLM) -> bool:
+    original_config = AutoConfig.from_pretrained(original_repo, token=os.environ.get("HUGGINGFACE_TOKEN"))
     finetuned_config = finetuned_model.config
 
     if hasattr(finetuned_model, "name_or_path"):
@@ -33,10 +33,7 @@ def model_is_a_finetune(
         "num_attention_heads",
         "num_key_value_heads",
     ]
-    architecture_same = all(
-        getattr(original_config, attr) == getattr(finetuned_config, attr)
-        for attr in attrs_to_compare
-    )
+    architecture_same = all(getattr(original_config, attr) == getattr(finetuned_config, attr) for attr in attrs_to_compare)
     base_model_match = finetuned_config._name_or_path == original_repo
     logger.info(
         f"Architecture same: {architecture_same}, Base model match: {base_model_match}, Has lora modules: {has_lora_modules}"

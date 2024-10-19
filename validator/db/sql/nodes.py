@@ -232,9 +232,8 @@ async def get_vali_ss58_address(psql_db: PSQLDB, netuid: int) -> str | None:
 
     return node[dcst.HOTKEY]
 
+
 # not sure if we need this
 async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_address: str) -> str | None:
-    _, uid = query_substrate(
-        substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True
-    )
+    _, uid = query_substrate(substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True)
     return uid

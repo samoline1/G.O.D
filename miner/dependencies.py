@@ -1,5 +1,3 @@
-
-
 from miner.config import WorkerConfig
 from miner.config import factory_worker_config
 

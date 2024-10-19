@@ -207,9 +207,7 @@ async def evaluate_and_score(task: Task, config) -> Task:
             synth_perplexity = synth_perplexity_tuple[1]  # Assuming ('perplexity', value)
             test_perplexity = test_perplexity_tuple[1]  # Assuming ('perplexity', value)
 
-            logger.info(
-                f"The losses that we have out from {miner.node_id} are synth: {synth_loss} and test {test_loss}"
-            )
+            logger.info(f"The losses that we have out from {miner.node_id} are synth: {synth_loss} and test {test_loss}")
             logger.info(
                 f"The perplexities that we have out from {miner.node_id} are synth: {synth_perplexity} and test {test_perplexity}"
             )

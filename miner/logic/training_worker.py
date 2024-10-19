@@ -12,10 +12,11 @@ from miner.logic.job_handler import start_tuning_container
 
 logger = get_logger(__name__)
 
+
 # one of the only classes I promise
 class TrainingWorker:
     def __init__(self):
-        logger.info('STARTING A TRAINING WORKER')
+        logger.info("STARTING A TRAINING WORKER")
         self.job_queue: queue.Queue[Job] = queue.Queue()
         self.job_store: dict[str, Job] = {}
         self.thread = threading.Thread(target=self._worker, daemon=True)

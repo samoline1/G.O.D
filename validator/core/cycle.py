@@ -24,9 +24,10 @@ from validator.utils.call_endpoint import process_stream
 
 logger = get_logger(__name__)
 
+
 def _get_total_dataset_size(repo_name: str) -> int:
-    return sum(info.dataset_size for info in get_dataset_infos(repo_name).values()
-               if info.dataset_size)
+    return sum(info.dataset_size for info in get_dataset_infos(repo_name).values() if info.dataset_size)
+
 
 async def _run_task_prep(task: Task) -> Task:
     columns_to_sample = [task.system, task.instruction, task.input, task.output]
@@ -34,7 +35,7 @@ async def _run_task_prep(task: Task) -> Task:
     columns_to_sample = list(filter(None, columns_to_sample))
     test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample)
     task.hf_training_repo = train_data
-    task.status =  TaskStatus.READY
+    task.status = TaskStatus.READY
     task.synthetic_data = synth_data
     task.test_data = test_data
     return task
@@ -49,42 +50,37 @@ async def _select_miner_pool(task: Task, miners: List[Node]):
     random.shuffle(miners)
     selected_miners = []
     ds_size = _get_total_dataset_size(task.ds_id)
-    task_details_for_miner = MinerTaskRequst(
-        ds_size = ds_size,
-        model = task.model_id,
-        hours_to_complete = task.hours_to_complete
-    )
+    task_details_for_miner = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete)
     while len(selected_miners) < cst.MINIMUM_MINER_POOL and miners:
         miner = miners.pop(0)
-        logger.info('LOOKING FOR MINERS')
+        logger.info("LOOKING FOR MINERS")
         response = await _make_offer(miner, task_details_for_miner)
-        logger.info(f'The response was {response}')
+        logger.info(f"The response was {response}")
         if response:
-            logger.info(f'Miner {miner.node_id}  the task')
+            logger.info(f"Miner {miner.node_id}  the task")
             selected_miners.append(miner.node_id)
     if len(selected_miners) < cst.MINIMUM_MINER_POOL:
-        logger.info('THERE WAS A PROBLEM - NOT ENOUGH MINERS')
+        logger.info("THERE WAS A PROBLEM - NOT ENOUGH MINERS")
         task.status = TaskStatus.FAILURE
 
     task.assigned_miners = selected_miners
-    logger.info(f'So we have {selected_miners} assigned to the task')
+    logger.info(f"So we have {selected_miners} assigned to the task")
     task.status = TaskStatus.MINERS_SELECTED
     return task
 
-async def _start_miners(task: Task, miners : List[Node]):
-    dataset_type = CustomDatasetType(
-            field_system = task.system,
-            field_input = task.input,
-            field_output = task.output,
-            field_instruction = task.instruction
-            )
 
-    task_request_body = TrainRequest(dataset = task.hf_training_repo,
-                 model = task.model_id,
-                 dataset_type= dataset_type,
-                 file_format= FileFormat.S3,
-                 task_id = str(task.task_id)
-                 )
+async def _start_miners(task: Task, miners: List[Node]):
+    dataset_type = CustomDatasetType(
+        field_system=task.system, field_input=task.input, field_output=task.output, field_instruction=task.instruction
+    )
+
+    task_request_body = TrainRequest(
+        dataset=task.hf_training_repo,
+        model=task.model_id,
+        dataset_type=dataset_type,
+        file_format=FileFormat.S3,
+        task_id=str(task.task_id),
+    )
 
     for miner in miners:
         url = f"{miner.ip}:{miner.port}/start_training/"
@@ -106,7 +102,8 @@ async def _process_pending_tasks(config):
             task.status = TaskStatus.FAILURE
             await sql.update_task(task, config.psql_db)
 
-    await asyncio.gather(*[assign_miners(task) for task in pending_tasks[:cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
+    await asyncio.gather(*[assign_miners(task) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
+
 
 async def _process_miner_selected_tasks(config):
     miner_selected_tasks = await sql.get_tasks_by_status(TaskStatus.MINERS_SELECTED, config.psql_db)
@@ -120,7 +117,8 @@ async def _process_miner_selected_tasks(config):
             task.status = TaskStatus.FAILURE
             await sql.update_task(task, config.psql_db)
 
-    await asyncio.gather(*[prep_task(task) for task in miner_selected_tasks[:cst.MAX_CONCURRENT_TASK_PREPS]])
+    await asyncio.gather(*[prep_task(task) for task in miner_selected_tasks[: cst.MAX_CONCURRENT_TASK_PREPS]])
+
 
 async def _process_ready_to_train_tasks(config):
     ready_to_train_tasks = await sql.get_tasks_by_status(TaskStatus.READY, config.psql_db)
@@ -138,7 +136,8 @@ async def _process_ready_to_train_tasks(config):
             task.status = TaskStatus.FAILURE
             await sql.update_task(task, config.psql_db)
 
-    await asyncio.gather(*[start_training(task) for task in ready_to_train_tasks[:cst.MAX_CONCURRENT_TRAININGS]])
+    await asyncio.gather(*[start_training(task) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
+
 
 async def process_completed_tasks(config):
     completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
@@ -152,8 +151,9 @@ async def process_completed_tasks(config):
             task.status = TaskStatus.FAILURE
             await sql.update_task(task, config.psql_db)
 
-    for task in completed_tasks[:cst.MAX_CONCURRENT_EVALUATIONS]:
+    for task in completed_tasks[: cst.MAX_CONCURRENT_EVALUATIONS]:
         await evaluate_task(task)
+
 
 async def validator_cycle(config):
     while True:
@@ -168,6 +168,7 @@ async def validator_cycle(config):
             await asyncio.sleep(5)
         except Exception as e:
             logger.error(f"Error in validator cycle: {e}", exc_info=True)
+
 
 def init_validator_cycle(config):
     return asyncio.create_task(validator_cycle(config))

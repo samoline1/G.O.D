@@ -21,6 +21,7 @@ from miner.logic.job_handler import create_job
 
 logger = get_logger(__name__)
 
+
 async def download_s3_file(file_url: str) -> str:
     parsed_url = urlparse(file_url)
     file_name = os.path.basename(parsed_url.path)
@@ -29,12 +30,13 @@ async def download_s3_file(file_url: str) -> str:
     async with aiohttp.ClientSession() as session:
         async with session.get(file_url) as response:
             if response.status == 200:
-                with open(local_file_path, 'wb') as f:
+                with open(local_file_path, "wb") as f:
                     f.write(await response.read())
             else:
                 raise Exception(f"Failed to download file: {response.status}")
 
     return local_file_path
+
 
 async def tune_model(
     request: TrainRequest,
@@ -58,7 +60,7 @@ async def tune_model(
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
-        job_id= str(request.task_id),
+        job_id=str(request.task_id),
         dataset=request.dataset,
         model=request.model,
         dataset_type=request.dataset_type,
@@ -69,13 +71,14 @@ async def tune_model(
 
     return {"message": "Training job enqueued.", "task_id": job.job_id}
 
+
 async def get_latest_model_submission(task_id: str) -> str:
     try:
         config_filename = f"{task_id}.yml"
         config_path = os.path.join(cst.CONFIG_DIR, config_filename)
-        with open(config_path, 'r') as file:
+        with open(config_path, "r") as file:
             config_data = yaml.safe_load(file)
-            return config_data.get('hub_model_id', None)
+            return config_data.get("hub_model_id", None)
 
     except Exception as e:
         logger.error(f"Error retrieving latest model submission for task {task_id}: {str(e)}")
@@ -84,20 +87,14 @@ async def get_latest_model_submission(task_id: str) -> str:
 
 async def task_offer(request: MinerTaskRequst) -> MinerTaskResponse:
     if request.hours_to_complete < 100:
-        return MinerTaskResponse(message='Yes', accepted=True)
+        return MinerTaskResponse(message="Yes", accepted=True)
     else:
-        return MinerTaskResponse(message='I only accept small jobs', accepted=False)
+        return MinerTaskResponse(message="I only accept small jobs", accepted=False)
 
 
 def factory_router() -> APIRouter:
     router = APIRouter()
-    router.add_api_route(
-        "/task_offer/",
-        task_offer,
-        tags=["Subnet"],
-        methods=["POST"],
-        response_model=MinerTaskResponse
-    )
+    router.add_api_route("/task_offer/", task_offer, tags=["Subnet"], methods=["POST"], response_model=MinerTaskResponse)
     router.add_api_route(
         "/get_latest_model_submission/{task_id}",
         get_latest_model_submission,
@@ -105,7 +102,7 @@ def factory_router() -> APIRouter:
         methods=["GET"],
         response_model=str,
         summary="Get Latest Model Submission",
-        description="Retrieve the latest model submission for a given task ID"
+        description="Retrieve the latest model submission for a given task ID",
     )
     router.add_api_route(
         "/start_training/",

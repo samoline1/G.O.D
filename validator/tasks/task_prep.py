@@ -16,15 +16,18 @@ from validator.utils.minio import async_minio_client
 
 logger = get_logger(__name__)
 
+
 async def save_json_to_temp_file(data: List[dict], prefix: str) -> str:
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json", prefix=prefix)
-    with open(temp_file.name, 'w') as f:
+    with open(temp_file.name, "w") as f:
         json.dump(data, f)
     return temp_file.name
+
 
 async def upload_json_to_minio(file_path: str, bucket_name: str, object_name: str) -> str:
     await async_minio_client.upload_file(bucket_name, object_name, file_path)
     return await async_minio_client.get_presigned_url(bucket_name, object_name)
+
 
 def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     if test_size is None:
@@ -45,6 +48,7 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     logger.info(f"Test set size: {len(split_dataset['test'])}")
     return split_dataset
 
+
 async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[str]) -> List[dict]:
     num_samples = min(cst.MAX_SYNTH_DATA_POINTS, int(len(dataset) * cst.ADDITIONAL_SYNTH_DATA_PERCENTAGE))
     logger.info(f"Generating {num_samples} additional synthetic data points")
@@ -54,19 +58,17 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
     synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
 
+
 def change_to_json_format(dataset: Dataset, columns: List[str]):
     logger.info(f"HERE  ARE THE COLUMNS {columns}")
-    return [
-        {col: row[col] for col in columns}
-        for row in dataset
-    ]
+    return [{col: row[col] for col in columns} for row in dataset]
 
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
     logger.info(f"Preparing {dataset_name}")
     dataset_dict = train_test_split(dataset_name)
-    train_dataset = dataset_dict['train']
-    test_dataset = dataset_dict['test']
+    train_dataset = dataset_dict["train"]
+    test_dataset = dataset_dict["test"]
 
     synthetic_data = []
     if cst.GET_SYNTH_DATA:
@@ -83,7 +85,6 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple
     else:
         logger.info("Skipping synthetic data generation")
 
-
     # this looks ugly
     train_data_json = change_to_json_format(train_dataset, columns_to_sample)
     test_data_json = change_to_json_format(test_dataset, columns_to_sample)
@@ -95,11 +96,9 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple
 
     train_json_url = await upload_json_to_minio(train_json_path, "tuning", f"{dataset_name}_train_data.json")
     test_json_url = await upload_json_to_minio(test_json_path, "tuning", f"{dataset_name}_test_data.json")
-    synth_json_url = await upload_json_to_minio(
-        synth_json_path,
-        "tuning",
-        f"{dataset_name}_synth_data.json") if synthetic_data else None
-
+    synth_json_url = (
+        await upload_json_to_minio(synth_json_path, "tuning", f"{dataset_name}_synth_data.json") if synthetic_data else None
+    )
 
     os.remove(test_json_path)
     if synth_json_path:

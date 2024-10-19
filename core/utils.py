@@ -7,9 +7,7 @@ from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 
 
-async def validate_dataset(
-    dataset_path: str, dataset_type: DatasetType, file_format: FileFormat
-) -> bool:
+async def validate_dataset(dataset_path: str, dataset_type: DatasetType, file_format: FileFormat) -> bool:
     try:
         if file_format == FileFormat.CSV:
             df = pd.read_csv(dataset_path)

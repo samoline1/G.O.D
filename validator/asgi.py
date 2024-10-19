@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to connect to Redis: {e}")
 
-    logger.info('Starting up...')
+    logger.info("Starting up...")
     app.state.config = config
 
     try:
@@ -63,6 +63,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
     await config.psql_db.close()
     await config.redis_db.close()
+
 
 def factory() -> FastAPI:
     logger.debug("Entering factory function")
@@ -83,8 +84,8 @@ def factory() -> FastAPI:
     logger.debug(f"App created with {len(app.routes)} routes")
     return app
 
-if __name__ == "__main__":
 
-    logger.info('Starting main validator')
+if __name__ == "__main__":
+    logger.info("Starting main validator")
 
     uvicorn.run(factory(), host="0.0.0.0", port=8010)

@@ -26,6 +26,7 @@ class JobStatus(str, Enum):
     FAILED = "Failed"
     NOT_FOUND = "Not Found"
 
+
 class TaskStatus(str, Enum):
     PENDING = "pending"
     IDLE = "idle"
@@ -48,6 +49,7 @@ class CustomDatasetType(BaseModel):
     no_input_format: str | None = None
     field: str | None = None
 
+
 class Job(BaseModel):
     job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     dataset: str
@@ -67,6 +69,7 @@ class Role(str, Enum):
 class Message(BaseModel):
     role: Role
     content: str
+
 
 class Prompts(BaseModel):
     synth_data_creation_sys: str

@@ -20,7 +20,7 @@ class Task(BaseModel):
     test_data: Optional[str] = None
     synthetic_data: Optional[str] = None
     hf_training_repo: Optional[str] = None
-    assigned_miners : Optional[List[UUID]] = None
+    assigned_miners: Optional[List[UUID]] = None
     miner_scores: Optional[List[float]] = None
     created_timestamp: Optional[datetime] = None
     updated_timestamp: Optional[datetime] = None
@@ -30,7 +30,6 @@ class Task(BaseModel):
     hours_to_complete: int
     best_submission_repo: Optional[str] = None
     user_id: Optional[str] = None
-
 
     # task = Task(
     #     model_id=request.model_repo,
@@ -42,6 +41,7 @@ class Task(BaseModel):
     #     status=TaskStatus.PENDING,
     #     end_timestamp=end_timestamp
     # )
+
 
 # task_id
 #   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
@@ -70,6 +70,7 @@ class Task(BaseModel):
 # completed_timestamp
 #   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
 #     For further information visit https://errors.pydantic.dev/2.9/v/missing
+
 
 class Node(BaseModel):
     node_id: Optional[UUID]

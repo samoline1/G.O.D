@@ -35,11 +35,7 @@ def create_dataset_entry(
     if isinstance(dataset_type, DatasetType):
         dataset_entry["type"] = dataset_type.value
     elif isinstance(dataset_type, CustomDatasetType):
-        custom_type_dict = {
-            key: value
-            for key, value in dataset_type.model_dump().items()
-            if value is not None
-        }
+        custom_type_dict = {key: value for key, value in dataset_type.model_dump().items() if value is not None}
         dataset_entry["type"] = custom_type_dict
     else:
         raise ValueError("Invalid dataset_type provided.")
@@ -50,9 +46,11 @@ def create_dataset_entry(
 
     return dataset_entry
 
+
 def update_model_info(config: dict, model: str, job_id: str = ""):
     config["base_model"] = model
-    config["wandb_runid"] =  job_id
+    config["wandb_runid"] = job_id
+
 
 def save_config(config: dict, config_path: str):
     with open(config_path, "w") as file:

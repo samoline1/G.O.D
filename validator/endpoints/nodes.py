@@ -9,6 +9,8 @@ from validator.db import sql
 
 
 logger = get_logger(__name__)
+
+
 async def add_node(
     coldkey: str = Body(..., embed=True),
     ip: str = Body(..., embed=True),

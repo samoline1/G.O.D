@@ -72,9 +72,7 @@ def generate_miner_config(dev: bool = False) -> dict[str, Any]:
     config["WALLET_NAME"] = input("Enter wallet name (default: default): ") or "default"
     config["HOTKEY_NAME"] = input("Enter hotkey name (default: default): ") or "default"
     config["SUBTENSOR_NETWORK"] = input("Enter subtensor network (default: test): ") or "test"
-    config["SUBTENSOR_ADDRESS"] = (
-        validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
-    )
+    config["SUBTENSOR_ADDRESS"] = validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
     default_stake_threshold = "0" if config["SUBTENSOR_NETWORK"] == "test" else "1000"
     config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 19
     config["ENV"] = "dev" if dev else "prod"
@@ -114,14 +112,10 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     if dev:
         config["ENV"] = "dev"
         config["REFRESH_NODES"] = (
-            "true"
-            if validate_input("Refresh nodes? (y/n): (default: y)", yes_no_validator).lower().startswith("y")
-            else "false"
+            "true" if validate_input("Refresh nodes? (y/n): (default: y)", yes_no_validator).lower().startswith("y") else "false"
         )
         config["LOCALHOST"] = (
-            "true"
-            if validate_input("Use localhost? (y/n): (default: y)", yes_no_validator).lower().startswith("y")
-            else "false"
+            "true" if validate_input("Use localhost? (y/n): (default: y)", yes_no_validator).lower().startswith("y") else "false"
         )
     else:
         config["ENV"] = "prod"

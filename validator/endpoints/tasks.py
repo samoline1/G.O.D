@@ -28,12 +28,12 @@ logger = get_logger(__name__)
 # Define a custom security scheme for the Bearer token
 bearer_token_header = APIKeyHeader(name="Authorization", auto_error=False)
 
+
 async def delete_task(
     task_id: UUID,
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
-
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization token is required.")
 
@@ -50,11 +50,11 @@ async def delete_task(
     await sql.delete_task(task_id, config.psql_db)
     return Response(success=True)
 
+
 async def get_tasks(
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
     config: Config = Depends(get_config),
 ) -> List[TaskStatusResponse]:
-
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization token is required.")
 
@@ -72,13 +72,14 @@ async def get_tasks(
             miners=task["miners"],
             model_id=task["model_id"],
             dataset=task["hf_training_repo"],
-            created=task["created_timestamp"].strftime('%Y-%m-%dT%H:%M:%S') if isinstance(
-                task["created_timestamp"], datetime
-            ) else task["created_timestamp"],
+            created=task["created_timestamp"].strftime("%Y-%m-%dT%H:%M:%S")
+            if isinstance(task["created_timestamp"], datetime)
+            else task["created_timestamp"],
             hours_to_complete=task["hours_to_complete"],
         )
         for task in tasks_with_miners
     ]
+
 
 async def create_task(
     request: NewTaskRequest,
@@ -92,7 +93,7 @@ async def create_task(
     current_time = datetime.utcnow()
     end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
 
-    logger.info(f'The request coming in {request}')
+    logger.info(f"The request coming in {request}")
     task = Task(
         model_id=request.model_repo,
         ds_id=request.ds_repo,
@@ -103,18 +104,16 @@ async def create_task(
         status=TaskStatus.PENDING,
         end_timestamp=end_timestamp,
         hours_to_complete=request.hours_to_complete,
-        user_id=user_id
+        user_id=user_id,
     )
 
     logger.info(f"The Task is {task}")
 
-    task = await sql.add_task(
-        task,
-        config.psql_db
-    )
+    task = await sql.add_task(task, config.psql_db)
 
     logger.info(task.task_id)
     return NewTaskResponse(success=True, task_id=task.task_id)
+
 
 async def get_task_status(
     task_id: UUID,
@@ -132,19 +131,16 @@ async def get_task_status(
         miners=None,
         dataset=task.hf_training_repo,
         created=str(task.created_timestamp),
-        hours_to_complete=task.hours_to_complete
+        hours_to_complete=task.hours_to_complete,
     )
+
 
 async def submit_task_submission(
     request: TaskSubmissionRequest,
     config: Config = Depends(get_config),
 ) -> TaskSubmissionResponse:
     is_unique = await sql.submission_repo_is_unique(request.repo, config.psql_db)
-    is_miner_assigned_to_task = await sql.is_miner_assigned_to_task(
-        request.task_id,
-        request.node_id,
-        config.psql_db
-    )
+    is_miner_assigned_to_task = await sql.is_miner_assigned_to_task(request.task_id, request.node_id, config.psql_db)
 
     if not is_unique:
         return TaskSubmissionResponse(success=False, message="Submission with this repository already exists.")
@@ -153,6 +149,7 @@ async def submit_task_submission(
     else:
         submission_id = await sql.add_submission(request.task_id, request.node_id, request.repo, config.psql_db)
         return TaskSubmissionResponse(success=True, message="success", submission_id=submission_id)
+
 
 def factory_router() -> APIRouter:
     router = APIRouter()

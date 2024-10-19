@@ -65,7 +65,5 @@ async def _process_response(response: httpx.Response) -> AsyncGenerator[str, Non
 
 def _load_sse_jsons(chunk: str) -> List[dict[str, Any]]:
     return [
-        json.loads(event.partition(":")[2])
-        for event in chunk.split("\n\n")
-        if event and not event.startswith("data: [DONE]")
+        json.loads(event.partition(":")[2]) for event in chunk.split("\n\n") if event and not event.startswith("data: [DONE]")
     ]
