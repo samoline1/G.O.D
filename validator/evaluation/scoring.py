@@ -153,9 +153,10 @@ def score_adjustment(miner_results: List[Tuple[str, float, float, bool]]) -> Dic
         task_results[miner_id] = calculate_scaled_score(weighted_loss, is_finetune, scale_factor)
     return task_results
 
-async def evaluate_and_score(task: Task, config) -> Task:
+async def evaluate_and_score(task: Task, config) -> Tuple[Dict[str, float], str]:
     miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
     task_results = []
+    submission_repos = {}
     dataset_type = CustomDatasetType(
         field_system=task.system,
         field_instruction=task.instruction,
@@ -167,6 +168,7 @@ async def evaluate_and_score(task: Task, config) -> Task:
         try:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
             submission_repo = await process_non_stream_get(url, None)
+            submission_repos[miner.node_id] = submission_repo
             evaluation_params = {
                 'file_format': FileFormat.JSON,
                 'original_model': task.model_id,
@@ -191,7 +193,6 @@ async def evaluate_and_score(task: Task, config) -> Task:
 
             task_results.append((miner.node_id, test_loss, synth_loss, is_test_finetune))
 
-
         except Exception as e:
             logger.info(f'There was an issue with scoring {e}')
 
@@ -200,6 +201,12 @@ async def evaluate_and_score(task: Task, config) -> Task:
     logger.info(f"The final scores are {relative_scores} from the raw scores of {task_results}")
     for miner_id, score in relative_scores.items():
        await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
+
     task.status = TaskStatus.SUCCESS
 
-    return task
+    # Find the miner with the highest score
+    best_miner_id = max(relative_scores, key=relative_scores.get)
+    best_submission_repo = submission_repos[best_miner_id]
+    logger.info(f"The top submission_repo is {best_submission_repo}")
+
+    return relative_scores, best_submission_repo
