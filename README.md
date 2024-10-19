@@ -58,6 +58,8 @@ pre-commit install
 
 2) Install .vali.env environment variables:
 
+# Why do I need to export  hugging face token and wandb token then - can't i add them to a .env file?
+# We should just add these to the create configs
 ```
 touch .vali.env
 cat << EOF >> .vali.env
