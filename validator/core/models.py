@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import List
 from typing import Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Task(BaseModel):
@@ -26,7 +26,9 @@ class Task(BaseModel):
     end_timestamp: Optional[datetime] = None
     completed_timestamp: Optional[datetime] = None
     hours_to_complete: int
+    best_submission_repo: Optional[str] = None
     user_id: Optional[str] = None
+
 
     # task = Task(
     #     model_id=request.model_repo,
@@ -83,7 +85,8 @@ class Node(BaseModel):
 
 
 class Submission(BaseModel):
-    submission_id: Optional[UUID]
+    submission_id: UUID = Field(default_factory=uuid4)
+    score: Optional[float] = None
     task_id: UUID
     node_id: UUID
     repo: str

@@ -1,13 +1,14 @@
 import os
 from typing import Dict
 from urllib.parse import urlparse
+from datetime import datetime
 
 import aiohttp
 from typing import Dict, Tuple, List
-from validator.db.sql import get_miners_assigned_to_task, set_task_node_quality_score
+from validator.db.sql import add_submission, get_miners_assigned_to_task, set_task_node_quality_score
 from validator.evaluation.docker_evaluation import run_evaluation_docker
-from validator.core.models import Task
-import core.constants as cts
+from validator.core.models import Submission, Task
+import validator.core.constants as cts
 import numpy as np
 from fiber.logging_utils import get_logger
 from core.models.utility_models import CustomDatasetType, TaskStatus
@@ -156,6 +157,7 @@ def score_adjustment(miner_results: List[Tuple[str, float, float, bool]]) -> Dic
 async def evaluate_and_score(task: Task, config) -> Task:
     miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
     task_results = []
+    submission_repos = {}
     dataset_type = CustomDatasetType(
         field_system=task.system,
         field_instruction=task.instruction,
@@ -167,13 +169,14 @@ async def evaluate_and_score(task: Task, config) -> Task:
         try:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
             submission_repo = await process_non_stream_get(url, None)
+            current_time = datetime.now()
+            submission_repos[str(miner.node_id)] = Submission(task_id=task.task_id, node_id=miner.node_id, repo=submission_repo, created_on=current_time, updated_on=current_time)
             evaluation_params = {
                 'file_format': FileFormat.JSON,
                 'original_model': task.model_id,
                 'model': submission_repo,
                 'dataset_type': dataset_type
             }
-
             synthetic_data_filepath = await download_s3_file(task.synthetic_data)
             test_data_filepath = await download_s3_file(task.test_data)
 
@@ -191,15 +194,19 @@ async def evaluate_and_score(task: Task, config) -> Task:
 
             task_results.append((miner.node_id, test_loss, synth_loss, is_test_finetune))
 
-
         except Exception as e:
             logger.info(f'There was an issue with scoring {e}')
 
     raw_scores = score_adjustment(task_results)
     relative_scores = calculate_relative_scores(raw_scores)
     logger.info(f"The final scores are {relative_scores} from the raw scores of {task_results}")
+    logger.info(f'The sumissions are {submission_repos}')
     for miner_id, score in relative_scores.items():
        await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
+       submission = submission_repos[miner_id]
+       submission.score = score
+       await add_submission(submission, config.psql_db)
+
     task.status = TaskStatus.SUCCESS
 
     return task
