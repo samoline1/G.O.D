@@ -34,6 +34,9 @@ async def delete_task(
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
 
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization token is required.")
+
     user_id = authorization
 
     task = await sql.get_task(task_id, config.psql_db)
@@ -51,6 +54,10 @@ async def get_tasks(
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
     config: Config = Depends(get_config),
 ) -> List[TaskStatusResponse]:
+
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization token is required.")
+
     user_id = authorization
 
     tasks_with_miners = await sql.get_tasks_with_miners_by_user(user_id, config.psql_db)
@@ -78,7 +85,10 @@ async def create_task(
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization token is required.")
 
+    user_id = authorization
     current_time = datetime.utcnow()
     end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
 
@@ -93,7 +103,7 @@ async def create_task(
         status=TaskStatus.PENDING,
         end_timestamp=end_timestamp,
         hours_to_complete=request.hours_to_complete,
-        user_id=authorization
+        user_id=user_id
     )
 
     logger.info(f"The Task is {task}")
