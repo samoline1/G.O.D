@@ -153,7 +153,7 @@ def score_adjustment(miner_results: List[Tuple[str, float, float, bool]]) -> Dic
         task_results[miner_id] = calculate_scaled_score(weighted_loss, is_finetune, scale_factor)
     return task_results
 
-async def evaluate_and_score(task: Task, config) -> Tuple[Dict[str, float], str]:
+async def evaluate_and_score(task: Task, config) -> Task:
     miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
     task_results = []
     submission_repos = {}
@@ -204,9 +204,8 @@ async def evaluate_and_score(task: Task, config) -> Tuple[Dict[str, float], str]
 
     task.status = TaskStatus.SUCCESS
 
-    # Find the miner with the highest score
     best_miner_id = max(relative_scores, key=relative_scores.get)
     best_submission_repo = submission_repos[best_miner_id]
     logger.info(f"The top submission_repo is {best_submission_repo}")
 
-    return relative_scores, best_submission_repo
+    return task
