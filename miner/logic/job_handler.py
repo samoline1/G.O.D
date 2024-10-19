@@ -54,6 +54,7 @@ def start_tuning_container(job: Job):
 
     logger.info(os.path.basename(job.dataset) if job.file_format != FileFormat.HF else "")
 
+    # Dataclass instead - or at least use constats here (NO MAGIC STRINGS :P)
     docker_env = {
         "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
         "WANDB_TOKEN": cst.WANDB_TOKEN,

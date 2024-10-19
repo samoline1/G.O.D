@@ -19,6 +19,7 @@ class TrainingWorker:
         logger.info("STARTING A TRAINING WORKER")
         self.job_queue: queue.Queue[Job] = queue.Queue()
         self.job_store: dict[str, Job] = {}
+        # Why do we need a separate thread here? dangerous
         self.thread = threading.Thread(target=self._worker, daemon=True)
         self.thread.start()
         self.docker_client = docker.from_env()
@@ -44,6 +45,7 @@ class TrainingWorker:
 
     def get_status(self, job_id: UUID) -> JobStatus:
         job = self.job_store.get(job_id)
+        # this doesn't match the typehint
         return job.status if job else "Not Found"
 
     def shutdown(self):

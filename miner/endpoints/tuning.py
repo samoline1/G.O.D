@@ -21,7 +21,7 @@ from miner.logic.job_handler import create_job
 
 logger = get_logger(__name__)
 
-
+# Why is this a public function if it is not an endpoint? Doesn't belong here
 async def download_s3_file(file_url: str) -> str:
     parsed_url = urlparse(file_url)
     file_name = os.path.basename(parsed_url.path)
