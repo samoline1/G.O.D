@@ -4,9 +4,9 @@ from urllib.parse import urlparse
 
 import aiohttp
 from typing import Dict, Tuple, List
-from validator.db.sql import get_miners_assigned_to_task, set_task_node_quality_score
+from validator.db.sql import add_submission, get_miners_assigned_to_task, set_task_node_quality_score
 from validator.evaluation.docker_evaluation import run_evaluation_docker
-from validator.core.models import Task
+from validator.core.models import Submission, Task
 import core.constants as cts
 import numpy as np
 from fiber.logging_utils import get_logger
@@ -175,7 +175,7 @@ async def evaluate_and_score(task: Task, config) -> Task:
                 'model': submission_repo,
                 'dataset_type': dataset_type
             }
-
+#            await add_submission(Submission(task_id=task.task_id, node_id=miner.node_id, repo=submission_repo), config.psql_db)
             synthetic_data_filepath = await download_s3_file(task.synthetic_data)
             test_data_filepath = await download_s3_file(task.test_data)
 
@@ -207,5 +207,6 @@ async def evaluate_and_score(task: Task, config) -> Task:
     best_miner_id = max(relative_scores, key=relative_scores.get)
     best_submission_repo = submission_repos[best_miner_id]
     logger.info(f"The top submission_repo is {best_submission_repo}")
+    task.best_submission_repo = best_submission_repo
 
     return task
