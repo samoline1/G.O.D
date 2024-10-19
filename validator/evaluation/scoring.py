@@ -175,6 +175,7 @@ async def evaluate_and_score(task: Task, config) -> Task:
                 'model': submission_repo,
                 'dataset_type': dataset_type
             }
+# commented for now, do we want to add the score to the submission and keep these separate
 #            await add_submission(Submission(task_id=task.task_id, node_id=miner.node_id, repo=submission_repo), config.psql_db)
             synthetic_data_filepath = await download_s3_file(task.synthetic_data)
             test_data_filepath = await download_s3_file(task.test_data)
