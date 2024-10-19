@@ -222,9 +222,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
                 dataset=synthetic_data_filepath, **evaluation_params
             )
             # needs to be _ if we dont use the variable (usually)
-            _, test_loss_tuple, test_perplexity_tuple = run_evaluation_docker(
-                dataset=test_data_filepath, **evaluation_params
-            )
+            _, test_loss_tuple, test_perplexity_tuple = run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
 
             # If you need to add comments about the tuple, you should use a dataclass or namedtuple
             synth_loss = synth_loss_tuple[1]  # Assuming ('eval_loss', value)

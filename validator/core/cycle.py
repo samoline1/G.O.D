@@ -30,9 +30,7 @@ def _get_total_dataset_size(repo_name: str) -> int:
 
 
 async def _run_task_prep(task: Task) -> Task:
-    columns_to_sample = [task.system, task.instruction, task.input, task.output]
-    # only non-null
-    columns_to_sample = list(filter(None, columns_to_sample))
+    columns_to_sample = [i for i in [task.system, task.instruction, task.input, task.output] if i is not None]
     test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample)
     task.hf_training_repo = train_data
     task.status = TaskStatus.READY

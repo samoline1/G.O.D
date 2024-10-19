@@ -39,6 +39,8 @@ async def process_non_stream(base_url: str, token: str, payload: dict[str, Any])
         return response.json()
 
 
+# If this it to talk to the miner, its already in fiber
+# We can change to that once we add bittensor stuff (i know that's why its like this ATM)
 async def process_non_stream_get(base_url: str, token: str) -> dict[str, Any]:
     headers = {
         "Accept": "application/json",
