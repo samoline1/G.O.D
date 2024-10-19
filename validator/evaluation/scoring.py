@@ -42,7 +42,8 @@ async def download_s3_file(file_url: str) -> str:
 
     return local_file_path
 
-
+# NOTE: doc strings are a bit long. Don't need to explain params and returns types - these
+# should be clear from the parameter names and function name
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     """
     Calculate a weighted average of test and synthetic losses.
@@ -58,10 +59,14 @@ def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor
     Calculate a score for a miner based on their weighted loss, using an exponential decay function.
 
     This function converts a loss value into a score, where lower losses result in higher scores.
+
+    # NOTE: Im not sure what this means
+
     The relationship between loss and score is not linear, but exponential, meaning small
     differences in low losses can lead to larger differences in scores than the same
     difference in higher losses.
 
+    # NOTE: don't need this - it should be clear from parameter names
     Parameters:
     weighted_loss : float
         The combined loss for the miner. Lower values indicate better performance.
@@ -72,14 +77,20 @@ def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor
         Higher scale factors amplify the effect of small loss differences on the final score.
         See compute_adaptive_scale_factor for details
 
+    #NOTE: dont need this
     Returns:
     float
         The calculated score, ranging from 0 to 1. Higher scores indicate better performance.
 
+    # NOTE: This should be obvious from the code
     Behavior:
     1. For non-finetuned models (is_finetune = False), the function always returns 0.
     2. As weighted_loss increases, the score decreases exponentially.
     3. The scale_factor determines how sharply the score drops off as loss increases.
+
+    # NOTE: this sounds like AI... why are you using my mental capacity
+    # to teach me about general machine learning concepts
+    # when reviewing the code
 
     Note:
     The exponential nature of this scoring system means it's particularly good at
