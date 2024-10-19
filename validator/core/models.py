@@ -84,7 +84,7 @@ class Node(BaseModel):
 
 class Submission(BaseModel):
     submission_id: UUID = Field(default_factory=uuid4)
-    score: float
+    score: Optional[float] = None
     task_id: UUID
     node_id: UUID
     repo: str
