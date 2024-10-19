@@ -84,6 +84,7 @@ class Node(BaseModel):
 
 class Submission(BaseModel):
     submission_id: Optional[UUID]
+    score: float
     task_id: UUID
     node_id: UUID
     repo: str

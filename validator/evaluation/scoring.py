@@ -168,15 +168,13 @@ async def evaluate_and_score(task: Task, config) -> Task:
         try:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
             submission_repo = await process_non_stream_get(url, None)
-            submission_repos[miner.node_id] = submission_repo
+            submission_repos[miner.node_id] = Submission(task_id=task.task_id, node_id=miner.node_id, repo=submission_repo)
             evaluation_params = {
                 'file_format': FileFormat.JSON,
                 'original_model': task.model_id,
                 'model': submission_repo,
                 'dataset_type': dataset_type
             }
-# commented for now, do we want to add the score to the submission and keep these separate
-#            await add_submission(Submission(task_id=task.task_id, node_id=miner.node_id, repo=submission_repo), config.psql_db)
             synthetic_data_filepath = await download_s3_file(task.synthetic_data)
             test_data_filepath = await download_s3_file(task.test_data)
 
@@ -202,12 +200,10 @@ async def evaluate_and_score(task: Task, config) -> Task:
     logger.info(f"The final scores are {relative_scores} from the raw scores of {task_results}")
     for miner_id, score in relative_scores.items():
        await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
+       submission = submission_repo[miner_id]
+       submission.score = score
+       await add_submission(submission, config.psql_db)
 
     task.status = TaskStatus.SUCCESS
-
-    best_miner_id = max(relative_scores, key=relative_scores.get)
-    best_submission_repo = submission_repos[best_miner_id]
-    logger.info(f"The top submission_repo is {best_submission_repo}")
-    task.best_submission_repo = best_submission_repo
 
     return task
