@@ -20,6 +20,7 @@ from validator.core.dependencies import get_config
 from validator.core.models import Task
 from validator.db import sql
 
+## TT leavin this one for you snr
 
 logger = get_logger(__name__)
 

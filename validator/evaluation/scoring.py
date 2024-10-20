@@ -160,17 +160,17 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
             synthetic_data_filepath = await download_s3_file(task.synthetic_data)
             test_data_filepath = await download_s3_file(task.test_data)
 
-            synth_eval_result = run_evaluation_docker(
+            synth_eval_result = await run_evaluation_docker(
                 dataset=synthetic_data_filepath, **evaluation_params
             )
-            test_eval_result = run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
+            test_eval_result = await run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
 
             logger.info(f"The losses that we have out from {miner.node_id} are synth: {synth_eval_result.eval_loss} and test {test_eval_result.eval_loss}")
             logger.info(
                 f"The perplexities that we have out from {miner.node_id} are synth: {synth_eval_result.perplexity} and test {test_eval_result.perplexity}"
             )
 
-            miner_result = MinerResults(node_id = str(miner.node_id),
+            miner_result = MinerResults(node_id = miner.node_id,
                                         test_loss = test_eval_result.eval_loss,
                                         synth_loss = synth_eval_result.eval_loss,
                                         is_finetune= test_eval_result.is_finetune, submission=submission)

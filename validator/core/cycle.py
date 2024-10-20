@@ -198,6 +198,6 @@ async def run_validator_cycles(config: Config) -> None:
             logger.error(f"Validator cycle crashed: {e}", exc_info=True)
             await asyncio.sleep(30)
 
-def init_validator_cycles(config):
+def init_validator_cycles(config: Config) -> None:
        return asyncio.create_task(run_validator_cycles(config))
 

@@ -32,47 +32,6 @@ class Task(BaseModel):
     user_id: Optional[str] = None
 
 
-    # task = Task(
-    #     model_id=request.model_repo,
-    #     ds_id=request.ds_repo,
-    #     system=request.system_col,
-    #     instruction=request.instruction_col,
-    #     input=request.input_col,
-    #     output=request.output_col,
-    #     status=TaskStatus.PENDING,
-    #     end_timestamp=end_timestamp
-    # )
-
-
-# task_id
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-# test_data
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-# synthetic_data
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-# hf_training_repo
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-# miner_scores
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-# created_timestamp
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-# updated_timestamp
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-# started_timestamp
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-# completed_timestamp
-#   Field required [type=missing, input_value={'model_id': 'string', 'd...14, 15, 16, 51, 875476)}, input_type=dict]
-#     For further information visit https://errors.pydantic.dev/2.9/v/missing
-
-
 class Node(BaseModel):
     node_id: int
     coldkey: str
