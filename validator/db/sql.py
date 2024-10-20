@@ -254,7 +254,6 @@ async def get_miners_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Nod
             SELECT nodes.* FROM nodes
             JOIN task_nodes ON nodes.node_id = task_nodes.node_id
             WHERE task_nodes.task_id = $1
-            AND nodes.trust IS NOT NULL
             """,
             task_id,
         )
