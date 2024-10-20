@@ -1,8 +1,7 @@
 import asyncio
 import datetime
 import random
-from typing import List
-
+from asyncio import Task as AsyncTask
 from datasets import get_dataset_infos
 from fiber.logging_utils import get_logger
 
@@ -44,13 +43,13 @@ async def _make_offer(node: Node, request: MinerTaskRequst) -> MinerTaskResponse
     response = await process_non_stream(url, None, request.model_dump())
     return MinerTaskResponse(message=response.get('message', 'No message given'), accepted=response.get('accepted', False))
 
-async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node], config: Config) -> Task:
+async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], config: Config) -> Task:
     if len(nodes) < cst.MINIMUM_MINER_POOL:
         logger.warning(f"Not enough nodes available. Need at least {cst.MINIMUM_MINER_POOL}, but only have {len(nodes)}.")
         task.status = TaskStatus.FAILURE
         return task
 
-    selected_miners: List[int] = []
+    selected_miners: list[int] = []
     ds_size = _get_total_dataset_size(task.ds_id)
     task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete)
 
@@ -66,7 +65,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node], conf
 
         if offer_response.accepted is True:
             selected_miners.append(node.node_id)
-            await sql.assign_node_to_task(task.task_id, node.node_id, config.psql_db)
+            await sql.assign_node_to_task(str(task.task_id), node.node_id, config.psql_db)
             logger.info(f"The miner {node.node_id} has officially been assigned the task")
 
     if len(selected_miners) < cst.MINIMUM_MINER_POOL:
@@ -82,7 +81,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node], conf
     task.status = TaskStatus.MINERS_SELECTED
     return task
 
-async def _let_miners_know_to_start_training(task: Task, nodes: List[Node]):
+async def _let_miners_know_to_start_training(task: Task, nodes: list[Node]):
     dataset_type = CustomDatasetType(
         field_system=task.system, field_input=task.input, field_output=task.output, field_instruction=task.instruction
     )
@@ -102,7 +101,7 @@ async def _let_miners_know_to_start_training(task: Task, nodes: List[Node]):
         response = await process_non_stream(url, None, task_request_body.model_dump())
         logger.info(f"The response we got from {node.node_id} was {response}")
 
-async def assign_miners(task: Task, nodes: List[Node], config: Config):
+async def assign_miners(task: Task, nodes: list[Node], config: Config):
     try:
         task = await _select_miner_pool_and_add_to_task(task, nodes, config)
         await sql.update_task(task, config.psql_db)
@@ -200,6 +199,6 @@ async def run_validator_cycles(config: Config) -> None:
             logger.error(f"Validator cycle crashed: {e}", exc_info=True)
             await asyncio.sleep(30)
 
-def init_validator_cycles(config: Config) -> None:
+def init_validator_cycles(config: Config) -> AsyncTask:
        return asyncio.create_task(run_validator_cycles(config))
 
