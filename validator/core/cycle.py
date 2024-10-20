@@ -119,16 +119,16 @@ async def _process_pending_tasks(config: Config):
 
 
 async def prep_task(task: Task, config: Config):
-        try:
-            task = await _run_task_prep(task)
+    try:
+        task = await _run_task_prep(task)
             # Would much prefer you don't update the state every time and rely on that,
             # but just do the steps for each task sequentially
             ## ww - leaving this for now - something to come back to.
-            await sql.update_task(task, config.psql_db)
-        except Exception as e:
-            logger.error(f"Error prepping task {task.task_id}: {e}", exc_info=True)
-            task.status = TaskStatus.FAILURE
-            await sql.update_task(task, config.psql_db)
+        await sql.update_task(task, config.psql_db)
+    except Exception as e:
+        logger.error(f"Error prepping task {task.task_id}: {e}", exc_info=True)
+        task.status = TaskStatus.FAILURE
+        await sql.update_task(task, config.psql_db)
 
 async def _process_miner_selected_tasks(config: Config):
     miner_selected_tasks = await sql.get_tasks_with_status(status=TaskStatus.MINERS_SELECTED, psql_db=config.psql_db)
@@ -138,7 +138,7 @@ async def _start_training_task(task: Task, config: Config) -> None:
     try:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
-        assigned_miners = await sql.get_miners_assigned_to_task(task.task_id, config.psql_db)
+        assigned_miners = await sql.get_miners_assigned_to_task(str(task.task_id), config.psql_db)
         task.status = TaskStatus.TRAINING
         await sql.update_task(task, config.psql_db)
         await _let_miners_know_to_start_training(task, assigned_miners)
@@ -153,16 +153,16 @@ async def _process_ready_to_train_tasks(config: Config):
     await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
 
 async def _evaluate_task(task: Task, config: Config):
-        try:
-            task = await evaluate_and_score(task, config)
-            await sql.update_task(task, config.psql_db)
-        except Exception as e:
-            logger.error(f"Error evaluating task {task.task_id}: {e}", exc_info=True)
-            task.status = TaskStatus.FAILURE
-            await sql.update_task(task, config.psql_db)
+    try:
+       task = await evaluate_and_score(task, config)
+       await sql.update_task(task, config.psql_db)
+    except Exception as e:
+       logger.error(f"Error evaluating task {task.task_id}: {e}", exc_info=True)
+       task.status = TaskStatus.FAILURE
+       await sql.update_task(task, config.psql_db)
 
 
-async def process_completed_tasks(config):
+async def process_completed_tasks(config: Config) -> None:
     completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
     while True:
         completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
@@ -171,7 +171,7 @@ async def process_completed_tasks(config):
         await asyncio.sleep(5)
 
 
-async def process_pending_tasks(config):
+async def process_pending_tasks(config: Config) -> None:
     while True:
         await _process_pending_tasks(config)
         await _process_miner_selected_tasks(config)
@@ -179,7 +179,7 @@ async def process_pending_tasks(config):
         await asyncio.sleep(5)
 
 
-async def validator_cycle(config):
+async def validator_cycle(config: Config) -> None:
        try:
            await asyncio.gather(
                process_completed_tasks(config),
@@ -190,13 +190,13 @@ async def validator_cycle(config):
 
 # Not sure if this is the best solution to the problem of if something within the cycle crashes TT good with this stuff?
 # If not, will come back - let me know  porfa
-async def run_validator_cycles(config):
-       while True:
-           try:
-               await validator_cycle(config)
-           except Exception as e:
-               logger.error(f"Validator cycle crashed: {e}", exc_info=True)
-               await asyncio.sleep(30)
+async def run_validator_cycles(config: Config) -> None:
+    while True:
+        try:
+            await validator_cycle(config)
+        except Exception as e:
+            logger.error(f"Validator cycle crashed: {e}", exc_info=True)
+            await asyncio.sleep(30)
 
 def init_validator_cycles(config):
        return asyncio.create_task(run_validator_cycles(config))
