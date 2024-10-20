@@ -66,8 +66,8 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Node:
         connection: Connection
         node_id = await connection.fetchval(
             """
-            INSERT INTO nodes (coldkey, ip, ip_type, port, symmetric_key, network, stake)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO nodes (coldkey, ip, ip_type, port, symmetric_key, network, stake, node_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING node_id
             """,
             node.coldkey,
@@ -77,6 +77,7 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Node:
             node.symmetric_key,
             node.network,
             node.stake,
+            node.node_id
         )
         return await get_node(node_id, psql_db)
 

@@ -15,6 +15,7 @@ logger = get_logger(__name__)
 # the env is not prod
 async def add_node(
     coldkey: str = Body(..., embed=True),
+    node_id: int = Body(..., embed=True),
     ip: str = Body(..., embed=True),
     ip_type: str = Body(..., embed=True),
     port: int = Body(..., embed=True),
@@ -23,7 +24,7 @@ async def add_node(
     stake: float = Body(..., embed=True),
     config: Config = Depends(get_config),
 ):
-    node_id = await sql.add_node(coldkey, ip, ip_type, port, symmetric_key, network, stake, config.psql_db)
+    node_id = await sql.add_node(coldkey, ip, ip_type, port, symmetric_key, network, stake, config.psql_db, node_id)
 
     logger.info(f"Node {node_id} added.")
     return {"success": True, "node_id": node_id}
