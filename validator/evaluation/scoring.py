@@ -160,23 +160,20 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
             synthetic_data_filepath = await download_s3_file(task.synthetic_data)
             test_data_filepath = await download_s3_file(task.test_data)
 
-            is_test_finetune, synth_loss_tuple, synth_perplexity_tuple = run_evaluation_docker(
+            synth_eval_result = run_evaluation_docker(
                 dataset=synthetic_data_filepath, **evaluation_params
             )
-            _, test_loss_tuple, test_perplexity_tuple = run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
+            test_eval_result = run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
 
-            synth_loss = synth_loss_tuple[1]  # Assuming ('eval_loss', value)
-            test_loss = test_loss_tuple[1]  # Assuming ('eval_loss', value)
-
-            synth_perplexity = synth_perplexity_tuple[1]  # Assuming ('perplexity', value)
-            test_perplexity = test_perplexity_tuple[1]  # Assuming ('perplexity', value)
-
-            logger.info(f"The losses that we have out from {miner.node_id} are synth: {synth_loss} and test {test_loss}")
+            logger.info(f"The losses that we have out from {miner.node_id} are synth: {synth_eval_result.eval_loss} and test {test_eval_result.eval_loss}")
             logger.info(
-                f"The perplexities that we have out from {miner.node_id} are synth: {synth_perplexity} and test {test_perplexity}"
+                f"The perplexities that we have out from {miner.node_id} are synth: {synth_eval_result.perplexity} and test {test_eval_result.perplexity}"
             )
 
-            miner_result = MinerResults(node_id = miner.node_id, test_loss = test_loss, synth_loss = synth_loss, is_finetune= is_test_finetune, submission=submission)
+            miner_result = MinerResults(node_id = miner.node_id,
+                                        test_loss = test_eval_result.eval_loss,
+                                        synth_loss = synth_eval_result.eval_loss,
+                                        is_finetune= test_eval_result.is_finetune, submission=submission)
             task_results.append(miner_result)
 
         except Exception as e:
