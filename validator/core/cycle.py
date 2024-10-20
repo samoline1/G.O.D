@@ -113,7 +113,6 @@ async def assign_miners(task: Task, nodes: List[Node], config: Config):
 
 
 async def _process_pending_tasks(config: Config):
-    logger.info('PROCESSING PENDING TASKS')
     pending_tasks = await sql.get_tasks_with_status(status=TaskStatus.PENDING, psql_db=config.psql_db)
     nodes = await sql.get_all_miners(psql_db=config.psql_db)
 
@@ -134,12 +133,10 @@ async def prep_task(task: Task, config: Config):
         await sql.update_task(task, config.psql_db)
 
 async def _process_miner_selected_tasks(config: Config):
-    logger.info('PROCESS MINER SELECTED  TASKS')
     miner_selected_tasks = await sql.get_tasks_with_status(status=TaskStatus.MINERS_SELECTED, psql_db=config.psql_db)
     await asyncio.gather(*[prep_task(task, config) for task in miner_selected_tasks[: cst.MAX_CONCURRENT_TASK_PREPS]])
 
 async def _start_training_task(task: Task, config: Config) -> None:
-    logger.info('STARTING TRAINING TASKS')
     try:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
