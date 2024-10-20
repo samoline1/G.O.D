@@ -48,5 +48,5 @@ Once a job is accepted, it will take a short amount of time while other contende
 post request with the full data details and your training script will automatically begin.
 
 After the alloted time for a competition, the validator will request your submission through the get_latest_submission endpoint which needs to be a huggingface repo containing a fine-tune (lora is fine)
-of the model you have been allocated. [endpoint details found here for more details](miner/endpoints/tuning.py).
+of the model you have been allocated. [endpoint details found here](miner/endpoints/tuning.py).
 
