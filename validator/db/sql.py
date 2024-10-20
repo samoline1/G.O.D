@@ -215,7 +215,6 @@ async def get_all_miners(psql_db: PSQLDB) -> List[Node]:
             # select * :0
             """
             SELECT * FROM nodes
-            WHERE trust IS NOT NULL
             """
         )
         return [Node(**dict(row)) for row in rows]
