@@ -170,7 +170,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
                 f"The perplexities that we have out from {miner.node_id} are synth: {synth_eval_result.perplexity} and test {test_eval_result.perplexity}"
             )
 
-            miner_result = MinerResults(node_id = miner.node_id,
+            miner_result = MinerResults(node_id = str(miner.node_id),
                                         test_loss = test_eval_result.eval_loss,
                                         synth_loss = synth_eval_result.eval_loss,
                                         is_finetune= test_eval_result.is_finetune, submission=submission)
