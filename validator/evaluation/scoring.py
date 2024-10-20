@@ -26,6 +26,7 @@ logger = get_logger(__name__)
 
 from scipy.stats import gmean
 
+# ww - not sure this should be here TT - can we move this into a common db utils
 async def download_s3_file(file_url: str) -> str:
     parsed_url = urlparse(file_url)
     file_name = os.path.basename(parsed_url.path)
@@ -131,11 +132,9 @@ def add_raw_scores_to_miner_results(miner_results: List[MinerResults]) -> List[M
         result.score = calculate_scaled_score(weighted_loss, result.is_finetune, scale_factor)
     return miner_results
 
-# config typehint missing
 async def evaluate_and_score(task: Task, config: Config) -> Task:
     miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
     task_results = []
-    submission_repos = {}  # typehint?
     dataset_type = CustomDatasetType(
         field_system=task.system, field_instruction=task.instruction, field_input=task.input, field_output=task.output
     )
@@ -145,7 +144,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
             submission_repo = await process_non_stream_get(url, None)
             current_time = datetime.now()
-            submission_repos[str(miner.node_id)] = Submission(
+            submission = Submission(
                 task_id=task.task_id,
                 node_id=miner.node_id,
                 repo=submission_repo,
