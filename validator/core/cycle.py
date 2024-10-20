@@ -187,6 +187,8 @@ async def validator_cycle(config):
        except Exception as e:
            logger.error(f"Error in validator_cycle: {e}", exc_info=True)
 
+# Not sure if this is the best solution to the problem of if something within the cycle crashes TT good with this stuff?
+# If not, will come back - let me know  porfa
 async def run_validator_cycles(config):
        while True:
            try:
