@@ -1,7 +1,7 @@
 import json
 from collections.abc import AsyncGenerator
 from typing import Any
-from typing import List
+from typing import List, Optional
 
 import httpx
 from fiber.logging_utils import get_logger
@@ -25,7 +25,7 @@ async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> 
             return "".join([chunk async for chunk in _process_response(response)])
 
 
-async def process_non_stream(base_url: str, token: str, payload: dict[str, Any]) -> dict[str, Any]:
+async def process_non_stream(base_url: str, token: Optional[str], payload: dict[str, Any]) -> dict[str, Any]:
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
