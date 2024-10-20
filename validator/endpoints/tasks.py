@@ -14,8 +14,6 @@ from fiber.logging_utils import get_logger
 from core.models.payload_models import NewTaskRequest
 from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import TaskStatusResponse
-from core.models.payload_models import TaskSubmissionRequest
-from core.models.payload_models import TaskSubmissionResponse
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_config
@@ -144,23 +142,6 @@ async def get_task_status(
     )
 
 
-# miners are not allowed to post to validators
-# This needs to be changed to validators asking miners for their submissions
-async def submit_task_submission(
-    request: TaskSubmissionRequest,
-    config: Config = Depends(get_config),
-) -> TaskSubmissionResponse:
-    is_unique = await sql.submission_repo_is_unique(request.repo, config.psql_db)
-    is_miner_assigned_to_task = await sql.is_miner_assigned_to_task(request.task_id, request.node_id, config.psql_db)
-
-    if not is_unique:
-        return TaskSubmissionResponse(success=False, message="Submission with this repository already exists.")
-    elif not is_miner_assigned_to_task:
-        return TaskSubmissionResponse(success=False, message="You are not registered as assigned to this task.")
-    else:
-        submission_id = await sql.add_submission(request.task_id, request.node_id, request.repo, config.psql_db)
-        return TaskSubmissionResponse(success=True, message="success", submission_id=submission_id)
-
 
 def factory_router() -> APIRouter:
     router = APIRouter()
@@ -181,15 +162,6 @@ def factory_router() -> APIRouter:
         methods=["GET"],
     )
 
-    router.add_api_route(
-        "/tasks/submit",
-        submit_task_submission,
-        response_model=TaskSubmissionResponse,
-        tags=["tasks"],
-        methods=["POST"],
-    )
-
-    # New endpoints
     router.add_api_route(
         "/tasks/delete/{task_id}",
         delete_task,

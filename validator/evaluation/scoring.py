@@ -44,8 +44,6 @@ async def download_s3_file(file_url: str) -> str:
     return local_file_path
 
 
-# NOTE: doc strings are a bit long. Don't need to explain params and returns types - these
-# should be clear from the parameter names and function name
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     """
     Calculate a weighted average of test and synthetic losses.
@@ -58,69 +56,16 @@ def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
 
 def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor: float) -> float:
     """
-    Contents:
-    1.
-    2.
-    3.
-
     Calculate a score for a miner based on their weighted loss, using an exponential decay function.
 
     This function converts a loss value into a score, where lower losses result in higher scores.
-
-    # NOTE: Im not sure what this means
-
-    The relationship between loss and score is not linear, but exponential, meaning small
-    differences in low losses can lead to larger differences in scores than the same
-    difference in higher losses.
-
-    # NOTE: don't need this - it should be clear from parameter names
-    Parameters:
-    weighted_loss : float
-        The combined loss for the miner. Lower values indicate better performance.
-    is_finetune : bool
-        Indicates whether the model is finetuned. Non-finetuned models always receive a score of 0.
-    scale_factor : float
-        A factor that adjusts the sensitivity of the scoring to differences in loss.
-        Higher scale factors amplify the effect of small loss differences on the final score.
-        See compute_adaptive_scale_factor for details
-
-    #NOTE: dont need this
-    Returns:
-    float
-        The calculated score, ranging from 0 to 1. Higher scores indicate better performance.
-
-
-    Chapter 2:
-
-    # NOTE: This should be obvious from the code
-    Behavior:
-    1. For non-finetuned models (is_finetune = False), the function always returns 0.
-    2. As weighted_loss increases, the score decreases exponentially.
-    3. The scale_factor determines how sharply the score drops off as loss increases.
-
-    # NOTE: this sounds like AI... why are you using my mental capacity
-    # to teach me about general machine learning concepts
-    # when reviewing the code
-
-    Note:
-    The exponential nature of this scoring system means it's particularly good at
-    distinguishing between small differences in low loss values, which is often
-    desirable in machine learning contexts where small improvements in already good
-    models can be significant.
     """
     return np.exp(-weighted_loss * scale_factor) if is_finetune else 0.0
 
 
 def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]:
     """
-    # NOTE: below two lines say the same thing?
-
-    Normalise scores relative to their geometric mean.
-
     This function adjusts all scores so that their geometric mean becomes 1.
-
-    #NOTE: below line not needed, you explain below
-    This helps in comparing scores across different tasks.
 
     By dividing each miner's score by the geometric mean of all scores for that task,
     we're essentially measuring each miner's performance relative to the overall performance on that specific task.
@@ -135,15 +80,9 @@ def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]
     return {str(miner_id): float(score) for miner_id, score in zip(task_scores.keys(), relative_scores)}
 
 
-# miner results name could be better? might be fine with a dataclass
-# P.S. list[tuple[]] NOT List[Tuple]
-def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, bool]]) -> float:
+def compute_adaptive_scale_factor(miner_results: list[Tuple[str, float, float, bool]]) -> float:
     """
-    # NOTE: this is the same as the function name
-    Compute an adaptive scale factor based on the range of losses.
-
-
-    We want to calculate a scaling factor that can be applied to these scores to make them more meaningful,   # what scores?
+    We want to calculate a scaling factor that can be applied to the loss results to make them more meaningful
     especially when the scores are closely clustered.
     For instance, if all scores fall between 0.8 and 0.85, it's difficult to distinguish performance differences.
     The function determines how much to "stretch" this range by computing a scale factor.
@@ -152,7 +91,6 @@ def compute_adaptive_scale_factor(miner_results: List[Tuple[str, float, float, b
     If the scores are tightly grouped, the scaling factor will be larger to amplify small differences.
     Conversely, if the scores are already well spread out, the scaling factor will be smaller.
 
-    # NOTE: Examples are GOAT - nice
     Examples:
     1. Closely clustered scores:
        miner_results = [
@@ -193,7 +131,6 @@ def score_adjustment(miner_results: List[Tuple[str, float, float, bool]]) -> Dic
         weighted_loss = calculate_weighted_loss(test_loss, synth_loss)
         task_results[miner_id] = calculate_scaled_score(weighted_loss, is_finetune, scale_factor)
     return task_results
-
 
 # config typehint missing
 async def evaluate_and_score(task: Task, config: Config) -> Task:

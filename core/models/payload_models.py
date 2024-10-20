@@ -109,13 +109,3 @@ class TaskStatusResponse(BaseModel):
     hours_to_complete: int
 
 
-class TaskSubmissionRequest(BaseModel):
-    task_id: UUID
-    node_id: UUID
-    repo: str
-
-
-class TaskSubmissionResponse(BaseModel):
-    success: bool
-    message: str
-    submission_id: Optional[UUID] = None
