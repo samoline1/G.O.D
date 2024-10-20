@@ -82,7 +82,7 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Node:
         return await get_node(node_id, psql_db)
 
 
-async def get_node(node_id: UUID, psql_db: PSQLDB) -> Optional[Node]:
+async def get_node(node_id: int, psql_db: PSQLDB) -> Optional[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         row = await connection.fetchrow(
@@ -148,7 +148,7 @@ async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[D
         ]
 
 
-async def assign_node_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> None:
+async def assign_node_to_task(task_id: str, node_id: int, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
         connection: Connection
         await connection.execute(
@@ -274,7 +274,7 @@ async def get_submissions_by_task(task_id: UUID, psql_db: PSQLDB) -> List[Submis
         return [Submission(**dict(row)) for row in rows]
 
 
-async def get_miner_latest_submission(task_id: str, node_id: str, psql_db: PSQLDB) -> Optional[Submission]:
+async def get_miner_latest_submission(task_id: str, node_id: int, psql_db: PSQLDB) -> Optional[Submission]:
     async with await psql_db.connection() as connection:
         connection: Connection
         row = await connection.fetchrow(
@@ -293,7 +293,7 @@ async def get_miner_latest_submission(task_id: str, node_id: str, psql_db: PSQLD
         return None
 
 
-async def is_miner_assigned_to_task(task_id: str, node_id: str, psql_db: PSQLDB) -> bool:
+async def is_miner_assigned_to_task(task_id: str, node_id: int, psql_db: PSQLDB) -> bool:
     async with await psql_db.connection() as connection:
         connection: Connection
         result = await connection.fetchval(
@@ -360,7 +360,7 @@ async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
         return [Task(**dict(row)) for row in rows]
 
 
-async def set_task_node_quality_score(task_id: UUID, node_id: UUID, quality_score: float, psql_db: PSQLDB) -> None:
+async def set_task_node_quality_score(task_id: UUID, node_id: int, quality_score: float, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
         connection: Connection
         await connection.execute(
@@ -376,7 +376,7 @@ async def set_task_node_quality_score(task_id: UUID, node_id: UUID, quality_scor
         )
 
 
-async def get_task_node_quality_score(task_id: UUID, node_id: UUID, psql_db: PSQLDB) -> Optional[float]:
+async def get_task_node_quality_score(task_id: UUID, node_id: int, psql_db: PSQLDB) -> Optional[float]:
     async with await psql_db.connection() as connection:
         connection: Connection
         score = await connection.fetchval(
