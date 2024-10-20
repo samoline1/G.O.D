@@ -45,7 +45,7 @@ async def _make_offer(node: Node, request: MinerTaskRequst) -> MinerTaskResponse
     response = await process_non_stream(url, None, request.model_dump())
     return MinerTaskResponse(message=response.get('message', 'No message given'), accepted=response.get('accepted', False))
 
-async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node]) -> Task:
+async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node], config: Config) -> Task:
     if len(nodes) < cst.MINIMUM_MINER_POOL:
         logger.warning(f"Not enough nodes available. Need at least {cst.MINIMUM_MINER_POOL}, but only have {len(nodes)}.")
         task.status = TaskStatus.FAILURE
@@ -69,6 +69,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node]) -> T
         if offer_response.accepted is True:
             logger.info(f"Node {node.node_id} accepted the task")
             selected_miners.append(node.node_id)
+            await sql.assign_node_to_task(task.task_id, node.node_id, config.psql_db)
 
     if len(selected_miners) < cst.MINIMUM_MINER_POOL:
         logger.warning(
@@ -105,7 +106,7 @@ async def _let_miners_know_to_start_training(task: Task, nodes: List[Node]):
 
 async def assign_miners(task: Task, nodes: List[Node], config: Config):
     try:
-        task = await _select_miner_pool_and_add_to_task(task, nodes)
+        task = await _select_miner_pool_and_add_to_task(task, nodes, config)
         await sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
@@ -156,7 +157,7 @@ async def _start_training_task(task: Task, config: Config) -> None:
 
 async def _process_ready_to_train_tasks(config: Config):
     ready_to_train_tasks = await sql.get_tasks_with_status(status=TaskStatus.READY, psql_db=config.psql_db)
-    logger.info(f"There are {len(ready_to_train_tasks)}")
+    logger.info(f"There are {len(ready_to_train_tasks)} ready to train")
     await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
 
 async def _evaluate_task(task: Task, config: Config):
