@@ -20,7 +20,7 @@ class Task(BaseModel):
     test_data: Optional[str] = None
     synthetic_data: Optional[str] = None
     hf_training_repo: Optional[str] = None
-    assigned_miners: Optional[List[UUID]] = None
+    assigned_miners: Optional[List[int]] = None
     miner_scores: Optional[List[float]] = None
     created_timestamp: Optional[datetime] = None
     updated_timestamp: Optional[datetime] = None
@@ -74,9 +74,7 @@ class Task(BaseModel):
 
 
 class Node(BaseModel):
-    # This is defined in fiber already, and we do not use UUID. NODE_ID IS NOT A UUID - its a integer corresponding
-    # to the number they have on the metagraph
-    node_id: Optional[UUID]
+    node_id: int
     coldkey: str
     ip: str
     ip_type: str
@@ -94,13 +92,13 @@ class Submission(BaseModel):
     submission_id: UUID = Field(default_factory=uuid4)
     score: Optional[float] = None
     task_id: UUID
-    node_id: UUID
+    node_id: int
     repo: str
     created_on: Optional[datetime]
     updated_on: Optional[datetime]
 
 class MinerResults(BaseModel):
-    node_id: str
+    node_id: int
     test_loss: float
     synth_loss: float
     is_finetune: bool

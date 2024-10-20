@@ -50,7 +50,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node]) -> T
         task.status = TaskStatus.FAILURE
         return task
 
-    selected_miners: List[str] = []
+    selected_miners: List[int] = []
     ds_size = _get_total_dataset_size(task.ds_id)
     task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete)
 
@@ -87,8 +87,9 @@ async def _let_miners_know_to_start_training(task: Task, nodes: List[Node]):
         field_system=task.system, field_input=task.input, field_output=task.output, field_instruction=task.instruction
     )
 
+    dataset = task.hf_training_repo if task.hf_training_repo else "dataset error"
     task_request_body = TrainRequest(
-        dataset=task.hf_training_repo,
+        dataset=dataset,
         model=task.model_id,
         dataset_type=dataset_type,
         file_format=FileFormat.S3,
@@ -100,14 +101,14 @@ async def _let_miners_know_to_start_training(task: Task, nodes: List[Node]):
         response = await process_non_stream(url, None, task_request_body.model_dump())
         logger.info(f"The response we got from {node.node_id} was {response}")
 
-async def assign_miners(task, nodes, config):
-        try:
-            task = await _select_miner_pool_and_add_to_task(task, nodes)
-            await sql.update_task(task, config.psql_db)
-        except Exception as e:
-            logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
-            task.status = TaskStatus.FAILURE
-            await sql.update_task(task, config.psql_db)
+async def assign_miners(task: Task, nodes: List[Node], config: Config):
+    try:
+        task = await _select_miner_pool_and_add_to_task(task, nodes)
+        await sql.update_task(task, config.psql_db)
+    except Exception as e:
+        logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
+        task.status = TaskStatus.FAILURE
+        await sql.update_task(task, config.psql_db)
 
 
 async def _process_pending_tasks(config: Config):
