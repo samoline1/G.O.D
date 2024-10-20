@@ -1,6 +1,5 @@
 import os
 from urllib.parse import urlparse
-
 import aiohttp
 import yaml
 from fastapi import Depends
@@ -14,28 +13,13 @@ from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequest
 from core.models.payload_models import TrainResponse
 from core.models.utility_models import FileFormat
+from core.utils import download_s3_file
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
 
 
 logger = get_logger(__name__)
-
-# Why is this a public function if it is not an endpoint? Doesn't belong here
-async def download_s3_file(file_url: str) -> str:
-    parsed_url = urlparse(file_url)
-    file_name = os.path.basename(parsed_url.path)
-    local_file_path = os.path.join("/tmp", file_name)
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(file_url) as response:
-            if response.status == 200:
-                with open(local_file_path, "wb") as f:
-                    f.write(await response.read())
-            else:
-                raise Exception(f"Failed to download file: {response.status}")
-
-    return local_file_path
 
 
 async def tune_model(

@@ -67,7 +67,7 @@ class TaskRequest(BaseModel):
 
 class SubmitTaskSubmissionRequest(BaseModel):
     task_id: str
-    node_id: str
+    node_id: int
     repo: str
 
 
