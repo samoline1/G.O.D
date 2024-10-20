@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     hours_to_complete INTEGER,
     created_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    end_timestamp TIMESTAMPTZ,
     started_timestamp TIMESTAMPTZ,
     completed_timestamp TIMESTAMPTZ
 );
