@@ -30,7 +30,6 @@ def _get_total_dataset_size(repo_name: str) -> int:
 
 
 async def _run_task_prep(task: Task) -> Task:
-    logger.info('RUNNING TASK PREP')
     columns_to_sample = [i for i in [task.system, task.instruction, task.input, task.output] if i is not None]
     test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample)
     task.hf_training_repo = train_data
@@ -62,12 +61,10 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node], conf
         node = random.choice(available_nodes)
         available_nodes.remove(node)
 
-        logger.info(f"Offering node {node.node_id} the task")
         offer_response = await _make_offer(node, task_request)
         logger.info(f"Node {node.node_id}'s response to the offer was {offer_response}")
 
         if offer_response.accepted is True:
-            logger.info(f"Node {node.node_id} accepted the task")
             selected_miners.append(node.node_id)
             await sql.assign_node_to_task(task.task_id, node.node_id, config.psql_db)
             logger.info(f"The miner {node.node_id} has officially been assigned the task")
@@ -162,7 +159,6 @@ async def _process_ready_to_train_tasks(config: Config):
     await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
 
 async def _evaluate_task(task: Task, config: Config):
-    logger.info('EVALUATING TASK')
     try:
        task = await evaluate_and_score(task, config)
        await sql.update_task(task, config.psql_db)

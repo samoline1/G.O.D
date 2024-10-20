@@ -18,8 +18,7 @@ from core.models.utility_models import FileFormat
 
 logger = get_logger(__name__)
 
-# should be async
-def run_evaluation_docker(
+async def run_evaluation_docker(
     dataset: str, model: str, original_model: str, dataset_type: Union[DatasetType, CustomDatasetType], file_format: FileFormat
 ) -> EvaluationResult:
     client = docker.from_env()
