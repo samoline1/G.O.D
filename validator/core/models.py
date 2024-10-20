@@ -43,8 +43,8 @@ class Node(BaseModel):
     trust: Optional[float] = 0.0
     vtrust: Optional[float] = 0.0
     stake: float
-    created_timestamp: Optional[datetime]
-    updated_timestamp: Optional[datetime]
+    created_timestamp: Optional[datetime] = None
+    updated_timestamp: Optional[datetime] = None
 
 
 class Submission(BaseModel):
