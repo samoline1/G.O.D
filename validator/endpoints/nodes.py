@@ -5,6 +5,7 @@ from fiber.logging_utils import get_logger
 
 from validator.core.config import Config
 from validator.core.dependencies import get_config
+from validator.core.models import Node
 from validator.db import sql
 
 
@@ -24,7 +25,12 @@ async def add_node(
     stake: float = Body(..., embed=True),
     config: Config = Depends(get_config),
 ):
-    node_id = await sql.add_node(coldkey, ip, ip_type, port, symmetric_key, network, stake, config.psql_db, node_id)
+
+    node = Node(node_id=node_id,
+                coldkey=coldkey, ip=ip,
+                ip_type=ip_type, port=port,
+                symmetric_key=symmetric_key, network=network, stake=stake)
+    node_id = await sql.add_node(node, config.psql_db)
 
     logger.info(f"Node {node_id} added.")
     return {"success": True, "node_id": node_id}
