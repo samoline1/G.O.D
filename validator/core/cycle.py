@@ -96,6 +96,7 @@ async def _let_miners_know_to_start_training(task: Task, nodes: List[Node]):
         file_format=FileFormat.S3,
         task_id=str(task.task_id),
     )
+    logger.info(f'We are tellingminers to start training there are  {len(nodes)}')
 
     for node in nodes:
         url = f"{node.ip}:{node.port}/{cst.START_TRAINING_ENDPOINT}/"
@@ -145,9 +146,9 @@ async def _start_training_task(task: Task, config: Config) -> None:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
         assigned_miners = await sql.get_miners_assigned_to_task(str(task.task_id), config.psql_db)
+        await _let_miners_know_to_start_training(task, assigned_miners)
         task.status = TaskStatus.TRAINING
         await sql.update_task(task, config.psql_db)
-        await _let_miners_know_to_start_training(task, assigned_miners)
     except Exception as e:
         logger.error(f"Error starting training for task {task.task_id}: {e}", exc_info=True)
         task.status = TaskStatus.FAILURE
@@ -155,9 +156,7 @@ async def _start_training_task(task: Task, config: Config) -> None:
 
 
 async def _process_ready_to_train_tasks(config: Config):
-    logger.info('PROCESSING READY TO TRAIN')
     ready_to_train_tasks = await sql.get_tasks_with_status(status=TaskStatus.READY, psql_db=config.psql_db)
-
     logger.info(f"There are {len(ready_to_train_tasks)}")
     await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
 
