@@ -65,7 +65,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node]) -> T
         offer_response = await _make_offer(node, task_request)
         logger.info(f"Node {node.node_id}'s response to the offer was {offer_response}")
 
-        if offer_response.accepted:
+        if offer_response.accepted is True:
             logger.info(f"Node {node.node_id} accepted the task")
             selected_miners.append(node.node_id)
 
