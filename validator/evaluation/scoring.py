@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
-from typing import List
 from urllib.parse import urlparse
+from scipy.stats import gmean
 
 import aiohttp
 import numpy as np
@@ -24,7 +24,6 @@ from validator.utils.call_endpoint import process_non_stream_get
 
 logger = get_logger(__name__)
 
-from scipy.stats import gmean
 
 # ww - not sure this should be here TT - can we move this into a common db utils
 async def download_s3_file(file_url: str) -> str:
@@ -62,7 +61,7 @@ def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor
     return np.exp(-weighted_loss * scale_factor) if is_finetune else 0.0
 
 
-def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerResults]) -> List[MinerResults]:
+def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerResults]) -> list[MinerResults]:
     """
     This function adjusts all scores so that their geometric mean becomes 1.
 
@@ -125,7 +124,7 @@ def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
     return np.log(cts.TARGET_SCORE_RATIO) / (max_loss - min_loss)
 
 
-def add_raw_scores_to_miner_results(miner_results: List[MinerResults]) -> List[MinerResults]:
+def add_raw_scores_to_miner_results(miner_results: list[MinerResults]) -> list[MinerResults]:
     scale_factor = compute_adaptive_scale_factor(miner_results)  # see function def for details
     for result in miner_results:
         weighted_loss = calculate_weighted_loss(result.test_loss, result.synth_loss)
