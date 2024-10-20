@@ -30,6 +30,7 @@ def _get_total_dataset_size(repo_name: str) -> int:
 
 
 async def _run_task_prep(task: Task) -> Task:
+    logger.info('RUNNING TASK PREP')
     columns_to_sample = [i for i in [task.system, task.instruction, task.input, task.output] if i is not None]
     test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample)
     task.hf_training_repo = train_data
@@ -126,6 +127,7 @@ async def prep_task(task: Task, config: Config):
             # Would much prefer you don't update the state every time and rely on that,
             # but just do the steps for each task sequentially
             ## ww - leaving this for now - something to come back to.
+        logger.info('The task should be starting ', task)
         await sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error prepping task {task.task_id}: {e}", exc_info=True)
@@ -155,6 +157,8 @@ async def _start_training_task(task: Task, config: Config) -> None:
 async def _process_ready_to_train_tasks(config: Config):
     logger.info('PROCESSING READY TO TRAIN')
     ready_to_train_tasks = await sql.get_tasks_with_status(status=TaskStatus.READY, psql_db=config.psql_db)
+
+    logger.info(f"There are {len(ready_to_train_tasks)}")
     await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
 
 async def _evaluate_task(task: Task, config: Config):
