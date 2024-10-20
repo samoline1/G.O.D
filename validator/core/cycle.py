@@ -128,7 +128,6 @@ async def prep_task(task: Task, config: Config):
             # Would much prefer you don't update the state every time and rely on that,
             # but just do the steps for each task sequentially
             ## ww - leaving this for now - something to come back to.
-        logger.info('The task should be starting ', task)
         await sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error prepping task {task.task_id}: {e}", exc_info=True)
