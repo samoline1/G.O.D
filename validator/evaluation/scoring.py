@@ -133,6 +133,7 @@ def add_raw_scores_to_miner_results(miner_results: list[MinerResults]) -> list[M
 
 async def evaluate_and_score(task: Task, config: Config) -> Task:
     miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
+    assert task.task_id is not None
     task_results = []
     dataset_type = CustomDatasetType(
         field_system=task.system, field_instruction=task.instruction, field_input=task.input, field_output=task.output
@@ -141,7 +142,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     for miner in miner_pool:
         try:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
-            submission_repo = await process_non_stream_get(url, None)
+            submission_repo = str(await process_non_stream_get(url, None))
             current_time = datetime.now()
             submission = Submission(
                 task_id=task.task_id,
@@ -156,6 +157,10 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
                 "model": submission_repo,
                 "dataset_type": dataset_type,
             }
+
+            assert task.synthetic_data is not None
+            assert task.test_data is not None
+
             synthetic_data_filepath = await download_s3_file(task.synthetic_data)
             test_data_filepath = await download_s3_file(task.test_data)
 
@@ -182,6 +187,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     task_results = adjust_miner_scores_to_be_relative_to_other_comps(task_results)
 
     for result in task_results:
+        assert result.score is not None
         await set_task_node_quality_score(task.task_id, result.node_id, result.score, config.psql_db)
         result.submission.score  = result.score
         await add_submission(result.submission, config.psql_db)
