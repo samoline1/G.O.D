@@ -70,6 +70,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node], conf
             logger.info(f"Node {node.node_id} accepted the task")
             selected_miners.append(node.node_id)
             await sql.assign_node_to_task(task.task_id, node.node_id, config.psql_db)
+            logger.info(f"The miner {node.node_id} has officially been assigned the task")
 
     if len(selected_miners) < cst.MINIMUM_MINER_POOL:
         logger.warning(
