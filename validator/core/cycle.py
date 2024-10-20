@@ -41,7 +41,8 @@ async def _run_task_prep(task: Task) -> Task:
 
 async def _make_offer(node: Node, request: MinerTaskRequst) -> MinerTaskResponse:
     url = f"{node.ip}:{node.port}/task_offer/"
-    return await process_non_stream(url, None, request.model_dump())
+    response = await process_non_stream(url, None, request.model_dump())
+    return MinerTaskResponse(message=response.get('message', 'No message given'), accepted=response.get('accepted', False))
 
 async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node]) -> Task:
     if len(nodes) < cst.MINIMUM_MINER_POOL:
