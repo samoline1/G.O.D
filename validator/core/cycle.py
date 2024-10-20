@@ -112,6 +112,7 @@ async def assign_miners(task: Task, nodes: List[Node], config: Config):
 
 
 async def _process_pending_tasks(config: Config):
+    logger.info('PROCESSING PENDING TASKS')
     pending_tasks = await sql.get_tasks_with_status(status=TaskStatus.PENDING, psql_db=config.psql_db)
     nodes = await sql.get_all_miners(psql_db=config.psql_db)
 
@@ -119,6 +120,7 @@ async def _process_pending_tasks(config: Config):
 
 
 async def prep_task(task: Task, config: Config):
+    logger.info('PREPING TASK')
     try:
         task = await _run_task_prep(task)
             # Would much prefer you don't update the state every time and rely on that,
@@ -131,10 +133,12 @@ async def prep_task(task: Task, config: Config):
         await sql.update_task(task, config.psql_db)
 
 async def _process_miner_selected_tasks(config: Config):
+    logger.info('PROCESS MINER SELECTED  TASKS')
     miner_selected_tasks = await sql.get_tasks_with_status(status=TaskStatus.MINERS_SELECTED, psql_db=config.psql_db)
     await asyncio.gather(*[prep_task(task, config) for task in miner_selected_tasks[: cst.MAX_CONCURRENT_TASK_PREPS]])
 
 async def _start_training_task(task: Task, config: Config) -> None:
+    logger.info('STARTING TRAINING TASKS')
     try:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
@@ -149,10 +153,12 @@ async def _start_training_task(task: Task, config: Config) -> None:
 
 
 async def _process_ready_to_train_tasks(config: Config):
+    logger.info('PROCESSING READY TO TRAIN')
     ready_to_train_tasks = await sql.get_tasks_with_status(status=TaskStatus.READY, psql_db=config.psql_db)
     await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
 
 async def _evaluate_task(task: Task, config: Config):
+    logger.info('EVALUATING TASK')
     try:
        task = await evaluate_and_score(task, config)
        await sql.update_task(task, config.psql_db)
@@ -163,7 +169,6 @@ async def _evaluate_task(task: Task, config: Config):
 
 
 async def process_completed_tasks(config: Config) -> None:
-    completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
     while True:
         completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
         for task in completed_tasks:
