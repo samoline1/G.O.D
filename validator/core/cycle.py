@@ -51,9 +51,9 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: List[Node]) -> T
 
     selected_miners: List[str] = []
     ds_size = _get_total_dataset_size(task.ds_id)
-    task_request = MinerTaskRequest(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete)
+    task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete)
 
-    # Create a copy of the nodes list to avoid mutating the original
+    # Create a copy of the nodes list to avoid mutating the original - better than popping? Not sure
     available_nodes = nodes.copy()
 
     while len(selected_miners) < cst.MINIMUM_MINER_POOL and available_nodes:
@@ -177,8 +177,7 @@ async def process_pending_tasks(config):
         await asyncio.sleep(5)
 
 
-
-  async def validator_cycle(config):
+async def validator_cycle(config):
        try:
            await asyncio.gather(
                process_completed_tasks(config),
