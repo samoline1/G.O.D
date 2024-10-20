@@ -31,6 +31,7 @@ class Task(BaseModel):
     best_submission_repo: Optional[str] = None
     user_id: Optional[str] = None
 
+
     # task = Task(
     #     model_id=request.model_repo,
     #     ds_id=request.ds_repo,
@@ -97,3 +98,13 @@ class Submission(BaseModel):
     repo: str
     created_on: Optional[datetime]
     updated_on: Optional[datetime]
+
+class MinerResults(BaseModel):
+    node_id: str
+    test_loss: float
+    synth_loss: float
+    is_finetune: bool
+    score: Optional[float]
+    submission: Submission
+
+

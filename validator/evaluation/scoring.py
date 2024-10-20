@@ -1,8 +1,6 @@
 import os
 from datetime import datetime
-from typing import Dict
 from typing import List
-from typing import Tuple
 from urllib.parse import urlparse
 
 import aiohttp
@@ -16,6 +14,7 @@ from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.models import Submission
 from validator.core.models import Task
+from validator.core.models import MinerResults
 from validator.db.sql import add_submission
 from validator.db.sql import get_miners_assigned_to_task
 from validator.db.sql import set_task_node_quality_score
@@ -26,7 +25,6 @@ from validator.utils.call_endpoint import process_non_stream_get
 logger = get_logger(__name__)
 
 from scipy.stats import gmean
-
 
 async def download_s3_file(file_url: str) -> str:
     parsed_url = urlparse(file_url)
@@ -63,7 +61,7 @@ def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor
     return np.exp(-weighted_loss * scale_factor) if is_finetune else 0.0
 
 
-def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]:
+def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerResults]) -> List[MinerResults]:
     """
     This function adjusts all scores so that their geometric mean becomes 1.
 
@@ -74,13 +72,15 @@ def calculate_relative_scores(task_scores: Dict[str, float]) -> Dict[str, float]
     If Task A is inherently more difficult and results in lower scores overall,
     dividing by the geometric mean will adjust for this.
     """
-    scores = np.array(list(task_scores.values()))
-    geometric_mean = gmean(scores)
-    relative_scores = np.where(scores > 0, scores / geometric_mean, 0)
-    return {str(miner_id): float(score) for miner_id, score in zip(task_scores.keys(), relative_scores)}
+    geometric_mean = gmean(np.array([res.score for res in miner_results]))
+
+    for res in miner_results:
+        res.score /= geometric_mean
+
+    return miner_results
 
 
-def compute_adaptive_scale_factor(miner_results: list[Tuple[str, float, float, bool]]) -> float:
+def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
     """
     We want to calculate a scaling factor that can be applied to the loss results to make them more meaningful
     especially when the scores are closely clustered.
@@ -114,7 +114,8 @@ def compute_adaptive_scale_factor(miner_results: list[Tuple[str, float, float, b
 
     """
     # NOTE: can we make miner_results be a dataclass or a namedtuple? Rather than needing to just *know*
-    weighted_losses = [calculate_weighted_loss(test_loss, synth_loss) for _, test_loss, synth_loss, _ in miner_results]
+    # WW : YES!
+    weighted_losses = [calculate_weighted_loss(result.test_loss, result.synth_loss) for result in miner_results]
     min_loss, max_loss = min(weighted_losses), max(weighted_losses)
 
     if min_loss == max_loss:
@@ -123,14 +124,12 @@ def compute_adaptive_scale_factor(miner_results: list[Tuple[str, float, float, b
     return np.log(cts.TARGET_SCORE_RATIO) / (max_loss - min_loss)
 
 
-# NOTE: bad name. get_raw_scores is much better no?
-def score_adjustment(miner_results: List[Tuple[str, float, float, bool]]) -> Dict[str, float]:
+def add_raw_scores_to_miner_results(miner_results: List[MinerResults]) -> List[MinerResults]:
     scale_factor = compute_adaptive_scale_factor(miner_results)  # see function def for details
-    task_results = {}
-    for miner_id, test_loss, synth_loss, is_finetune in miner_results:
-        weighted_loss = calculate_weighted_loss(test_loss, synth_loss)
-        task_results[miner_id] = calculate_scaled_score(weighted_loss, is_finetune, scale_factor)
-    return task_results
+    for result in miner_results:
+        weighted_loss = calculate_weighted_loss(result.test_loss, result.synth_loss)
+        result.score = calculate_scaled_score(weighted_loss, result.is_finetune, scale_factor)
+    return miner_results
 
 # config typehint missing
 async def evaluate_and_score(task: Task, config: Config) -> Task:
@@ -165,10 +164,8 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
             is_test_finetune, synth_loss_tuple, synth_perplexity_tuple = run_evaluation_docker(
                 dataset=synthetic_data_filepath, **evaluation_params
             )
-            # needs to be _ if we dont use the variable (usually)
             _, test_loss_tuple, test_perplexity_tuple = run_evaluation_docker(dataset=test_data_filepath, **evaluation_params)
 
-            # If you need to add comments about the tuple, you should use a dataclass or namedtuple
             synth_loss = synth_loss_tuple[1]  # Assuming ('eval_loss', value)
             test_loss = test_loss_tuple[1]  # Assuming ('eval_loss', value)
 
@@ -180,21 +177,19 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
                 f"The perplexities that we have out from {miner.node_id} are synth: {synth_perplexity} and test {test_perplexity}"
             )
 
-            task_results.append((miner.node_id, test_loss, synth_loss, is_test_finetune))
+            miner_result = MinerResults(node_id = miner.node_id, test_loss = test_loss, synth_loss = synth_loss, is_finetune= is_test_finetune, submission=submission)
+            task_results.append(miner_result)
 
         except Exception as e:
             logger.info(f"There was an issue with scoring {e}")
 
-    raw_scores = score_adjustment(task_results)  # bad name
-    relative_scores = calculate_relative_scores(raw_scores)  # nice
+    task_results = add_raw_scores_to_miner_results(task_results)
+    task_results = adjust_miner_scores_to_be_relative_to_other_comps(task_results)
 
-    logger.info(f"The final scores are {relative_scores} from the raw scores of {task_results}")
-    logger.info(f"The sumission repos are {submission_repos}")
-    for miner_id, score in relative_scores.items():
-        await set_task_node_quality_score(task.task_id, miner_id, score, config.psql_db)
-        submission = submission_repos[miner_id]
-        submission.score = score  # this doesn't work with typehinting - its not blue
-        await add_submission(submission, config.psql_db)
+    for result in task_results:
+        await set_task_node_quality_score(task.task_id, result.node_id, result.score, config.psql_db)
+        result.submission.score  = result.score
+        await add_submission(result.submission, config.psql_db)
 
     task.status = TaskStatus.SUCCESS
 
