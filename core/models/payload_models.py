@@ -13,13 +13,12 @@ from core.models.utility_models import TaskStatus
 
 
 class TrainRequest(BaseModel):
-    dataset: str = Field(
-        ..., description="Path to the dataset file or Hugging Face dataset name"
-    )
+    dataset: str = Field(..., description="Path to the dataset file or Hugging Face dataset name")
     model: str = Field(..., description="Name or path of the model to be trained")
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
     task_id: str
+
 
 class TrainResponse(BaseModel):
     message: str
@@ -38,15 +37,18 @@ class JobStatusResponse(BaseModel):
 class EvaluationRequest(TrainRequest):
     original_model: str
 
+
 class EvaluationResult(BaseModel):
     is_finetune: bool
     eval_loss: float
     perplexity: float
 
+
 class MinerTaskRequst(BaseModel):
     ds_size: int
     model: str
     hours_to_complete: int
+
 
 class MinerTaskResponse(BaseModel):
     message: str
@@ -65,8 +67,9 @@ class TaskRequest(BaseModel):
 
 class SubmitTaskSubmissionRequest(BaseModel):
     task_id: str
-    node_id: str
+    node_id: int
     repo: str
+
 
 class TaskResponse(BaseModel):
     success: bool
@@ -74,11 +77,11 @@ class TaskResponse(BaseModel):
     message: Optional[str] = None
 
 
-
 class SubmissionResponse(BaseModel):
     success: bool
     message: str
     submission_id: Optional[str] = None
+
 
 class NewTaskRequest(BaseModel):
     model_repo: str
@@ -94,6 +97,7 @@ class NewTaskResponse(BaseModel):
     success: bool
     task_id: UUID
 
+
 class TaskStatusResponse(BaseModel):
     success: bool
     task_id: UUID
@@ -104,12 +108,4 @@ class TaskStatusResponse(BaseModel):
     created: str
     hours_to_complete: int
 
-class TaskSubmissionRequest(BaseModel):
-    task_id: UUID
-    node_id: UUID
-    repo: str
 
-class TaskSubmissionResponse(BaseModel):
-    success: bool
-    message: str
-    submission_id: Optional[UUID] = None

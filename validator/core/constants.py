@@ -1,5 +1,5 @@
 import os
-from core.constants import HUGGINGFACE_TOKEN
+
 
 SUCCESS = "success"
 ACCOUNT_ID = "account_id"
@@ -15,6 +15,10 @@ COLDKEY = "coldkey"
 
 VALI_CONFIG_PATH = "validator/test_axolotl.yml"
 
+
+#api stuff
+START_TRAINING_ENDPOINT = 'start_training'
+TASK_OFFER_ENDPOINT = 'task_offer'
 # data stuff
 TEST_SIZE = 0.1
 TRAIN_TEST_SPLIT_PERCENTAGE = 0.1
@@ -32,12 +36,12 @@ PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
 PROMPT_PATH = "validator/prompts.yml"
 
 # Task Stuff
-MINIMUM_MINER_POOL = 1 # we need at least 4 miners usually - this is for testing
+MINIMUM_MINER_POOL = 1  # we need at least 4 miners usually - this is for testing
 
 # scoring stuff
 MAX_COMPETITION_HOURS = 10
 SOFTMAX_TEMPERATURE = 0.5
-TEST_SCORE_WEIGHTING = 0.8 # synth will be (1 - this)
+TEST_SCORE_WEIGHTING = 0.8  # synth will be (1 - this)
 TARGET_SCORE_RATIO = 2
 
 # processing stuff

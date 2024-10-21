@@ -1,15 +1,16 @@
 import datetime
-from fiber import SubstrateInterface
-from validator.db.src.database import PSQLDB
-from fiber.networking.models import NodeWithFernet as Node
-from fiber.logging_utils import get_logger
 
 from asyncpg import Connection
-from validator.utils.database import database_constants as dcst
-from fiber import utils as futils
 from cryptography.fernet import Fernet
+from fiber import SubstrateInterface
+from fiber import utils as futils
+from fiber.logging_utils import get_logger
+from fiber.networking.models import NodeWithFernet as Node
 
+from validator.db.src.database import PSQLDB
+from validator.utils.database import database_constants as dcst
 from validator.utils.substrate.query_substrate import query_substrate
+
 
 logger = get_logger(__name__)
 
@@ -132,7 +133,7 @@ async def insert_symmetric_keys_for_nodes(connection: Connection, nodes: list[No
 
 async def get_nodes(psql_db: PSQLDB, netuid: int) -> list[Node]:
     query = f"""
-        SELECT 
+        SELECT
             {dcst.HOTKEY},
             {dcst.COLDKEY},
             {dcst.NODE_ID},
@@ -171,7 +172,7 @@ async def get_node_stakes(psql_db: PSQLDB, netuid: int) -> dict[str, float]:
 
 async def get_node(psql_db: PSQLDB, node_id: int, netuid: int) -> Node | None:
     query = f"""
-        SELECT 
+        SELECT
             {dcst.HOTKEY},
             {dcst.COLDKEY},
             {dcst.NODE_ID},
@@ -217,7 +218,7 @@ async def update_our_vali_node_in_db(connection: Connection, ss58_address: str, 
 
 async def get_vali_ss58_address(psql_db: PSQLDB, netuid: int) -> str | None:
     query = f"""
-        SELECT 
+        SELECT
             {dcst.HOTKEY}
         FROM {dcst.NODES_TABLE}
         WHERE {dcst.OUR_VALIDATOR} = true AND {dcst.NETUID} = $1
@@ -231,9 +232,8 @@ async def get_vali_ss58_address(psql_db: PSQLDB, netuid: int) -> str | None:
 
     return node[dcst.HOTKEY]
 
+
 # not sure if we need this
 async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_address: str) -> str | None:
-    _, uid = query_substrate(
-        substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True
-    )
+    _, uid = query_substrate(substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True)
     return uid

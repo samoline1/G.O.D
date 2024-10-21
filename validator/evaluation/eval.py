@@ -1,22 +1,31 @@
-from typing import Union
-from pathlib import Path
-import yaml
-import torch
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
-from torch.nn.utils.rnn import pad_sequence
-from transformers import AutoModelForCausalLM, AutoTokenizer
 import json
 import os
-from core.config.config_handler import create_dataset_entry, update_model_info
-from validator.core import constants as cst
-from core.models.utility_models import CustomDatasetType, DatasetType, FileFormat
-from fiber.logging_utils import get_logger
+from pathlib import Path
+from typing import Union
+
+import torch
+import torch.nn.functional as F
+import yaml
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
+from fiber.logging_utils import get_logger
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
+from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
+
+from core.config.config_handler import create_dataset_entry
+from core.config.config_handler import update_model_info
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import DatasetType
+from core.models.utility_models import FileFormat
+from validator.core import constants as cst
 from validator.evaluation.utils import model_is_a_finetune
 
+
 logger = get_logger(__name__)
+
 
 def _load_and_update_evaluation_config(
     dataset_name: str,
@@ -38,13 +47,9 @@ def _load_and_update_evaluation_config(
     return DictDefault(config_dict)
 
 
-def _load_evaluation_dataset(
-    evaluation_config: DictDefault, tokenizer: AutoTokenizer
-) -> Dataset:
+def _load_evaluation_dataset(evaluation_config: DictDefault, tokenizer: AutoTokenizer) -> Dataset:
     prepared_path = Path(evaluation_config.output_dir) / "prepared"
-    eval_dataset, _ = load_tokenized_prepared_datasets(
-        tokenizer, evaluation_config, prepared_path
-    )
+    eval_dataset, _ = load_tokenized_prepared_datasets(tokenizer, evaluation_config, prepared_path)
     logger.info(f"Loaded evaluation dataset with {len(eval_dataset)} samples")
     return eval_dataset
 
@@ -61,9 +66,7 @@ def _log_dataset_and_model_info(
     logger.info(f"Model vocabulary size: {language_model.config.vocab_size}")
 
 
-def _create_evaluation_dataloader(
-    eval_dataset: Dataset, evaluation_config: DictDefault, tokenizer: AutoTokenizer
-) -> DataLoader:
+def _create_evaluation_dataloader(eval_dataset: Dataset, evaluation_config: DictDefault, tokenizer: AutoTokenizer) -> DataLoader:
     return DataLoader(
         eval_dataset,
         batch_size=evaluation_config.micro_batch_size,
@@ -72,16 +75,12 @@ def _create_evaluation_dataloader(
     )
 
 
-def _collate_evaluation_batch(
-    batch: list[dict[str, list[int]]], tokenizer: AutoTokenizer
-) -> dict[str, torch.Tensor]:
+def _collate_evaluation_batch(batch: list[dict[str, list[int]]], tokenizer: AutoTokenizer) -> dict[str, torch.Tensor]:
     input_ids = [torch.tensor(item["input_ids"]) for item in batch]
     attention_mask = [torch.tensor(item["attention_mask"]) for item in batch]
     labels = [torch.tensor(item["labels"]) for item in batch]
 
-    input_ids = pad_sequence(
-        input_ids, batch_first=True, padding_value=tokenizer.pad_token_id
-    )
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=tokenizer.pad_token_id)
     attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
     labels = pad_sequence(labels, batch_first=True, padding_value=-100)
 
@@ -107,9 +106,7 @@ def _process_evaluation_batches(
     return total_loss, num_batches
 
 
-def _compute_batch_loss(
-    language_model: AutoModelForCausalLM, batch: dict, device: torch.device
-) -> float:
+def _compute_batch_loss(language_model: AutoModelForCausalLM, batch: dict, device: torch.device) -> float:
     input_ids = batch["input_ids"].to(device)
     attention_mask = batch["attention_mask"].to(device)
     labels = batch["labels"].to(device)
@@ -129,9 +126,7 @@ def _compute_batch_loss(
     return loss.item()
 
 
-def _calculate_evaluation_metrics(
-    total_loss: float, num_batches: int
-) -> dict[str, float]:
+def _calculate_evaluation_metrics(total_loss: float, num_batches: int) -> dict[str, float]:
     if num_batches > 0:
         average_loss = total_loss / num_batches
         logger.info(f"Average loss: {average_loss}")
@@ -155,24 +150,18 @@ def evaluate_language_model_loss(
 
     eval_dataset = _load_evaluation_dataset(evaluation_config, tokenizer)
     _log_dataset_and_model_info(eval_dataset, language_model, tokenizer)
-    eval_dataloader = _create_evaluation_dataloader(
-        eval_dataset, evaluation_config, tokenizer
-    )
+    eval_dataloader = _create_evaluation_dataloader(eval_dataset, evaluation_config, tokenizer)
 
     language_model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     language_model.to(device)
 
-    total_loss, num_batches = _process_evaluation_batches(
-        language_model, eval_dataloader, device
-    )
+    total_loss, num_batches = _process_evaluation_batches(language_model, eval_dataloader, device)
 
     evaluation_results = _calculate_evaluation_metrics(total_loss, num_batches)
     logger.info(f"Final evaluation results: {evaluation_results}")
 
     return evaluation_results
-
-
 
 
 def evaluate_finetuned_model(
@@ -207,8 +196,8 @@ def main():
         dataset_type = CustomDatasetType.model_validate_json(dataset_type_str)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    finetuned_model = AutoModelForCausalLM.from_pretrained(model, token=os.environ.get('HUGGINGFACE_TOKEN')).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(original_model, token=os.environ.get('HUGGINGFACE_TOKEN'))
+    finetuned_model = AutoModelForCausalLM.from_pretrained(model, token=os.environ.get("HUGGINGFACE_TOKEN")).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(original_model, token=os.environ.get("HUGGINGFACE_TOKEN"))
 
     is_finetune = model_is_a_finetune(original_model, finetuned_model)
 
@@ -217,10 +206,10 @@ def main():
         finetuned_model=finetuned_model,
         dataset_type=dataset_type,
         file_format=file_format,
-        tokenizer=tokenizer
+        tokenizer=tokenizer,
     )
 
-    results['is_finetune'] = is_finetune
+    results["is_finetune"] = is_finetune
 
     output_file = "/aplp/evaluation_results.json"
     output_dir = os.path.dirname(output_file)
@@ -236,6 +225,7 @@ def main():
     logger.info(f"Evaluation results saved to {output_file}")
 
     logger.info(json.dumps(results))
+
 
 if __name__ == "__main__":
     main()

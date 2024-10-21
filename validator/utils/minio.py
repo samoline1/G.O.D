@@ -6,6 +6,13 @@ from concurrent.futures import ThreadPoolExecutor
 from minio import Minio
 
 
+# NOTE: wen type hints
+# NOTE: POINTS:
+# - why are you using a separate event loop
+# - why are you using a thread pool executor
+# Do we really need to do this object orienteated? Would much
+# prefer functional style.
+# Add the minio client to config and use it directly
 class AsyncMinioClient:
     def __init__(self, endpoint, access_key, secret_key, secure=True, region="us-east-1"):
         self.endpoint = endpoint

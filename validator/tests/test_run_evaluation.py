@@ -7,6 +7,7 @@ from validator.evaluation.docker_evaluation import run_evaluation_docker
 
 logger = get_logger(__name__)
 
+
 def test():
     custom_dataset_type = CustomDatasetType(
         system_prompt="you are helpful",
@@ -14,7 +15,7 @@ def test():
         field_system="text",
         field_instruction="instruction",
         field_input="input",
-        field_output="output"
+        field_output="output",
     )
 
     results = run_evaluation_docker(
@@ -22,6 +23,6 @@ def test():
         model="unsloth/Llama-3.2-3B-Instruct",
         original_model="unsloth/Llama-3.2-3B-Instruct",
         dataset_type=custom_dataset_type,
-        file_format=FileFormat.JSON
+        file_format=FileFormat.JSON,
     )
     logger.info(f"Evaluation results: {results}")

@@ -1,17 +1,23 @@
-import os
+import argparse
+import random
+import re
 import secrets
 import string
-import re
-import argparse
-from typing import Callable, Any
-import random
+from typing import Any
+from typing import Callable
+
 
 # Lots of this was taken from sn19, some of which might not be needed, will come back to clean one we have an end2end
 # right now we're not using any of this - just here for shitz and gigz apparently
 
+
 def generate_secure_password(length: int = 16) -> str:
     alphabet = string.ascii_letters + string.digits
-    password = [secrets.choice(string.ascii_uppercase), secrets.choice(string.ascii_lowercase), secrets.choice(string.digits)]
+    password = [
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.digits),
+    ]
     password += [secrets.choice(alphabet) for _ in range(length - 3)]
     password = list(password)  # Convert to list for shuffling
     random.shuffle(password)  # Use random.shuffle instead of secrets.shuffle
@@ -94,7 +100,9 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     config["SET_METAGRAPH_WEIGHTS_WITH_HIGH_UPDATED_TO_NOT_DEREG"] = (
         "true"
         if validate_input(
-            "Set metagraph weights when updated gets really high to not dereg? (y/n): (default: n)", yes_no_validator, default="n"
+            "Set metagraph weights when updated gets really high to not dereg? (y/n): (default: n)",
+            yes_no_validator,
+            default="n",
         )
         .lower()
         .startswith("y")

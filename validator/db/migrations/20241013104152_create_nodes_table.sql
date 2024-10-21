@@ -1,6 +1,6 @@
 -- migrate:up
 CREATE TABLE IF NOT EXISTS nodes (
-    node_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    node_id INT PRIMARY KEY DEFAULT 0,
     coldkey TEXT NOT NULL,
     ip TEXT NOT NULL,
     ip_type TEXT NOT NULL,

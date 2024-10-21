@@ -57,7 +57,7 @@ include = [
 ]
 
 [tool.ruff]
-line-length = 120
+line-length = 130
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
@@ -85,3 +85,6 @@ extend-ignore-identifiers-re = [
 [tool.pytest.ini_options]
 addopts      = "--random-order --cov=src --cov-report=term-missing --cov-report=xml"
 asyncio_mode = "auto"
+
+
+# Missing pyright from here

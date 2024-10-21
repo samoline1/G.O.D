@@ -1,7 +1,7 @@
 -- migrate:up
 CREATE TABLE IF NOT EXISTS task_nodes (
     task_id UUID NOT NULL,
-    node_id UUID NOT NULL,
+    node_id INT NOT NULL,
     PRIMARY KEY (task_id, node_id),
     CONSTRAINT fk_task
         FOREIGN KEY (task_id)

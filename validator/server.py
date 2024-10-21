@@ -1,25 +1,30 @@
-from fastapi import APIRouter, HTTPException
-from core.utils import validate_dataset
-from core.models.utility_models import FileFormat, TaskStatus
-from core.models.payload_models import EvaluationRequest, EvaluationResponse, TaskRequest, TaskResponse
+import uuid
+
+from fastapi import APIRouter
+from fastapi import HTTPException
 from fiber.logging_utils import get_logger
+
+from core.models.payload_models import EvaluationRequest
+from core.models.payload_models import EvaluationResponse
+from core.models.payload_models import TaskRequest
+from core.models.payload_models import TaskResponse
+from core.models.utility_models import FileFormat
+from core.models.utility_models import TaskStatus
+from core.utils import validate_dataset
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.evaluation.task_prep import prepare_task
-import uuid
+
 
 logger = get_logger(__name__)
 
+
 async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
     if not request.dataset or not request.model or not request.original_model:
-        raise HTTPException(
-            status_code=400, detail="Dataset, model, original_model, and dataset_type are required."
-        )
+        raise HTTPException(status_code=400, detail="Dataset, model, original_model, and dataset_type are required.")
 
     try:
         if request.file_format != FileFormat.HF:
-            is_valid = validate_dataset(
-                request.dataset, request.dataset_type, request.file_format
-            )
+            is_valid = validate_dataset(request.dataset, request.dataset_type, request.file_format)
             if not is_valid:
                 raise HTTPException(
                     status_code=400,
@@ -34,12 +39,13 @@ async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
             model=request.model,
             original_model=request.original_model,
             dataset_type=request.dataset_type,
-            file_format=request.file_format
+            file_format=request.file_format,
         )
         return EvaluationResponse(**eval_results.dict())
     except Exception as e:
         logger.error(f"Error during evaluation: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 async def create_task(request: TaskRequest) -> TaskResponse:
     task_id = str(uuid.uuid4())
@@ -49,9 +55,11 @@ async def create_task(request: TaskRequest) -> TaskResponse:
 
     return TaskResponse(task_id=task_id, status=TaskStatus.PENDING)
 
+
 async def get_task_status(task_id: str) -> TaskResponse:
     # get the task from the database
     return TaskResponse(task_id=task_id, status=TaskStatus.IDLE)
+
 
 def factory():
     router = APIRouter()

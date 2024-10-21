@@ -18,12 +18,9 @@ from core.models.utility_models import Job
 
 logger = get_logger(__name__)
 
+
 def _load_and_modify_config(
-    dataset: str,
-    model: str,
-    dataset_type: DatasetType | CustomDatasetType,
-    file_format: FileFormat,
-    task_id: str
+    dataset: str, model: str, dataset_type: DatasetType | CustomDatasetType, file_format: FileFormat, task_id: str
 ) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
@@ -41,26 +38,23 @@ def _load_and_modify_config(
 
     return config
 
-def create_job(
-        job_id: str, dataset: str, model: str, dataset_type: DatasetType, file_format: FileFormat
-) -> Job:
-    return Job(
-        job_id=job_id, dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format
-    )
+
+def create_job(job_id: str, dataset: str, model: str, dataset_type: DatasetType|CustomDatasetType, file_format: FileFormat) -> Job:
+    return Job(job_id=job_id, dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format)
+
 
 def start_tuning_container(job: Job):
     config_filename = f"{job.job_id}.yml"
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
 
-    config = _load_and_modify_config(
-        job.dataset, job.model, job.dataset_type, job.file_format, job.job_id
-    )
+    config = _load_and_modify_config(job.dataset, job.model, job.dataset_type, job.file_format, job.job_id)
     save_config(config, config_path)
 
     logger.info(config)
 
     logger.info(os.path.basename(job.dataset) if job.file_format != FileFormat.HF else "")
 
+    # Dataclass instead - or at least use constats here (NO MAGIC STRINGS :P)
     docker_env = {
         "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
         "WANDB_TOKEN": cst.WANDB_TOKEN,
@@ -97,7 +91,7 @@ def start_tuning_container(job: Job):
             environment=docker_env,
             volumes=volume_bindings,
             runtime="nvidia",
-            device_requests=[docker.types.DeviceRequest(count=1, capabilities=[['gpu']])],
+            device_requests=[docker.types.DeviceRequest(count=1, capabilities=[["gpu"]])],
             detach=True,
             tty=True,
         )
@@ -108,9 +102,7 @@ def start_tuning_container(job: Job):
         result = container.wait()
 
         if result["StatusCode"] != 0:
-            raise DockerException(
-                f"Container exited with non-zero status code: {result['StatusCode']}"
-            )
+            raise DockerException(f"Container exited with non-zero status code: {result['StatusCode']}")
 
     except Exception as e:
         logger.error(f"Error processing job: {str(e)}")

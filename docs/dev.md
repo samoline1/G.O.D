@@ -3,7 +3,7 @@
 1. Run bootstrap.sh
 ```bash
 sudo -E bash bootstrap.sh
-``` 
+```
 
 2. Optional if you need a venv
 ```bash

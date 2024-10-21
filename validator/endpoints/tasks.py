@@ -14,26 +14,30 @@ from fiber.logging_utils import get_logger
 from core.models.payload_models import NewTaskRequest
 from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import TaskStatusResponse
-from core.models.payload_models import TaskSubmissionRequest
-from core.models.payload_models import TaskSubmissionResponse
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_config
 from validator.core.models import Task
 from validator.db import sql
 
+## TT leavin this one for you snr
 
 logger = get_logger(__name__)
 
+# NOTE: please dont just dump AI code in here without thinking - this is how bugs get in
 # Define a custom security scheme for the Bearer token
 bearer_token_header = APIKeyHeader(name="Authorization", auto_error=False)
 
+
 async def delete_task(
     task_id: UUID,
+    # What is the comment below for - its obvious right?
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
+    # Instead of the above you need to make a dependency and
+    # extract the user_id from the token, and use that here
+    # This is a byproduct of pasting gpt code
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
-
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization token is required.")
 
@@ -41,6 +45,7 @@ async def delete_task(
 
     task = await sql.get_task(task_id, config.psql_db)
 
+    # If task is none you mean?
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
@@ -50,11 +55,11 @@ async def delete_task(
     await sql.delete_task(task_id, config.psql_db)
     return Response(success=True)
 
+
 async def get_tasks(
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
     config: Config = Depends(get_config),
 ) -> List[TaskStatusResponse]:
-
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization token is required.")
 
@@ -64,6 +69,8 @@ async def get_tasks(
 
     logger.info(tasks_with_miners)
 
+    # Why so many magic strings? can't you keep it as a Task object?
+
     return [
         TaskStatusResponse(
             success=True,
@@ -72,16 +79,18 @@ async def get_tasks(
             miners=task["miners"],
             model_id=task["model_id"],
             dataset=task["hf_training_repo"],
-            created=task["created_timestamp"].strftime('%Y-%m-%dT%H:%M:%S') if isinstance(
-                task["created_timestamp"], datetime
-            ) else task["created_timestamp"],
+            created=task["created_timestamp"].strftime("%Y-%m-%dT%H:%M:%S")
+            if isinstance(task["created_timestamp"], datetime)
+            else task["created_timestamp"],
             hours_to_complete=task["hours_to_complete"],
         )
         for task in tasks_with_miners
     ]
 
+
 async def create_task(
     request: NewTaskRequest,
+    # gpt code be gone plz
     authorization: str = Security(bearer_token_header),  # Use Security with APIKeyHeader
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
@@ -92,7 +101,7 @@ async def create_task(
     current_time = datetime.utcnow()
     end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
 
-    logger.info(f'The request coming in {request}')
+    logger.info(f"The request coming in {request}")
     task = Task(
         model_id=request.model_repo,
         ds_id=request.ds_repo,
@@ -103,18 +112,16 @@ async def create_task(
         status=TaskStatus.PENDING,
         end_timestamp=end_timestamp,
         hours_to_complete=request.hours_to_complete,
-        user_id=user_id
+        user_id=user_id,
     )
 
     logger.info(f"The Task is {task}")
 
-    task = await sql.add_task(
-        task,
-        config.psql_db
-    )
+    task = await sql.add_task(task, config.psql_db)
 
     logger.info(task.task_id)
     return NewTaskResponse(success=True, task_id=task.task_id)
+
 
 async def get_task_status(
     task_id: UUID,
@@ -131,28 +138,11 @@ async def get_task_status(
         model_id=task.model_id,
         miners=None,
         dataset=task.hf_training_repo,
-        created=str(task.created_timestamp),
-        hours_to_complete=task.hours_to_complete
+        created=str(task.created_timestamp),  # created_at? is str() ok here?
+        hours_to_complete=task.hours_to_complete,
     )
 
-async def submit_task_submission(
-    request: TaskSubmissionRequest,
-    config: Config = Depends(get_config),
-) -> TaskSubmissionResponse:
-    is_unique = await sql.submission_repo_is_unique(request.repo, config.psql_db)
-    is_miner_assigned_to_task = await sql.is_miner_assigned_to_task(
-        request.task_id,
-        request.node_id,
-        config.psql_db
-    )
 
-    if not is_unique:
-        return TaskSubmissionResponse(success=False, message="Submission with this repository already exists.")
-    elif not is_miner_assigned_to_task:
-        return TaskSubmissionResponse(success=False, message="You are not registered as assigned to this task.")
-    else:
-        submission_id = await sql.add_submission(request.task_id, request.node_id, request.repo, config.psql_db)
-        return TaskSubmissionResponse(success=True, message="success", submission_id=submission_id)
 
 def factory_router() -> APIRouter:
     router = APIRouter()
@@ -173,15 +163,6 @@ def factory_router() -> APIRouter:
         methods=["GET"],
     )
 
-    router.add_api_route(
-        "/tasks/submit",
-        submit_task_submission,
-        response_model=TaskSubmissionResponse,
-        tags=["tasks"],
-        methods=["POST"],
-    )
-
-    # New endpoints
     router.add_api_route(
         "/tasks/delete/{task_id}",
         delete_task,

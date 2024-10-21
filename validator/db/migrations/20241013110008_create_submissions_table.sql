@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS submissions (
     submission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL,
-    node_id UUID NOT NULL,
+    node_id INT NOT NULL,
     repo TEXT NOT NULL,
     created_on TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_on TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
