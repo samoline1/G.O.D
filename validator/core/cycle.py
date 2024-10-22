@@ -175,10 +175,13 @@ async def process_completed_tasks(config: Config) -> None:
 
 async def process_pending_tasks(config: Config) -> None:
     while True:
-        await _process_pending_tasks(config)
-        await _process_miner_selected_tasks(config)
-        await _process_ready_to_train_tasks(config)
-        await asyncio.sleep(5)
+        try:
+            await _process_pending_tasks(config)
+            await _process_miner_selected_tasks(config)
+            await _process_ready_to_train_tasks(config)
+            await asyncio.sleep(5)
+        except Exception as e:
+            logger.info(f"There was a problem in processing: {e}")
 
 
 async def validator_cycle(config: Config) -> None:
