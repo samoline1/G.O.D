@@ -30,7 +30,9 @@ pre-commit install
 
 3.
 
-update your 'entity_id' in the wandb section of the config to be your wandb username+org_name [here](core/config/base.yml)
+ - Update your 'entity_id' in the wandb section of the config to be your wandb username+org_name [here](core/config/base.yml)
+ - In the same config you need to change the hub_model_id to be the huggingface hub repo you want to upload to
+
 
 4. Start the miner service:
 
