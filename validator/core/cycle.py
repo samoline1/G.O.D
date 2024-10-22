@@ -168,9 +168,13 @@ async def _evaluate_task(task: Task, config: Config):
 async def process_completed_tasks(config: Config) -> None:
     while True:
         completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
-        logger.info(f"There are {len(completed_tasks)} awaiting evaluation")
-        for task in completed_tasks:
-            await _evaluate_task(task, config)
+        if len(completed_tasks) > 0:
+            logger.info(f"There are {len(completed_tasks)} awaiting evaluation")
+            for task in completed_tasks:
+                await _evaluate_task(task, config)
+        if len(completed_tasks) == 0:
+            logger.info('There are no tasks to evaluate - waiting 30 seconds')
+            await asyncio.sleep(30)
 
 
 async def process_pending_tasks(config: Config) -> None:
@@ -179,9 +183,9 @@ async def process_pending_tasks(config: Config) -> None:
             await _process_pending_tasks(config)
             await _process_miner_selected_tasks(config)
             await _process_ready_to_train_tasks(config)
-            await asyncio.sleep(5)
         except Exception as e:
             logger.info(f"There was a problem in processing: {e}")
+            await asyncio.sleep(30)
 
 
 async def validator_cycle(config: Config) -> None:
@@ -192,6 +196,7 @@ async def validator_cycle(config: Config) -> None:
            )
        except Exception as e:
            logger.error(f"Error in validator_cycle: {e}", exc_info=True)
+           await asyncio.sleep(30)
 
 # Not sure if this is the best solution to the problem of if something within the cycle crashes TT good with this stuff?
 # If not, will come back - let me know  porfa
@@ -201,7 +206,7 @@ async def run_validator_cycles(config: Config) -> None:
             await validator_cycle(config)
         except Exception as e:
             logger.error(f"Validator cycle crashed: {e}", exc_info=True)
-            await asyncio.sleep(5)
+            await asyncio.sleep(30)
 
 def init_validator_cycles(config: Config) -> Task:
        return asyncio.create_task(run_validator_cycles(config))
