@@ -51,7 +51,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
 
     selected_miners: list[int] = []
     ds_size = _get_total_dataset_size(task.ds_id)
-    task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete)
+    task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete, task_id= str(task.task_id))
 
     # Create a copy of the nodes list to avoid mutating the original - better than popping? Not sure
     available_nodes = nodes.copy()
@@ -199,6 +199,6 @@ async def run_validator_cycles(config: Config) -> None:
             logger.error(f"Validator cycle crashed: {e}", exc_info=True)
             await asyncio.sleep(30)
 
-def init_validator_cycles(config: Config) -> AsyncTask:
+def init_validator_cycles(config: Config) -> Task:
        return asyncio.create_task(run_validator_cycles(config))
 
