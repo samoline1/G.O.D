@@ -17,8 +17,11 @@ You will be scored on three aspects:
 
 ## 🎢 Competition Flow
 
-1. Initially, job-model combinations will be simple - a short introduction to the process with one training job at a time.
-2. By Friday, expect multiple jobs to be sent to you simultaneously.
+
+1. You'll first ping in the channel (or DM to WW) that you want your miner to be registered with ip details and WW will add your miner to the pool
+2. Jobs will then come through to your miner endpoint with an option to accept/reject, if you accept you'll have a fixed time period to complete training and upload your fine-tune (this is all automated so you only need to change the config if wanna play simple)
+3.  Initially, job-model combinations will be basic and allocated training times short - a quick introduction to the process with one training job at a time.
+4. By Friday, expect multiple jobs to be sent to you simultaneously.
 
 ## 🎯 Optimization Areas for Fair Play
 
@@ -46,6 +49,8 @@ My job (WW) over the 3 days will be to try to plug the exploits as we go along w
 - You can submit up to 5 miners
 
 ## 🏅 Prizes
+
+You will be ordered based on the product of your individual quality scores. Average score for a comp (say 4 miners in a comp) will always be 1. So you need to be better than average to gain from entering (in your overal score anyway).
 
 - All participants who submit at least three models will receive 'x' Tao
 - 2nd prize: 'y' Tao
