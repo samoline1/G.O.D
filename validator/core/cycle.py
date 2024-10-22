@@ -156,7 +156,7 @@ async def _process_ready_to_train_tasks(config: Config):
         logger.info(f"There are {len(ready_to_train_tasks)} ready to train")
         await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
     else:
-        logger(f"No pending tasks - waiting for 30 seconds")
+        logger.info(f"No pending tasks - waiting for 30 seconds")
         await asyncio.sleep(30)
 
 async def _evaluate_task(task: Task, config: Config):
