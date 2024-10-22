@@ -152,7 +152,7 @@ async def _start_training_task(task: Task, config: Config) -> None:
 
 async def _process_ready_to_train_tasks(config: Config):
     ready_to_train_tasks = await sql.get_tasks_with_status(status=TaskStatus.READY, psql_db=config.psql_db)
-    if len(ready_to_train_tasks) > 0
+    if len(ready_to_train_tasks) > 0:
         logger.info(f"There are {len(ready_to_train_tasks)} ready to train")
         await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
     else:
