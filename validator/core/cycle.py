@@ -168,9 +168,9 @@ async def _evaluate_task(task: Task, config: Config):
 async def process_completed_tasks(config: Config) -> None:
     while True:
         completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
+        logger.info(f"There are {len(completed_tasks)} awaiting evaluation")
         for task in completed_tasks:
             await _evaluate_task(task, config)
-        await asyncio.sleep(5)
 
 
 async def process_pending_tasks(config: Config) -> None:
@@ -201,7 +201,7 @@ async def run_validator_cycles(config: Config) -> None:
             await validator_cycle(config)
         except Exception as e:
             logger.error(f"Validator cycle crashed: {e}", exc_info=True)
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
 
 def init_validator_cycles(config: Config) -> Task:
        return asyncio.create_task(run_validator_cycles(config))

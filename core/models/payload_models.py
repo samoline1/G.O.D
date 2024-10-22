@@ -52,6 +52,7 @@ class MinerTaskRequst(BaseModel):
     task_id: str
 
 
+
 class MinerTaskResponse(BaseModel):
     message: str
     accepted: bool
