@@ -24,7 +24,7 @@ TEST_SIZE = 0.1
 TRAIN_TEST_SPLIT_PERCENTAGE = 0.1
 GET_SYNTH_DATA = True
 MAX_SYNTH_DATA_POINTS = 1000
-ADDITIONAL_SYNTH_DATA_PERCENTAGE = 0.1
+ADDITIONAL_SYNTH_DATA_PERCENTAGE = 1.0 # same size as training set
 
 # synth stuff
 SYNTH_GEN_BATCH_SIZE = 3
@@ -36,7 +36,7 @@ PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
 PROMPT_PATH = "validator/prompts.yml"
 
 # Task Stuff
-MINIMUM_MINER_POOL = 1  # we need at least 4 miners usually - this is for testing
+MINIMUM_MINER_POOL = 3  # we need at least 4 miners usually - this is for testing
 
 # scoring stuff
 MAX_COMPETITION_HOURS = 10

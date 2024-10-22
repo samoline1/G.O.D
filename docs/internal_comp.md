@@ -29,6 +29,8 @@ The "playing-fair" miner will have two areas to optimize:
 a) Choosing training parameters
 b) Deciding when to accept or reject an incoming job
 
+The base code will automatically accept all requests and will start up a training  job within a docker container using Axolotl. An easy start up would be just about editing the initial config and job_request endoint.
+
 ## 🕵️‍♂️ Cheating Strategies (Encouraged for Testing)
 
 We also encourage you to attempt to cheat. Some strategies could include:
