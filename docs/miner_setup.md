@@ -28,7 +28,7 @@ This guide will walk you through the process of setting up and running a miner f
     - For developers: use `SUBTENSOR_ADDRESS=wss://test.finney.opentensor.ai:443/`
 
 3. Configure environment variables:
-    Create a `.env` file with the following:
+    Create a `.1.env` file with the following:
     - `HUGGINGFACE_TOKEN`
     - `WANDB_TOKEN`
 
