@@ -8,11 +8,6 @@ RUN mkdir -p /workspace/axolotl/configs \
     /workspace/axolotl/data \
     /workspace/input_data
 
-ENV HUGGINGFACE_TOKEN=""
-ENV WANDB_TOKEN=""
-ENV JOB_ID=""
-ENV DATASET_TYPE=""
-ENV DATASET_FILENAME=""
 ENV CONFIG_DIR="/workspace/axolotl/configs"
 ENV OUTPUT_DIR="/workspace/axolotl/outputs"
 ENV AWS_ENDPOINT_URL="https://5a301a635a9d0ac3cb7fcc3bf373c3c3.r2.cloudflarestorage.com"
