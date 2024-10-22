@@ -18,6 +18,7 @@ class TrainRequest(BaseModel):
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
     task_id: str
+    hours_to_complete: int
 
 
 class TrainResponse(BaseModel):

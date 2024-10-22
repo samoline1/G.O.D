@@ -93,6 +93,7 @@ async def _let_miners_know_to_start_training(task: Task, nodes: list[Node]):
         dataset_type=dataset_type,
         file_format=FileFormat.S3,
         task_id=str(task.task_id),
+        hours_to_complete = task.hours_to_complete
     )
     logger.info(f'We are tellingminers to start training there are  {len(nodes)}')
 
