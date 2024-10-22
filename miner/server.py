@@ -17,8 +17,8 @@ tuning_router = tuning_factory_router()
 
 app.include_router(tuning_router)
 
-if os.getenv("ENV", "prod").lower() == "dev":
-    configure_extra_logging_middleware(app)
+#if os.getenv("ENV", "prod").lower() == "dev":
+#    configure_extra_logging_middleware(app)
 
 
 if __name__ == "__main__":
