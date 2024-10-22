@@ -23,16 +23,14 @@ pip install -e '.[dev]'
 pre-commit install
 ```
 
-2.
-
-Get you wallet (hotkey) on the machine. Then run core/create_config.py --miner (In case you're a dev, use SUBTENSOR_ADDRESS=wss://test.finney.opentensor.ai:443/)
+2.Get you wallet (hotkey) on the machine. Then run core/create_config.py --miner (In case you're a dev, use SUBTENSOR_ADDRESS=wss://test.finney.opentensor.ai:443/)
 
 3. Set up training environment variables in `.1.env`:
 
    - `HUGGINGFACE_TOKEN`
    - `WANDB_TOKEN`
 
-4.
+4. Update the config
 
  - Update your 'entity_id' in the wandb section of the config to be your wandb username+org_name [here](core/config/base.yml)
  - In the same config you need to change the hub_model_id to be the huggingface hub repo you want to upload to
