@@ -3,6 +3,7 @@ from scipy.stats import gmean
 import numpy as np
 from fiber.logging_utils import get_logger
 
+from core.models.payload_models import EvaluationResult
 import validator.core.constants as cts
 from core.utils import download_s3_file
 from core.models.utility_models import CustomDatasetType
@@ -220,9 +221,15 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
             synth_eval_result = await run_evaluation_docker(
                 dataset=synthetic_data_filepath, **evaluation_params
             )
-            test_eval_result = await run_evaluation_docker(
-                dataset=test_data_filepath, **evaluation_params
-            )
+            if synth_eval_result.is_finetune:
+                test_eval_result = await run_evaluation_docker(
+                    dataset=test_data_filepath, **evaluation_params
+                )
+            else:
+                synth_eval_result.eval_loss = 0.0
+                synth_eval_result.perplexity = 0.0
+                test_eval_result = EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0)
+
 
             logger.info(
                 f"Evaluation results for miner {miner.node_id}:"
