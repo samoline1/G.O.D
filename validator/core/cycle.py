@@ -35,6 +35,7 @@ async def _run_task_prep(task: Task) -> Task:
     task.status = TaskStatus.DATA_READY
     task.synthetic_data = synth_data
     task.test_data = test_data
+    logger.info('Data creation is complete - now time to find some miners')
     return task
 
 
