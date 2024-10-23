@@ -32,7 +32,6 @@ def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
     """
     Compute scale factor based only on finetuned submissions.
     """
-    # Only consider finetuned submissions
     finetuned_results = [
         res for res in miner_results
         if res.is_finetune
@@ -40,7 +39,7 @@ def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
         and not np.isnan(res.synth_loss)
     ]
 
-    if not finetuned_results:
+    if not finetuned_results or len(finetuned_results) == 1:
         logger.info("No finetuned results found for scale factor calculation")
         return 1.0
 
