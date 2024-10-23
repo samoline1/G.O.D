@@ -24,6 +24,11 @@ pre-commit install
 
 2. Create and set up the `.vali.env` file:
 
+You'll need to setup a MINIO account and add in your access key, endpoint and security key below and also a huggingface token in order to access gated models (such as Llama3.2)
+
+To generate the synthetic data you'll also need to either setup your own LLM server following the instructions (TBA later) or use CorcelAPI and add
+your corcel token below:
+
 ```bash
 touch .vali.env
 cat << EOF >> .vali.env
@@ -33,6 +38,13 @@ POSTGRES_DB=db
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 LOCALHOST=true
+REDIS_HOST=localhost
+DATABASE_URL=postgres:/user:password@postgresql:5432/db?sslmode=disable
+MINIO_ENDPOINT=
+MINIO_ACCESS_KEY=
+MINIO_SECRET_KEY=
+HUGGINGFACE_TOKEN=
+CORCEL_TOKEN=
 EOF
 ```
 
