@@ -29,7 +29,7 @@ def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     Calculate a weighted average of test and synthetic losses.
 
     This function combines the test loss and synthetic loss into a single metric,
-    giving more weight to the test loss as defined by TEST_SCORE_WEIGHTING.
+giving more weight to the test loss as defined by TEST_SCORE_WEIGHTING.
     """
     return cts.TEST_SCORE_WEIGHTING * test_loss + (1 - cts.TEST_SCORE_WEIGHTING) * synth_loss
 
@@ -148,7 +148,21 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     for miner in miner_pool:
         try:
             url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
-            submission_repo = str(await process_non_stream_get(url, None))
+            try:
+                submission_repo = str(await process_non_stream_get(url, None))
+            except Exception as e:
+                submission_repo = None
+                logger.error(f"Failed to process non-stream get for miner {miner.node_id} - {e}")
+            if submission_repo is None:
+                miner_result = MinerResults(node_id = miner.node_id,
+                                            test_loss = 0.0,
+                                            synth_loss = 0.0,
+                                            is_finetune= False, submission=None)
+                task_results.append(miner_result)
+                continue
+
+
+
             current_time = datetime.now()
             submission = Submission(
                 task_id=task.task_id,
@@ -195,9 +209,9 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     for result in task_results:
         assert result.score is not None
         await set_task_node_quality_score(task.task_id, result.node_id, result.score, config.psql_db)
-        result.submission.score  = result.score
         logger.info(f"Adding submission {result.submission}")
-        await add_submission(result.submission, config.psql_db)
+        if result.submission is not None:
+            await add_submission(result.submission, config.psql_db)
     logger.info(f"The final results are {task_results}")
     task.status = TaskStatus.SUCCESS
 

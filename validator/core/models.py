@@ -62,6 +62,6 @@ class MinerResults(BaseModel):
     synth_loss: float
     is_finetune: bool
     score: Optional[float] = 0.0
-    submission: Submission
+    submission: Optional[Submission] = None
 
 
