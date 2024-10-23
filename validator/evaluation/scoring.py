@@ -45,24 +45,32 @@ def calculate_scaled_score(weighted_loss: float, is_finetune: bool, scale_factor
 
 def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerResults]) -> list[MinerResults]:
     """
-    This function adjusts all scores so that their geometric mean becomes 1.
+    This function adjusts all valid scores so that their geometric mean becomes 1.
 
-    By dividing each miner's score by the geometric mean of all scores for that task,
+    By dividing each miner's score by the geometric mean of all valid scores for that task,
     we're essentially measuring each miner's performance relative to the overall performance on that specific task.
 
     This normalisation makes the scores scale-independent.
     If Task A is inherently more difficult and results in lower scores overall,
     dividing by the geometric mean will adjust for this.
+
+    NaN scores (e.g., from rejected submissions) are left unchanged.
     """
-    geometric_mean = gmean(np.array([res.score for res in miner_results]))
+    valid_scores = [res.score for res in miner_results if not np.isnan(res.score)]
 
-    # if geometric_mean is inf or negative inf then we set to 1
-    if np.isinf(geometric_mean) or np.isneginf(geometric_mean):
-       geometric_mean = 1.0
+    if not valid_scores:
+        logger.warning("All scores are NaN. No adjustment performed.")
+        return miner_results
 
+    geometric_mean = gmean(np.array(valid_scores))
+
+    if np.isnan(geometric_mean) or np.isinf(geometric_mean) or geometric_mean <= 0:
+        logger.warning(f"Invalid geometric mean: {geometric_mean}. Setting to 1.")
+        geometric_mean = 1.0
 
     for res in miner_results:
-        res.score /= geometric_mean
+        if not np.isnan(res.score):
+            res.score /= geometric_mean
 
     return miner_results
 
@@ -112,10 +120,21 @@ def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
 
 
 def add_raw_scores_to_miner_results(miner_results: list[MinerResults]) -> list[MinerResults]:
-    scale_factor = compute_adaptive_scale_factor(miner_results)  # see function def for details
+    valid_results = [res for res in miner_results if not np.isnan(res.test_loss) and not np.isnan(res.synth_loss)]
+
+    if not valid_results:
+        logger.warning("All results have NaN losses. Setting all scores to NaN.")
+        for result in miner_results:
+            result.score = np.nan
+        return miner_results
+
+    scale_factor = compute_adaptive_scale_factor(valid_results)  # see function def for details
     for result in miner_results:
-        weighted_loss = calculate_weighted_loss(result.test_loss, result.synth_loss)
-        result.score = calculate_scaled_score(weighted_loss, result.is_finetune, scale_factor)
+        if np.isnan(result.test_loss) or np.isnan(result.synth_loss):
+            result.score = np.nan
+        else:
+            weighted_loss = calculate_weighted_loss(result.test_loss, result.synth_loss)
+            result.score = calculate_scaled_score(weighted_loss, result.is_finetune, scale_factor)
     return miner_results
 
 async def evaluate_and_score(task: Task, config: Config) -> Task:
