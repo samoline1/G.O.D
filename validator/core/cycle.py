@@ -62,8 +62,12 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
         node = random.choice(available_nodes)
         available_nodes.remove(node)
 
-        offer_response = await _make_offer(node, task_request)
-        logger.info(f"Node {node.node_id}'s response to the offer was {offer_response}")
+        try:
+            offer_response = await _make_offer(node, task_request)
+            logger.info(f"Node {node.node_id}'s response to the offer was {offer_response}")
+        except:
+            logger.info(f"Seems that {node.node_id} has a connection issue")
+            offer_response = MinerTaskResponse(accepted=False, message="Connection error")
 
         if offer_response.accepted is True:
             selected_miners.append(node.node_id)
