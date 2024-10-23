@@ -36,7 +36,7 @@ PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
 PROMPT_PATH = "validator/prompts.yml"
 
 # Task Stuff
-MINIMUM_MINER_POOL = 3  # we need at least 4 miners usually - this is for testing
+MINIMUM_MINER_POOL = 1  # we need at least 4 miners usually - this is for testing
 
 # scoring stuff
 MAX_COMPETITION_HOURS = 10

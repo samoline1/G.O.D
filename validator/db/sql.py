@@ -101,7 +101,7 @@ async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
         connection: Connection
         submission_id = await connection.fetchval(
             """
-            INSERT INTO submissions (task_id, node_id, repo)
+            INSERT INTO submissions (task_id, node_id, repo, score)
             VALUES ($1, $2, $3)
             RETURNING submission_id
             """,
