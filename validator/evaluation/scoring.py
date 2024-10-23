@@ -171,7 +171,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     for result in task_results:
         assert result.score is not None
         await set_task_node_quality_score(task.task_id, result.node_id, result.score, config.psql_db)
-        result.submission.score  = result.score * task.hours_to_complete
+        result.submission.score  = result.score
         logger.info(f"Adding submission {result.submission}")
         await add_submission(result.submission, config.psql_db)
     logger.info(f"The final results are {task_results}")
