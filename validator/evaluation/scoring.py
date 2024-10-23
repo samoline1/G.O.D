@@ -56,6 +56,11 @@ def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerR
     """
     geometric_mean = gmean(np.array([res.score for res in miner_results]))
 
+    # if geometric_mean is inf or negative inf then we set to 1
+    if np.isinf(geometric_mean) or np.isneginf(geometric_mean):
+        geometric_mean = 1
+
+
     for res in miner_results:
         res.score /= geometric_mean
 
