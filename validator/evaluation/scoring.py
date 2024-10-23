@@ -226,6 +226,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
                     dataset=test_data_filepath, **evaluation_params
                 )
             else:
+                logger.info('Since the is_finetune is False, we do not need to run against the test set')
                 synth_eval_result.eval_loss = 0.0
                 synth_eval_result.perplexity = 0.0
                 test_eval_result = EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0)
