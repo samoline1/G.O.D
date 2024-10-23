@@ -211,6 +211,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
         await set_task_node_quality_score(task.task_id, result.node_id, result.score, config.psql_db)
         logger.info(f"Adding submission {result.submission}")
         if result.submission is not None:
+            result.submission.score = result.score
             await add_submission(result.submission, config.psql_db)
     logger.info(f"The final results are {task_results}")
     task.status = TaskStatus.SUCCESS
