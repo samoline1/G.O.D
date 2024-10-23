@@ -84,7 +84,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
 
     task.assigned_miners = selected_miners
     logger.info(f"We have {len(selected_miners)} miners assigned to the task - which is enough to get going 🚀")
-    task.status = TaskStatus.MINERS_SELECTED
+    task.status = TaskStatus.READY
     return task
 
 async def _let_miners_know_to_start_training(task: Task, nodes: list[Node]):
