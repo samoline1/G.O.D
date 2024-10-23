@@ -33,7 +33,11 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     if test_size is None:
         test_size = cst.TRAIN_TEST_SPLIT_PERCENTAGE
     logger.info(f"Loading dataset '{dataset_name}'")
-    dataset = load_dataset(dataset_name)
+    try:
+        dataset = load_dataset(dataset_name)
+    except:
+        logger.info('Assuming main name on a failure')
+        dataset = load_dataset(dataset_name, 'main')
 
     if isinstance(dataset, DatasetDict):
         combined_dataset = concatenate_datasets([split for split in dataset.values()])
