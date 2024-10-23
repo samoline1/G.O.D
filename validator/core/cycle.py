@@ -56,7 +56,8 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
     # Create a copy of the nodes list to avoid mutating the original - better than popping? Not sure
     available_nodes = nodes.copy()
 
-    while len(selected_miners) < cst.MINIMUM_MINER_POOL and available_nodes:
+    num_of_miners_to_try_for = random.randint(3,5)
+    while len(selected_miners) < num_of_miners_to_try_for and available_nodes:
         node = random.choice(available_nodes)
         available_nodes.remove(node)
 
