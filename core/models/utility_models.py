@@ -32,7 +32,7 @@ class TaskStatus(str, Enum):
     IDLE = "idle"
     READY = "ready"
     SUCCESS = "success"
-    MINERS_SELECTED = "miners_selected"
+    DATA_READY = "data_ready"
     EVALUATING = "evaluating"
     TRAINING = "training"
     FAILURE = "failure"

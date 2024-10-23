@@ -32,7 +32,7 @@ async def _run_task_prep(task: Task) -> Task:
     columns_to_sample = [i for i in [task.system, task.instruction, task.input, task.output] if i is not None]
     test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample)
     task.hf_training_repo = train_data
-    task.status = TaskStatus.READY
+    task.status = TaskStatus.DATA_READY
     task.synthetic_data = synth_data
     task.test_data = test_data
     return task
@@ -56,7 +56,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
     # Create a copy of the nodes list to avoid mutating the original - better than popping? Not sure
     available_nodes = nodes.copy()
 
-    num_of_miners_to_try_for = random.randint(3,6)
+    num_of_miners_to_try_for = random.randint(cst.MIN_IDEAL_NUM_MINERS_IN_POOL,cst.MAX_IDEAL_NUM_MINERS_IN_POOL)
     while len(selected_miners) < num_of_miners_to_try_for and available_nodes:
         node = random.choice(available_nodes)
         available_nodes.remove(node)
@@ -113,8 +113,8 @@ async def assign_miners(task: Task, nodes: list[Node], config: Config):
         await sql.update_task(task, config.psql_db)
 
 
-async def _process_pending_tasks(config: Config):
-    pending_tasks = await sql.get_tasks_with_status(status=TaskStatus.PENDING, psql_db=config.psql_db)
+async def _find_miners_for_task(config: Config):
+    pending_tasks = await sql.get_tasks_with_status(status=TaskStatus.DATA_READY, psql_db=config.psql_db)
     nodes = await sql.get_all_miners(psql_db=config.psql_db)
 
     await asyncio.gather(*[assign_miners(task, nodes, config) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
@@ -133,8 +133,8 @@ async def prep_task(task: Task, config: Config):
         task.status = TaskStatus.FAILURE
         await sql.update_task(task, config.psql_db)
 
-async def _process_miner_selected_tasks(config: Config):
-    miner_selected_tasks = await sql.get_tasks_with_status(status=TaskStatus.MINERS_SELECTED, psql_db=config.psql_db)
+async def _process_selected_tasks(config: Config):
+    miner_selected_tasks = await sql.get_tasks_with_status(status=TaskStatus.PENDING, psql_db=config.psql_db)
     await asyncio.gather(*[prep_task(task, config) for task in miner_selected_tasks[: cst.MAX_CONCURRENT_TASK_PREPS]])
 
 async def _start_training_task(task: Task, config: Config) -> None:
@@ -185,8 +185,8 @@ async def process_completed_tasks(config: Config) -> None:
 async def process_pending_tasks(config: Config) -> None:
     while True:
         try:
-            await _process_pending_tasks(config)
-            await _process_miner_selected_tasks(config)
+            await _process_selected_tasks(config)
+            await _find_miners_for_task(config)
             await _process_ready_to_train_tasks(config)
         except Exception as e:
             logger.info(f"There was a problem in processing: {e}")
