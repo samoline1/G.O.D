@@ -29,7 +29,12 @@ def load_prompts() -> Prompts:
 
 
 def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> List[dict]:
-    dataset = load_dataset(dataset_name)
+    try:
+        dataset = load_dataset(dataset_name)
+    except Exception as e:
+        logger.info('We needed to select the dataset config - assuming main')
+        dataset = load_dataset(dataset_name, 'main')
+
     logger.info(f"Dataset: {dataset}")
     train_dataset = dataset["train"]
     train_dataset = train_dataset.remove_columns([col for col in train_dataset.column_names if col not in columns_to_sample])
