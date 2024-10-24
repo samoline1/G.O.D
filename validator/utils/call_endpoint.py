@@ -18,7 +18,6 @@ async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> 
     }
 
     json_data = json.dumps(payload)
-    logger.info(json_data)
 
     async with httpx.AsyncClient(timeout=120) as client:
         async with client.stream("POST", base_url, content=json_data.encode("utf-8"), headers=headers) as response:
