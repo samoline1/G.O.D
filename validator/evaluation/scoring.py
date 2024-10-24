@@ -154,12 +154,19 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
     assert task.task_id is not None
     task_results = []
-    dataset_type = CustomDatasetType(
-        field_system=task.system,
-        field_instruction=task.instruction,
-        field_input=task.input,
-        field_output=task.output
-    )
+    if task.instruction:
+        dataset_type = CustomDatasetType(
+            field_system=task.system,
+            field_instruction=task.instruction,
+            field_input=task.input,
+            field_output=task.output
+        )
+    else:
+        dataset_type = CustomDatasetType(
+            field_system=task.system,
+            field_input=task.input,
+            field_output=task.output
+        )
 
     logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
 
