@@ -77,10 +77,10 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
             if check_the_synthetic_data(json_synthetic_data_point, row.keys()):
                 return json_synthetic_data_point
         except json.JSONDecodeError as e:
-            logger.info('Json Eror was {e}')
+            logger.info(f'Json Eror was {e}')
             pass
         except Exception as e:
-            logger.info('Erorr was {e}')
+            logger.info(f'Erorr was {e}')
             pass
         return None  # Return None if there's an error or invalid data
 
