@@ -5,11 +5,21 @@ from typing import List, Optional
 
 import httpx
 from fiber.logging_utils import get_logger
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 
 logger = get_logger(__name__)
 
+# Create a retry decorator with exponential backoff
+retry_with_backoff = retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.RequestError)),
+    reraise=True
+)
 
+
+@retry_with_backoff
 async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> str:
     headers = {
         "Accept": "application/json",
@@ -25,6 +35,7 @@ async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> 
             return "".join([chunk async for chunk in _process_response(response)])
 
 
+@retry_with_backoff
 async def process_non_stream(base_url: str, token: Optional[str], payload: dict[str, Any]) -> dict[str, Any]:
     headers = {
         "Accept": "application/json",
@@ -41,6 +52,7 @@ async def process_non_stream(base_url: str, token: Optional[str], payload: dict[
 
 # If this it to talk to the miner, its already in fiber
 # We can change to that once we add bittensor stuff (i know that's why its like this ATM)
+@retry_with_backoff
 async def process_non_stream_get(base_url: str, token: Optional[str]) -> dict[str, Any]:
     headers = {
         "Accept": "application/json",
