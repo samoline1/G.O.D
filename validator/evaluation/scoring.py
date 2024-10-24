@@ -218,6 +218,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
                 "model": submission_repo,
                 "dataset_type": dataset_type,
             }
+            logger.info(f"Attempting with {evaluation_params}")
 
             assert task.synthetic_data is not None
             assert task.test_data is not None
