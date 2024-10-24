@@ -5,6 +5,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 from minio import Minio
 
+from fiber.logging_utils import get_logger
+
+
+logger = get_logger(__name__)
 
 # NOTE: wen type hints
 # NOTE: POINTS:
@@ -23,11 +27,16 @@ class AsyncMinioClient:
     async def upload_file(self, bucket_name, object_name, file_path):
         func = self.client.fput_object
         args = (bucket_name, object_name, file_path)
-        return await self.loop.run_in_executor(self.executor, func, *args)
+        logger.info('Attempting to upload')
+        try:
+            return await self.loop.run_in_executor(self.executor, func, *args)
+        except Exception as e:
+            logger.info(f"There was an issue with uploading {e}")
 
     async def download_file(self, bucket_name, object_name, file_path):
         func = self.client.fget_object
         args = (bucket_name, object_name, file_path)
+        logger.info('Attempting to download')
         return await self.loop.run_in_executor(self.executor, func, *args)
 
     async def delete_file(self, bucket_name, object_name):
@@ -38,6 +47,7 @@ class AsyncMinioClient:
     async def list_objects(self, bucket_name, prefix=None, recursive=True):
         func = self.client.list_objects
         args = (bucket_name, prefix, recursive)
+        logger.info('Listing objects')
         return await self.loop.run_in_executor(self.executor, func, *args)
 
     async def ensure_bucket_exists(self, bucket_name):
