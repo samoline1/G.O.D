@@ -47,6 +47,7 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     logger.info(f"Combined dataset size: {len(combined_dataset)}")
     logger.info(f"Splitting combined dataset into train and test with test size {test_size}")
 
+    test_size = min(int(len(combined_dataset) * cst.TRAIN_TEST_SPLIT_PERCENTAGE), cst.MAX_SYNTH_DATA_POINTS)
     split_dataset = combined_dataset.train_test_split(test_size=test_size, shuffle=True, seed=42)
     logger.info(f"Train set size: {len(split_dataset['train'])}")
     logger.info(f"Test set size: {len(split_dataset['test'])}")
