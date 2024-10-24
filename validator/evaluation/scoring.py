@@ -165,6 +165,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
         dataset_type = CustomDatasetType(
             field_system=task.system,
             field_input=task.input,
+            field_instruction=task.system,
             field_output=task.output
         )
 
