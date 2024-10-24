@@ -23,6 +23,7 @@ dependencies = [
     "uvicorn==0.31.0",
     "datasets",
     "docker",
+    "tenacity",
     "pandas",
     "minio",
     "scipy",
