@@ -29,7 +29,9 @@ class AsyncMinioClient:
         args = (bucket_name, object_name, file_path)
         logger.info('Attempting to upload')
         try:
-            return await self.loop.run_in_executor(self.executor, func, *args)
+            result = await self.loop.run_in_executor(self.executor, func, *args)
+            logger.info(f"The bucket_name is {bucket_name} and the result was {result}")
+            return result
         except Exception as e:
             logger.info(f"There was an issue with uploading {e}")
 
