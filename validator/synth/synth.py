@@ -86,6 +86,7 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
         return None  # Return None if there's an error or invalid data
 
     for i in range(0, len(sampled_data), SYNTH_GEN_BATCH_SIZE):
+        logger.info(f"Synth index {i} of {sampled_data}")
         batch = sampled_data[i : i + SYNTH_GEN_BATCH_SIZE]
         tasks = [process_row(row) for row in batch]
         results = await asyncio.gather(*tasks)
