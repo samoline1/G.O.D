@@ -70,6 +70,7 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
             "messages": [message.dict() for message in messages],
             "model": SYNTH_MODEL,
             "temperature": SYNTH_MODEL_TEMPERATURE,
+            "stream": True
         }
         try:
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
