@@ -16,5 +16,5 @@ sample_packing: false
 eval_sample_packing: false
 pad_to_sequence_len: true
 gradient_accumulation_steps: 4
-micro_batch_size: 8
+micro_batch_size: 2
 num_epochs: 1
