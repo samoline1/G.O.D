@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from typing import Dict
 from typing import List
@@ -439,7 +440,7 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
         )
 
 
-async def get_aggregate_scores_since(start_time: str, psql_db) -> list[TaskResults]:
+async def get_aggregate_scores_since(start_time: datetime, psql_db) -> list[TaskResults]:
     """
     Get aggregate scores for all completed tasks since the given start time.
     Only includes tasks that have at least one node with score > 0.
