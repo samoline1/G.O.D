@@ -439,50 +439,71 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
         )
 
 
-
 async def get_aggregate_scores_since(start_time: str, psql_db) -> list[TaskResults]:
     """
     Get aggregate scores for all completed tasks since the given start time.
-    Only includes tasks that have at least one node with a score > 0.
-
-    Args:
-        start_time: ISO format timestamp string to filter tasks created after this time
-        psql_db: Database connection
-    Returns:
-        List of TaskResults containing task info and node scores
+    Only includes tasks that have at least one node with score > 0.
     """
     async with await psql_db.connection() as connection:
         rows = await connection.fetch(
             """
-            WITH scored_tasks AS (
-                -- First get tasks that have at least one node with score > 0
-                SELECT DISTINCT t.*
-                FROM tasks t
-                INNER JOIN task_nodes tn ON t.task_id = tn.task_id
-                WHERE t.status = 'SUCCESS'
-                AND t.created_timestamp >= $1::timestamp
-                AND EXISTS (
-                    SELECT 1
-                    FROM task_nodes tn2
-                    WHERE tn2.task_id = t.task_id
-                    AND tn2.quality_score > 0
-                )
-            )
             SELECT
-                t.*,
+                t.task_id,
+                t.model_id,
+                t.ds_id,
+                t.system,
+                t.instruction,
+                t.input,
+                t.output,
+                t.status,
+                t.test_data,
+                t.synthetic_data,
+                t.hf_training_repo,
+                t.miner_scores,
+                t.hours_to_complete,
+                t.created_timestamp,
+                t.updated_timestamp,
+                t.started_timestamp,
+                t.completed_timestamp,
                 COALESCE(
                     json_agg(
                         json_build_object(
-                            'task_id', tn.task_id,
+                            'task_id', t.task_id::text,
                             'node_id', tn.node_id,
                             'quality_score', tn.quality_score
                         )
+                        ORDER BY tn.quality_score DESC NULLS LAST
                     ) FILTER (WHERE tn.node_id IS NOT NULL),
                     '[]'
                 ) as node_scores
-            FROM scored_tasks t
+            FROM tasks t
             LEFT JOIN task_nodes tn ON t.task_id = tn.task_id
-            GROUP BY t.task_id
+            WHERE t.status = 'SUCCESS'
+            AND t.created_timestamp >= $1::timestamp
+            AND EXISTS (
+                SELECT 1
+                FROM task_nodes tn2
+                WHERE tn2.task_id = t.task_id
+                AND tn2.quality_score > 0
+            )
+            GROUP BY
+                t.task_id,
+                t.model_id,
+                t.ds_id,
+                t.system,
+                t.instruction,
+                t.input,
+                t.output,
+                t.status,
+                t.test_data,
+                t.synthetic_data,
+                t.hf_training_repo,
+                t.miner_scores,
+                t.hours_to_complete,
+                t.created_timestamp,
+                t.updated_timestamp,
+                t.started_timestamp,
+                t.completed_timestamp
             ORDER BY t.created_timestamp DESC
             """,
             start_time
@@ -494,4 +515,5 @@ async def get_aggregate_scores_since(start_time: str, psql_db) -> list[TaskResul
             task = Task(**task_dict)
             node_scores = [TaskNode(**node) for node in row['node_scores']]
             results.append(TaskResults(task=task, node_scores=node_scores))
+
         return results
