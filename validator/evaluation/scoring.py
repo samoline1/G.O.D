@@ -35,11 +35,9 @@ def get_task_work_score(task: Task) -> int:
 async def scoring_aggregation(psql_db):
     logger.info('Starting to do scoring aggregation')
     a_few_days_ago = datetime.now() - timedelta(days=3)
-    task_results = await get_aggregate_scores_since(a_few_days_ago,psql_db)
-    node_aggregations = {int: NodeAggregationResult}
+    task_results = await get_aggregate_scores_since(a_few_days_ago, psql_db)
+    node_aggregations = {}
     total_work_score = 0
-
-
     for task_res in task_results:
         task_work_score = get_task_work_score(task_res.task)
         total_work_score += task_work_score
@@ -47,22 +45,24 @@ async def scoring_aggregation(psql_db):
             if node_score.node_id in node_aggregations:
                 node_aggregation_result = node_aggregations[node_score.node_id]
             else:
-                node_aggregation_result = NodeAggregationResult(node_id=node_score.node_id, work_sum = 0, summed_scores = 0, raw_scores = [])
-
+                node_aggregation_result = NodeAggregationResult(
+                    node_id=node_score.node_id,
+                    work_sum=0,
+                    summed_scores=0,
+                    raw_scores=[]
+                )
+                node_aggregations[node_score.node_id] = node_aggregation_result
             if node_score.quality_score > cts.SCORE_THRESHOLD:
                 node_aggregation_result.work_sum += task_work_score
             node_aggregation_result.summed_scores += node_score.quality_score - cts.SCORE_THRESHOLD
             node_aggregation_result.raw_scores.append(node_score.quality_score)
 
-    for node in node_aggregations:
-        node_aggregation = node_aggregations[node]
-        logger.info(node)
+    for node_id, node_aggregation in node_aggregations.items():
+        logger.info(node_id)
         logger.info(node_aggregation)
         node_aggregation.work_score = node_aggregation.work_sum / total_work_score
         node_aggregation.average_score = np.mean(node_aggregation.raw_scores)
-        logger.info(f"The final scores for node {node} are Average Score: {node_aggregation.average_score}, Work Score: {node_aggregation.work_score} Task scores: {node_aggregation.work_sum}")
-
-
+        logger.info(f"The final scores for node {node_id} are Average Score: {node_aggregation.average_score}, Work Score: {node_aggregation.work_score} Task scores: {node_aggregation.work_sum}")
 
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
