@@ -62,7 +62,7 @@ async def scoring_aggregation(psql_db):
         logger.info(node_aggregation)
         node_aggregation.work_score = node_aggregation.work_sum / total_work_score
         node_aggregation.average_score = np.mean(node_aggregation.raw_scores)
-        logger.info(f"The final scores for node {node_id} are Average Score: {node_aggregation.average_score}, Work Score: {node_aggregation.work_score} Task scores: {node_aggregation.work_sum}")
+        logger.info(f"The final scores for node {node_id} are Average Score: {node_aggregation.average_score}, Work Score: {node_aggregation.work_score} Task scores: {node_aggregation.summed_scores}")
 
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
