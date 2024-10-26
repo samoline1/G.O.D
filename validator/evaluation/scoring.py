@@ -67,6 +67,7 @@ async def scoring_aggregation(psql_db):
         score = node_aggregation.work_score * node_aggregation.average_score * node_aggregation.summed_scores
         min_score = min(min_score, score)
         final_scores.append((node_id, score))
+        logger.info(node_aggregation)
 
     shift = abs(min_score) + 1e-10 if min_score < 0 else 0
     total = sum(score + shift for _, score in final_scores)
