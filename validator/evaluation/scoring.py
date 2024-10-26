@@ -10,10 +10,10 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
-from validator.core.models import Submission, TaskResults
+from validator.core.models import Submission
 from validator.core.models import Task
 from validator.core.models import MinerResults
-from validator.db.sql import add_submission, get_aggregate_scores_since, get_task_nodes_with_scores, get_tasks_by_status_and_start_time
+from validator.db.sql import add_submission, get_aggregate_scores_since
 from validator.db.sql import get_miners_assigned_to_task
 from validator.db.sql import set_task_node_quality_score
 from validator.evaluation.docker_evaluation import run_evaluation_docker
