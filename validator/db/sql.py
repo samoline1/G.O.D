@@ -440,10 +440,19 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
         )
 
 
+from datetime import datetime, timedelta
+import json
+
 async def get_aggregate_scores_since(start_time: datetime, psql_db) -> list[TaskResults]:
     """
     Get aggregate scores for all completed tasks since the given start time.
     Only includes tasks that have at least one node with score > 0.
+
+    Args:
+        start_time: datetime object to filter tasks created after this time
+        psql_db: Database connection
+    Returns:
+        List of TaskResults containing task info and node scores
     """
     async with await psql_db.connection() as connection:
         rows = await connection.fetch(
@@ -475,12 +484,11 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db) -> list[Task
                         )
                         ORDER BY tn.quality_score DESC NULLS LAST
                     ) FILTER (WHERE tn.node_id IS NOT NULL),
-                    '[]'
+                    '[]'::json
                 ) as node_scores
             FROM tasks t
             LEFT JOIN task_nodes tn ON t.task_id = tn.task_id
-            WHERE t.status = 'SUCCESS'
-            AND t.created_timestamp >= $1::timestamp
+            WHERE t.created_timestamp >= $1
             AND EXISTS (
                 SELECT 1
                 FROM task_nodes tn2
@@ -512,9 +520,29 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db) -> list[Task
 
         results = []
         for row in rows:
-            task_dict = {k: v for k, v in dict(row).items() if k != 'node_scores'}
+            # Convert row to dict and handle the node_scores separately
+            row_dict = dict(row)
+
+            # Create Task object without node_scores
+            task_dict = {k: v for k, v in row_dict.items() if k != 'node_scores'}
             task = Task(**task_dict)
-            node_scores = [TaskNode(**node) for node in row['node_scores']]
+
+            # Parse node_scores - ensure we're working with a list of dicts
+            node_scores_data = row_dict['node_scores']
+            if isinstance(node_scores_data, str):
+                # If it's a string, parse it as JSON
+                node_scores_data = json.loads(node_scores_data)
+
+            # Create TaskNode objects
+            node_scores = [
+                TaskNode(
+                    task_id=str(node['task_id']),
+                    node_id=int(node['node_id']),
+                    quality_score=float(node['quality_score']) if node['quality_score'] is not None else None
+                )
+                for node in node_scores_data
+            ]
+
             results.append(TaskResults(task=task, node_scores=node_scores))
 
         return results

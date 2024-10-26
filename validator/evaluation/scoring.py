@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 
 async def scoring_aggregation(psql_db):
     logger.info('Starting to do scoring aggregation')
-    a_few_days_ago = datetime.now() - timedelta(days=3)
+    a_few_days_ago = datetime.now() - timedelta(days=10)
     task_results = await get_aggregate_scores_since(a_few_days_ago,psql_db)
     logger.info(f'Here we my task resulst {task_results}')
     for task_res in task_results:
