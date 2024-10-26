@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing_extensions import final
 from scipy.stats import gmean
 import numpy as np
 from fiber.logging_utils import get_logger
@@ -57,11 +58,23 @@ async def scoring_aggregation(psql_db):
             node_aggregation_result.summed_scores += node_score.quality_score - cts.SCORE_THRESHOLD
             node_aggregation_result.raw_scores.append(node_score.quality_score)
 
+
+    final_scores = []  # Store tuples of (node_id, score) for efficient processing
+    min_score = float('inf')
     for node_id, node_aggregation in node_aggregations.items():
         node_aggregation.work_score = node_aggregation.work_sum / total_work_score
         node_aggregation.average_score = np.mean(node_aggregation.raw_scores)
-        logger.info(node_aggregation)
-        logger.info(f"The final scores for node {node_id} are Average Score: {node_aggregation.average_score}, Work Score: {node_aggregation.work_score} Task scores: {node_aggregation.summed_scores}")
+        score = node_aggregation.work_score * node_aggregation.average_score * node_aggregation.summed_scores
+        min_score = min(min_score, score)
+        final_scores.append((node_id, score))
+
+    shift = abs(min_score) + 1e-10 if min_score < 0 else 0
+    total = sum(score + shift for _, score in final_scores)
+
+    for node_id, score in final_scores:
+        normalized_score = (score + shift) / total if total > 0 else 1.0 / len(final_scores)
+        node_aggregations[node_id].final_score = normalized_score
+        logger.info(f'Final normalized score for node {node_id}: {normalized_score}')
 
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
