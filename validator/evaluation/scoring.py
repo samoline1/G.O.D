@@ -37,7 +37,7 @@ def get_task_work_score(task: Task) -> int:
 
 async def scoring_aggregation(psql_db):
     logger.info('Starting to do scoring aggregation')
-    a_few_days_ago = datetime.now() - timedelta(days=7)
+    a_few_days_ago = datetime.now() - timedelta(days=3)
     task_results = await get_aggregate_scores_since(a_few_days_ago, psql_db)
     node_aggregations = {}
     total_work_score = 0
