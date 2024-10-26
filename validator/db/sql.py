@@ -6,7 +6,7 @@ from uuid import UUID
 
 from asyncpg.connection import Connection
 
-from validator.core.models import Node
+from validator.core.models import Node, TaskNode, TaskResults
 from validator.core.models import Submission
 from validator.core.models import Task
 from validator.db.database import PSQLDB
@@ -437,3 +437,60 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
             """,
             task_id,
         )
+
+async def get_aggregate_scores_since(start_time: str, psql_db) -> list[TaskResults]:
+    """
+    Get aggregate scores for all completed tasks since the given start time.
+    Only includes tasks that have at least one node with a score > 0.
+
+    Args:
+        start_time: ISO format timestamp string to filter tasks created after this time
+        psql_db: Database connection
+    Returns:
+        List of TaskResults containing task info and node scores
+    """
+    async with await psql_db.connection() as connection:
+        rows = await connection.fetch(
+            """
+            WITH scored_tasks AS (
+                -- First get tasks that have at least one node with score > 0
+                SELECT DISTINCT t.*
+                FROM tasks t
+                INNER JOIN task_nodes tn ON t.task_id = tn.task_id
+                WHERE t.status = 'SUCCESS'
+                AND t.created_timestamp >= $1::timestamp
+                AND EXISTS (
+                    SELECT 1
+                    FROM task_nodes tn2
+                    WHERE tn2.task_id = t.task_id
+                    AND tn2.quality_score > 0
+                )
+            )
+            SELECT
+                t.*,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'task_id', tn.task_id,
+                            'node_id', tn.node_id,
+                            'quality_score', tn.quality_score
+                        )
+                    ) FILTER (WHERE tn.node_id IS NOT NULL),
+                    '[]'
+                ) as node_scores
+            FROM scored_tasks t
+            LEFT JOIN task_nodes tn ON t.task_id = tn.task_id
+            GROUP BY t.task_id
+            ORDER BY t.created_timestamp DESC
+            """,
+            start_time
+        )
+
+        results = []
+        for row in rows:
+            task_dict = {k: v for k, v in dict(row).items() if k != 'node_scores'}
+            task = Task(**task_dict)
+            node_scores = [TaskNode(**node) for node in row['node_scores']]
+            results.append(TaskResults(task=task, node_scores=node_scores))
+
+        return results

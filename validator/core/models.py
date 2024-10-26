@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 
+
 class Task(BaseModel):
     task_id: Optional[UUID] = None
     model_id: str
@@ -30,6 +31,15 @@ class Task(BaseModel):
     hours_to_complete: int
     best_submission_repo: Optional[str] = None
     user_id: Optional[str] = None
+
+class TaskNode(BaseModel):
+    task_id: str
+    node_id: int
+    quality_score: float
+
+class TaskResults(BaseModel):
+    task: Task
+    node_scores: list[TaskNode]
 
 
 class Node(BaseModel):

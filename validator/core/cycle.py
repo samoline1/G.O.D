@@ -16,7 +16,7 @@ from validator.core.config import Config
 from validator.core.models import Node
 from validator.core.models import Task
 from validator.db import sql
-from validator.evaluation.scoring import evaluate_and_score
+from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream
 
@@ -213,6 +213,7 @@ async def validator_cycle(config: Config) -> None:
 async def run_validator_cycles(config: Config) -> None:
     while True:
         try:
+            await scoring_aggregation(config.psql_db)
             await validator_cycle(config)
         except Exception as e:
             logger.error(f"Validator cycle crashed: {e}", exc_info=True)

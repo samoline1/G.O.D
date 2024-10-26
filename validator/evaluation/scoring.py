@@ -10,16 +10,24 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
-from validator.core.models import Submission
+from validator.core.models import Submission, TaskResults
 from validator.core.models import Task
 from validator.core.models import MinerResults
-from validator.db.sql import add_submission
+from validator.db.sql import add_submission, get_aggregate_scores_since, get_task_nodes_with_scores, get_tasks_by_status_and_start_time
 from validator.db.sql import get_miners_assigned_to_task
 from validator.db.sql import set_task_node_quality_score
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.utils.call_endpoint import process_non_stream_get
+from datetime import timedelta
 
 logger = get_logger(__name__)
+
+
+async def scoring_aggregation(psql_db):
+    a_few_days_ago = (datetime.now() - timedelta(days=3)).isoformat()
+    task_results = await get_aggregate_scores_since(a_few_days_ago,psql_db)
+    for task_res in task_results:
+        logger.info(task_res)
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     """Calculate weighted average of losses with more weight on test loss."""
