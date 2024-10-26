@@ -488,7 +488,8 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db) -> list[Task
                 ) as node_scores
             FROM tasks t
             LEFT JOIN task_nodes tn ON t.task_id = tn.task_id
-            WHERE t.created_timestamp >= $1
+            WHERE t.status = 'success'
+            AND t.created_timestamp >= $1
             AND EXISTS (
                 SELECT 1
                 FROM task_nodes tn2
