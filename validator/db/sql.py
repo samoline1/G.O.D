@@ -438,6 +438,8 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
             task_id,
         )
 
+
+
 async def get_aggregate_scores_since(start_time: str, psql_db) -> list[TaskResults]:
     """
     Get aggregate scores for all completed tasks since the given start time.
@@ -492,5 +494,4 @@ async def get_aggregate_scores_since(start_time: str, psql_db) -> list[TaskResul
             task = Task(**task_dict)
             node_scores = [TaskNode(**node) for node in row['node_scores']]
             results.append(TaskResults(task=task, node_scores=node_scores))
-
         return results
