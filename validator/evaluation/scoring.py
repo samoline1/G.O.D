@@ -55,6 +55,7 @@ async def scoring_aggregation(psql_db):
                 node_aggregations[node_score.node_id] = node_aggregation_result
             if node_score.quality_score > cts.TASK_SCORE_THRESHOLD:
                 node_aggregation_result.work_sum += task_work_score
+                node_aggregation_result.work_sums.append(task_work_score)
             node_aggregation_result.summed_scores += max(cts.MIN_TASK_SCORE, node_score.quality_score - cts.TASK_SCORE_THRESHOLD)
             node_aggregation_result.raw_scores.append(node_score.quality_score)
 
