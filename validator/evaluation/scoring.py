@@ -43,7 +43,7 @@ async def scoring_aggregation(psql_db):
         task_work_score = get_task_work_score(task_res.task)
         total_work_score += task_work_score
         for node_score in task_res.node_scores:
-            if not node_score.node_id in node_aggregations:
+            if node_score.node_id in node_aggregations:
                 node_aggregation_result = node_aggregations[node_score.node_id]
             else:
                 node_aggregation_result = NodeAggregationResult(node_id=node_score.node_id, work_sum = 0, summed_scores = 0, raw_scores = [])
