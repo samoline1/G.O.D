@@ -10,7 +10,7 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
-from validator.core.models import Submission
+from validator.core.models import Node, NodeAggregationResult, Submission
 from validator.core.models import Task
 from validator.core.models import MinerResults
 from validator.db.sql import add_submission, get_aggregate_scores_since
@@ -19,17 +19,48 @@ from validator.db.sql import set_task_node_quality_score
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.utils.call_endpoint import process_non_stream_get
 from datetime import timedelta
+import re
 
 logger = get_logger(__name__)
 
 
+def get_task_work_score(task: Task) -> int:
+    hours = task.hours_to_complete
+    model = task.model_id
+    model_size = int(re.search(r'(\d+)(?=B)', model).group(0))
+    return hours * model_size
+
+
 async def scoring_aggregation(psql_db):
     logger.info('Starting to do scoring aggregation')
-    a_few_days_ago = datetime.now() - timedelta(days=10)
+    a_few_days_ago = datetime.now() - timedelta(days=3)
     task_results = await get_aggregate_scores_since(a_few_days_ago,psql_db)
-    logger.info(f'Here we my task resulst {task_results}')
+    node_aggregations = {int: NodeAggregationResult}
+    total_work_score = 0
+
+
     for task_res in task_results:
-        logger.info(task_res)
+        task_work_score = get_task_work_score(task_res.task)
+        total_work_score += task_work_score
+        for node_score in task_res.node_scores:
+            if not node_score.node_id in node_aggregations:
+                node_aggregation_result = node_aggregations[node_score.node_id]
+            else:
+                node_aggregation_result = NodeAggregationResult(node_id=node_score.node_id, work_sum = 0, summed_scores = 0, raw_scores = [])
+
+            if node_score.quality_score > cts.SCORE_THRESHOLD:
+                node_aggregation_result.work_sum += task_work_score
+            node_aggregation_result.summed_scores += node_score.quality_score - cts.SCORE_THRESHOLD
+            node_aggregation_result.raw_scores.append(node_score.quality_score)
+
+    for node in node_aggregations:
+        node_aggregation = node_aggregations[node]
+        node_aggregation.work_score = node_aggregation.work_sum / total_work_score
+        node_aggregation.average_score = np.mean(node_aggregation.raw_scores)
+        logger.info(f"The final scores for node {node} are Average Score: {node_aggregation.average_score}, Work Score: {node_aggregation.work_score} Task scores: {node_aggregation.work_sum}")
+
+
+
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     """Calculate weighted average of losses with more weight on test loss."""

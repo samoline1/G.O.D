@@ -41,6 +41,15 @@ class TaskResults(BaseModel):
     task: Task
     node_scores: list[TaskNode]
 
+class NodeAggregationResult(BaseModel):
+    work_sum: int = 0
+    work_score: Optional[float] = 0.0
+    average_score: Optional[float] = 0.0
+    summed_scores: float =  0.0
+    final_score: Optional[float] = 0.0
+    raw_scores: list[float] = []
+    node_id: int
+
 
 class Node(BaseModel):
     node_id: int
