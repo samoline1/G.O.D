@@ -27,7 +27,8 @@ logger = get_logger(__name__)
 def get_task_work_score(task: Task) -> int:
     hours = task.hours_to_complete
     model = task.model_id
-    model_size = int(re.search(r'(\d+)(?=B)', model).group(0))
+    model_size = re.search(r'(\d+)(?=[bB])', model)
+    model_size = int(model_size.group(1)) if model_size else 1
     return hours * model_size
 
 
