@@ -30,7 +30,8 @@ def get_task_work_score(task: Task) -> int:
     model = task.model_id
     model_size = re.search(r'(\d+)(?=[bB])', model)
     model_size = int(model_size.group(1)) if model_size else 1
-    logger.info(f"model: {model} size {model_size} hours: {hours} data: {task.ds_id}")
+    logger.info(f"Task_id {task.task_id} model: {model} size {model_size} hours: {hours} data: {task.ds_id}")
+
     return hours * model_size
 
 
