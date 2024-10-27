@@ -40,7 +40,7 @@ def calculate_adjusted_task_score(quality_score: float, task_work_score: float) 
     return max(cts.MIN_TASK_SCORE, quality_score - cts.TASK_SCORE_THRESHOLD) * task_work_score
 
 def update_node_aggregation(
-    node_aggregations: Dict[int, NodeAggregationResult],
+    node_aggregations: dict[int, NodeAggregationResult],
     node_score: TaskNode,
     task_work_score: float
 ) -> None:
@@ -59,12 +59,12 @@ def update_node_aggregation(
     node_result.task_work_scores.append(task_work_score)
 
 def calculate_node_quality_scores(
-    node_aggregations: Dict[int, NodeAggregationResult]
-) -> Tuple[List[Tuple[int, float]], float]:
+    node_aggregations: dict[int, NodeAggregationResult]
+) -> tuple[list[tuple[int, float]], float]:
     """Calculate quality scores for each node."""
     assert node_aggregations, "Node aggregations dictionary cannot be empty"
 
-    final_scores: List[Tuple[int, float]] = []
+    final_scores: list[tuple[int, float]] = []
     min_score = float('inf')
 
     for node_id, node_agg in node_aggregations.items():
@@ -79,9 +79,9 @@ def calculate_node_quality_scores(
     return final_scores, min_score
 
 def normalise_scores(
-    final_scores: List[Tuple[int, float]],
+    final_scores: list[tuple[int, float]],
     min_score: float,
-    node_aggregations: Dict[int, NodeAggregationResult]
+    node_aggregations: dict[int, NodeAggregationResult]
 ) -> None:
     """Normalize scores and update node emission values."""
     assert final_scores, "Final scores list cannot be empty"
@@ -98,10 +98,10 @@ async def scoring_aggregation(psql_db: str) -> None:
     """Aggregate and normalize scores across all nodes."""
     try:
         a_few_days_ago = datetime.now() - timedelta(days=3)
-        task_results: List[TaskResults] = await get_aggregate_scores_since(a_few_days_ago, psql_db)
+        task_results: list[TaskResults] = await get_aggregate_scores_since(a_few_days_ago, psql_db)
         assert task_results, "No task results found"
 
-        node_aggregations: Dict[int, NodeAggregationResult] = {}
+        node_aggregations: dict[int, NodeAggregationResult] = {}
 
         for task_res in task_results:
             task_work_score = get_task_work_score(task_res.task)
@@ -127,7 +127,7 @@ def calculate_scaled_score(weighted_loss: float, scale_factor: float) -> float:
     assert scale_factor > 0, "Scale factor must be positive"
     return float(np.exp(-weighted_loss * scale_factor))
 
-def compute_adaptive_scale_factor(miner_results: List[MinerResults]) -> float:
+def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
     """Compute scale factor based only on finetuned submissions."""
     finetuned_results = [
         res for res in miner_results
@@ -156,7 +156,7 @@ def compute_adaptive_scale_factor(miner_results: List[MinerResults]) -> float:
     logger.info(f"Computed scale factor: {scale:.4f}")
     return scale
 
-def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: List[MinerResults]) -> List[MinerResults]:
+def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerResults]) -> list[MinerResults]:
     """Adjusts scores to have geometric mean of 1.0 for finetuned submissions only."""
     valid_scores = [
         res.score for res in miner_results
@@ -192,7 +192,7 @@ def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: List[MinerR
 
     return miner_results
 
-def add_raw_scores_to_miner_results(miner_results: List[MinerResults]) -> List[MinerResults]:
+def add_raw_scores_to_miner_results(miner_results: list[MinerResults]) -> list[MinerResults]:
     """Calculate scores using only finetuned submissions."""
     logger.info("Beginning score calculation...")
 
@@ -238,8 +238,8 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     """Main evaluation and scoring function."""
     assert task.task_id is not None, "Task ID must be present"
 
-    miner_pool: List[Node] = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
-    task_results: List[MinerResults] = []
+    miner_pool: list[Node] = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
+    task_results: list[MinerResults] = []
 
     if task.instruction:
         dataset_type = CustomDatasetType(
