@@ -66,6 +66,7 @@ async def scoring_aggregation(psql_db):
     for node_id, node_aggregation in node_aggregations.items():
         node_aggregation.average_score = np.mean(node_aggregation.raw_scores)
         score =  node_aggregation.summed_scores * node_aggregation.average_score
+        node_aggregation.work_sum = np.sum(node_aggregation.work_sums)
         node_aggregation.final_score = score
         min_score = min(min_score, score)
         final_scores.append((node_id, score))
