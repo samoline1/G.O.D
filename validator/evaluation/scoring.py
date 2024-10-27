@@ -358,7 +358,7 @@ async def get_repo_creation_time(repo_name: str) -> datetime:
         logger.error(f"Error fetching repo creation time for {repo_name}: {e}")
     return datetime.max
 
-def group_by_losses(task_results: list[MinerResults]) -> Dict[Tuple[float, float], List[Tuple[int, str]]]:
+def group_by_losses(task_results: list[MinerResults]) -> dict[tuple[float, float], list[tuple[int, str]]]:
     """Group submissions by their loss values."""
     loss_groups: dict[tuple[float, float], list[tuple[int, str]]] = {}
 
