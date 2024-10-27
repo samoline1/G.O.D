@@ -70,7 +70,6 @@ async def scoring_aggregation(psql_db):
         node_aggregation.final_score = score
         min_score = min(min_score, score)
         final_scores.append((node_id, score))
-        logger.info(node_aggregation)
 
     shift = abs(min_score) + 1e-10 if min_score < 0 else 0
     total = sum(score + shift for _, score in final_scores)
@@ -78,7 +77,7 @@ async def scoring_aggregation(psql_db):
     for node_id, score in final_scores:
         normalized_score = (score + shift) / total if total > 0 else 1.0 / len(final_scores)
         node_aggregations[node_id].final_score = normalized_score
-        logger.info(f'Final normalized score for node {node_id}: {normalized_score}')
+        logger.info(node_aggregations[node_id])
 
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
