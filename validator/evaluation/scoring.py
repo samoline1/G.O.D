@@ -35,6 +35,7 @@ def get_task_work_score(task: Task) -> float:
     return np.log(hours * model_size)
 
 
+# coming back to tidy this up tomorrow - fresh mind for beautiful code and all that jazz, but this works well overall
 async def scoring_aggregation(psql_db):
     logger.info('Starting to do scoring aggregation')
     a_few_days_ago = datetime.now() - timedelta(days=3)
@@ -61,7 +62,7 @@ async def scoring_aggregation(psql_db):
             node_aggregation_result.work_sums.append(task_work_score)
 
 
-    final_scores = []  # Store tuples of (node_id, score) for efficient processing
+    final_scores = []
     min_score = float('inf')
     for node_id, node_aggregation in node_aggregations.items():
         node_aggregation.average_score = np.mean(node_aggregation.raw_scores)
@@ -79,7 +80,6 @@ async def scoring_aggregation(psql_db):
             node_aggregations[node_id].final_score = normalized_score
             logger.info(node_aggregations[node_id])
 
-        # Print sorted scores
     sorted_scores = sorted([(node_id, node_aggregations[node_id].final_score)
                               for node_id in node_aggregations],
                               key=lambda x: x[1], reverse=True)
