@@ -1,10 +1,7 @@
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional
-from typing_extensions import final
 from scipy.stats import gmean
 import numpy as np
 from fiber.logging_utils import get_logger
-from uuid import UUID
 
 from core.models.payload_models import EvaluationResult
 import validator.core.constants as cts
@@ -19,6 +16,7 @@ from validator.db.sql import get_miners_assigned_to_task
 from validator.db.sql import set_task_node_quality_score
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.utils.call_endpoint import process_non_stream_get
+import re
 
 logger = get_logger(__name__)
 
