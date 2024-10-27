@@ -234,151 +234,130 @@ def add_raw_scores_to_miner_results(miner_results: list[MinerResults]) -> list[M
 
     return miner_results
 
-async def evaluate_and_score(task: Task, config: Config) -> Task:
-    """Main evaluation and scoring function."""
-    assert task.task_id is not None, "Task ID must be present"
+def _get_dataset_type(task: Task) -> CustomDatasetType:
+    return CustomDatasetType(
+        field_system=task.system,
+        field_instruction=task.instruction or task.input,
+        field_input=task.input,
+        field_output=task.output
+    )
 
-    miner_pool: list[Node] = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
-    task_results: list[MinerResults] = []
+def _create_failed_miner_result(node_id: int) -> MinerResults:
+    return MinerResults(
+        node_id=node_id,
+        test_loss=np.nan,
+        synth_loss=np.nan,
+        is_finetune=False,
+        submission=None
+    )
 
-    if task.instruction:
-        dataset_type = CustomDatasetType(
-            field_system=task.system,
-            field_instruction=task.instruction,
-            field_input=task.input,
-            field_output=task.output
+async def _get_submission_repo(miner: Node, task_id: str) -> str | None:
+    url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task_id}"
+    try:
+        return str(await process_non_stream_get(url, None))
+    except Exception as e:
+        logger.error(f"Failed to get submission for miner {miner.node_id}: {e}")
+        return None
+
+async def _evaluate_submission(
+    task: Task,
+    submission_repo: str,
+    dataset_type: CustomDatasetType
+) -> tuple[EvaluationResult, EvaluationResult]:
+    evaluation_params = {
+        "file_format": FileFormat.JSON,
+        "original_model": task.model_id,
+        "model": submission_repo,
+        "dataset_type": dataset_type,
+    }
+
+    assert task.synthetic_data is not None,  "Synthetic data shouldn't be none"
+    assert task.test_data is not None,  "Test data shouldn't be none"
+    synthetic_data_filepath = await download_s3_file(task.synthetic_data)
+    synth_eval_result = await run_evaluation_docker(
+        dataset=synthetic_data_filepath, **evaluation_params
+    )
+
+    if not synth_eval_result.is_finetune:
+        return (
+            EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0),
+            EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0)
         )
-    else:
-        dataset_type = CustomDatasetType(
-            field_system=task.system,
-            field_input=task.input,
-            field_instruction=task.input,
-            field_output=task.output
+
+    test_data_filepath = await download_s3_file(task.test_data)
+    test_eval_result = await run_evaluation_docker(
+        dataset=test_data_filepath, **evaluation_params
+    )
+
+    return synth_eval_result, test_eval_result
+
+async def _process_miner(
+    miner: Node,
+    task: Task,
+    dataset_type: CustomDatasetType
+) -> MinerResults:
+    assert task.task_id is not None, "We should have a task id when processing the miner"
+    submission_repo = await _get_submission_repo(miner, str(task.task_id))
+    if not submission_repo:
+        return _create_failed_miner_result(miner.node_id)
+
+    try:
+        submission = Submission(
+            task_id=task.task_id,
+            node_id=miner.node_id,
+            repo=submission_repo,
+            created_on=datetime.now(),
+            updated_on=datetime.now(),
         )
 
-    logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
+        synth_result, test_result = await _evaluate_submission(task, submission_repo, dataset_type)
 
-    for miner in miner_pool:
-        try:
-            url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task.task_id}"
-            try:
-                submission_repo = str(await process_non_stream_get(url, None))
-            except Exception as e:
-                logger.error(f"Failed to process non-stream get for miner {miner.node_id} - {e}")
-                miner_result = MinerResults(
-                    node_id=miner.node_id,
-                    test_loss=np.nan,
-                    synth_loss=np.nan,
-                    is_finetune=False,
-                    submission=None
-                )
-                task_results.append(miner_result)
-                continue
+        return MinerResults(
+            node_id=miner.node_id,
+            test_loss=float(test_result.eval_loss),
+            synth_loss=float(synth_result.eval_loss),
+            is_finetune=test_result.is_finetune,
+            submission=submission
+        )
+    except Exception as e:
+        logger.error(f"Error evaluating miner {miner.node_id}: {e}")
+        return _create_failed_miner_result(miner.node_id)
 
-            if submission_repo is None:
-                logger.info(f"No submission found for miner {miner.node_id}")
-                miner_result = MinerResults(
-                    node_id=miner.node_id,
-                    test_loss=np.nan,
-                    synth_loss=np.nan,
-                    is_finetune=False,
-                    submission=None
-                )
-                task_results.append(miner_result)
-                continue
-
-            logger.info(f"Processing submission from miner {miner.node_id}")
-            current_time = datetime.now()
-            submission = Submission(
-                task_id=task.task_id,
-                node_id=miner.node_id,
-                repo=submission_repo,
-                created_on=current_time,
-                updated_on=current_time,
-            )
-
-            evaluation_params = {
-                "file_format": FileFormat.JSON,
-                "original_model": task.model_id,
-                "model": submission_repo,
-                "dataset_type": dataset_type,
-            }
-            logger.info(f"Attempting with {evaluation_params}")
-
-            assert task.synthetic_data is not None, "Synthetic data must be present"
-            assert task.test_data is not None, "Test data must be present"
-
-            synthetic_data_filepath = await download_s3_file(task.synthetic_data)
-            test_data_filepath = await download_s3_file(task.test_data)
-
-            synth_eval_result: EvaluationResult = await run_evaluation_docker(
-                dataset=synthetic_data_filepath, **evaluation_params
-            )
-
-            if synth_eval_result.is_finetune:
-                test_eval_result: EvaluationResult = await run_evaluation_docker(
-                    dataset=test_data_filepath, **evaluation_params
-                )
-            else:
-                logger.info('Since is_finetune is False, we do not need to run against the test set')
-                synth_eval_result.eval_loss = 0.0
-                synth_eval_result.perplexity = 0.0
-                test_eval_result = EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0)
-
-            logger.info(
-                f"Evaluation results for miner {miner.node_id}:"
-                f" synth_loss={synth_eval_result.eval_loss:.4f}"
-                f" test_loss={test_eval_result.eval_loss:.4f}"
-                f" is_finetune={test_eval_result.is_finetune}"
-            )
-
-            miner_result = MinerResults(
-                node_id=miner.node_id,
-                test_loss=float(test_eval_result.eval_loss),
-                synth_loss=float(synth_eval_result.eval_loss),
-                is_finetune=test_eval_result.is_finetune,
-                submission=submission
-            )
-            task_results.append(miner_result)
-
-        except Exception as e:
-            logger.error(f"Error processing miner {miner.node_id}: {e}")
-            miner_result = MinerResults(
-                node_id=miner.node_id,
-                test_loss=np.nan,
-                synth_loss=np.nan,
-                is_finetune=False,
-                submission=None
-            )
-            task_results.append(miner_result)
-
-    logger.info("Beginning scoring process...")
-    task_results = add_raw_scores_to_miner_results(task_results)
-    task_results = adjust_miner_scores_to_be_relative_to_other_comps(task_results)
-
-    logger.info("Updating database with final scores...")
+async def _update_scores(task: Task, task_results: list[MinerResults], psql_db) -> None:
+    assert task.task_id is not None, 'task id needs to be seet to update scores'
     for result in task_results:
-        assert result.score is not None, f"Score must be present for miner {result.node_id}"
+        if result.score is None:
+            continue
+
         await set_task_node_quality_score(
             task_id=task.task_id,
             node_id=result.node_id,
             quality_score=float(result.score),
-            psql_db=config.psql_db
+            psql_db=psql_db
         )
 
-        if result.submission is not None:
+        if result.submission:
             result.submission.score = result.score
-            await add_submission(result.submission, config.psql_db)
+            await add_submission(result.submission, psql_db)
 
-    logger.info("Final results:")
-    for result in task_results:
-        logger.info(
-            f"Miner {result.node_id}:"
-            f" test_loss={result.test_loss:.4f}"
-            f" synth_loss={result.synth_loss:.4f}"
-            f" is_finetune={result.is_finetune}"
-            f" final_score={result.score:.4f if result.score is not None else 0.0}"
-        )
+async def evaluate_and_score(task: Task, config: Config) -> Task:
+    assert task.task_id is not None, "Task ID must be present"
+    assert task.synthetic_data is not None, "Synthetic data must be present"
+    assert task.test_data is not None, "Test data must be present"
 
+    miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
+    dataset_type = _get_dataset_type(task)
+
+    logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
+    task_results = [
+        await _process_miner(miner, task, dataset_type)
+        for miner in miner_pool
+    ]
+
+    logger.info("Calculating final scores...")
+    task_results = add_raw_scores_to_miner_results(task_results)
+    task_results = adjust_miner_scores_to_be_relative_to_other_comps(task_results)
+
+    await _update_scores(task, task_results, config.psql_db)
     task.status = TaskStatus.SUCCESS
     return task
