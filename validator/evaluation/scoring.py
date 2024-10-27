@@ -62,8 +62,8 @@ async def scoring_aggregation(psql_db):
     final_scores = []
     min_score = float('inf')
     for node_id, node_aggregation in node_aggregations.items():
-        node_aggregation.average_score = np.mean(node_aggregation.task_raw_scores)
-        score =  node_aggregation.summed_adjusted_task_scores * node_aggregation.average_score
+        node_aggregation.average_raw_score = np.mean(node_aggregation.task_raw_scores)
+        score =  node_aggregation.summed_adjusted_task_scores * node_aggregation.raw_average_score
         node_aggregation.quality_score = score
         min_score = min(min_score, score)
         final_scores.append((node_id, score))
