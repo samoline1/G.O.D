@@ -273,6 +273,7 @@ async def _evaluate_submission(
 
     assert task.synthetic_data is not None,  "Synthetic data shouldn't be none"
     assert task.test_data is not None,  "Test data shouldn't be none"
+    logger.info('Starting synth evaluation')
     synthetic_data_filepath = await download_s3_file(task.synthetic_data)
     synth_eval_result = await run_evaluation_docker(
         dataset=synthetic_data_filepath, **evaluation_params
@@ -298,6 +299,7 @@ async def _process_miner(
 ) -> MinerResults:
     assert task.task_id is not None, "We should have a task id when processing the miner"
     submission_repo = await _get_submission_repo(miner, str(task.task_id))
+    logger.info(f"Found repo {submission_repo}")
     if not submission_repo:
         return _create_failed_miner_result(miner.node_id)
 
