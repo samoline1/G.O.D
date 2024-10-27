@@ -72,7 +72,7 @@ def calculate_node_quality_scores(
     return final_scores, min_score
 
 
-def normalize_scores(
+def normalise_scores(
     final_scores: list[tuple[int, float]],
     min_score: float,
     node_aggregations: dict[int, NodeAggregationResult]
@@ -111,7 +111,7 @@ async def scoring_aggregation(psql_db: str) -> None:
                 update_node_aggregation(node_aggregations, node_score, task_work_score)
 
         final_scores, min_score = calculate_node_quality_scores(node_aggregations)
-        normalize_scores(final_scores, min_score, node_aggregations)
+        normalise_scores(final_scores, min_score, node_aggregations)
 
     except Exception as e:
         logger.error(f"Error in scoring aggregation: {e}")
