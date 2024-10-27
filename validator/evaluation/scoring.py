@@ -84,7 +84,7 @@ async def scoring_aggregation(psql_db):
                               for node_id in node_aggregations],
                               key=lambda x: x[1], reverse=True)
     for node_id, score in sorted_scores:
-            logger.info(f'Sorted scores - Node {node_id}: {score}')
+            logger.info(f'Sorted scores - Node {node_id}: {score * 32}')
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     """Calculate weighted average of losses with more weight on test loss."""
