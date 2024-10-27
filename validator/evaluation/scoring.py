@@ -25,7 +25,7 @@ import re
 logger = get_logger(__name__)
 
 
-def get_task_work_score(task: Task) -> int:
+def get_task_work_score(task: Task) -> float:
     hours = task.hours_to_complete
     model = task.model_id
     model_size = re.search(r'(\d+)(?=[bB])', model)

@@ -43,8 +43,8 @@ class TaskResults(BaseModel):
 
 
 class NodeAggregationResult(BaseModel):
-    work_sum: int = Field(default=0)
-    work_sums: List[int] = Field(default_factory=list)
+    work_sum: float = Field(default=0)
+    work_sums: List[float] = Field(default_factory=list)
     average_score: Optional[float] = Field(default=0.0)
     summed_scores: float = Field(default=0.0)
     final_score: Optional[float] = Field(default=0.0)
