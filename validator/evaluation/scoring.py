@@ -51,24 +51,20 @@ async def scoring_aggregation(psql_db):
             else:
                 node_aggregation_result = NodeAggregationResult(
                     node_id=node_score.node_id,
-                    work_sum=0,
-                    summed_scores=0,
-                    raw_scores=[]
                 )
                 node_aggregations[node_score.node_id] = node_aggregation_result
-            task_score = max(cts.MIN_TASK_SCORE, node_score.quality_score - cts.TASK_SCORE_THRESHOLD) * task_work_score
-            node_aggregation_result.summed_scores += task_score
-            node_aggregation_result.raw_scores.append(node_score.quality_score)
-            node_aggregation_result.work_sums.append(task_work_score)
+            adjusted_task_score = max(cts.MIN_TASK_SCORE, node_score.quality_score - cts.TASK_SCORE_THRESHOLD) * task_work_score
+            node_aggregation_result.summed_adjusted_task_scores += adjusted_task_score
+            node_aggregation_result.task_raw_scores.append(node_score.quality_score)
+            node_aggregation_result.task_work_scores.append(task_work_score)
 
 
     final_scores = []
     min_score = float('inf')
     for node_id, node_aggregation in node_aggregations.items():
         node_aggregation.average_score = np.mean(node_aggregation.raw_scores)
-        score =  node_aggregation.summed_scores * node_aggregation.average_score
-        node_aggregation.work_sum = np.sum(node_aggregation.work_sums)
-        node_aggregation.final_score = score
+        score =  node_aggregation.summed_adjusted_task_scores * node_aggregation.average_score
+        node_aggregation.quality_score = score
         min_score = min(min_score, score)
         final_scores.append((node_id, score))
 
@@ -77,10 +73,10 @@ async def scoring_aggregation(psql_db):
 
     for node_id, score in final_scores:
             normalized_score = (score + shift) / total if total > 0 else 1.0 / len(final_scores)
-            node_aggregations[node_id].final_score = normalized_score
+            node_aggregations[node_id].emission = normalized_score
             logger.info(node_aggregations[node_id])
 
-    sorted_scores = sorted([(node_id, node_aggregations[node_id].final_score)
+    sorted_scores = sorted([(node_id, node_aggregations[node_id].emission)
                               for node_id in node_aggregations],
                               key=lambda x: x[1], reverse=True)
     for node_id, score in sorted_scores:

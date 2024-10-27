@@ -43,12 +43,13 @@ class TaskResults(BaseModel):
 
 
 class NodeAggregationResult(BaseModel):
-    work_sum: float = Field(default=0)
-    work_sums: List[float] = Field(default_factory=list)
-    average_score: Optional[float] = Field(default=0.0)
-    summed_scores: float = Field(default=0.0)
-    final_score: Optional[float] = Field(default=0.0)
-    raw_scores: List[float] = Field(default_factory=list)
+    task_work_scores: List[float] = Field(default_factory=list)
+    average_raw_score: Optional[float] = Field(default=0.0)
+    summed_adjusted_task_scores: float = Field(default=0.0)
+    quality_score: Optional[float] = Field(default=0.0)
+    emission: Optional[float] = Field(default=0.0)
+    task_raw_scores: List[float] = Field(default_factory=list)
+
     node_id: int
     class Config:
         validate_assignment = True
