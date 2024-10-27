@@ -55,19 +55,17 @@ async def scoring_aggregation(psql_db):
                     raw_scores=[]
                 )
                 node_aggregations[node_score.node_id] = node_aggregation_result
-            if node_score.quality_score > cts.TASK_SCORE_THRESHOLD:
-                node_aggregation_result.work_sum += task_work_score
-                node_aggregation_result.work_sums.append(task_work_score)
-            node_aggregation_result.summed_scores += max(cts.MIN_TASK_SCORE, node_score.quality_score - cts.TASK_SCORE_THRESHOLD)
+            task_score = max(cts.MIN_TASK_SCORE, node_score.quality_score - cts.TASK_SCORE_THRESHOLD) * task_work_score
+            node_aggregation_result.summed_scores += task_score
             node_aggregation_result.raw_scores.append(node_score.quality_score)
+            node_aggregation_result.work_sums.append(task_work_score)
 
 
     final_scores = []  # Store tuples of (node_id, score) for efficient processing
     min_score = float('inf')
     for node_id, node_aggregation in node_aggregations.items():
-        node_aggregation.work_score = node_aggregation.work_sum / total_work_score
         node_aggregation.average_score = np.mean(node_aggregation.raw_scores)
-        score = node_aggregation.work_score * node_aggregation.average_score * node_aggregation.summed_scores
+        score =  node_aggregation.summed_scores * node_aggregation.average_score
         node_aggregation.final_score = score
         min_score = min(min_score, score)
         final_scores.append((node_id, score))
