@@ -32,7 +32,7 @@ def get_task_work_score(task: Task) -> int:
     model_size = int(model_size.group(1)) if model_size else 1
     logger.info(f"Task_id {task.task_id} start_time: {task.started_timestamp} model : {model} size {model_size} hours: {hours} data: {task.ds_id}")
 
-    return hours * model_size
+    return np.log(hours * model_size)
 
 
 async def scoring_aggregation(psql_db):
