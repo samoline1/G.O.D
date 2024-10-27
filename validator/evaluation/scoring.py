@@ -254,6 +254,7 @@ def _create_failed_miner_result(node_id: int) -> MinerResults:
 async def _get_submission_repo(miner: Node, task_id: str) -> str | None:
     url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task_id}"
     try:
+        return 'unsloth/Meta-Llama-3.1-8B'
         return str(await process_non_stream_get(url, None))
     except Exception as e:
         logger.error(f"Failed to get submission for miner {miner.node_id}: {e}")
@@ -342,8 +343,6 @@ async def _update_scores(task: Task, task_results: list[MinerResults], psql_db) 
             result.submission.score = result.score
             await add_submission(result.submission, psql_db)
 
-from typing import Dict, List, Tuple
-from datetime import datetime
 
 async def get_repo_creation_time(repo_name: str) -> datetime:
     """Get the creation timestamp of a Hugging Face repository."""
@@ -359,9 +358,9 @@ async def get_repo_creation_time(repo_name: str) -> datetime:
         logger.error(f"Error fetching repo creation time for {repo_name}: {e}")
     return datetime.max
 
-def group_by_losses(task_results: List[MinerResults]) -> Dict[Tuple[float, float], List[Tuple[int, str]]]:
+def group_by_losses(task_results: list[MinerResults]) -> Dict[Tuple[float, float], List[Tuple[int, str]]]:
     """Group submissions by their loss values."""
-    loss_groups: Dict[Tuple[float, float], List[Tuple[int, str]]] = {}
+    loss_groups: dict[tuple[float, float], list[tuple[int, str]]] = {}
 
     for result in task_results:
         if (result.submission and
@@ -375,7 +374,7 @@ def group_by_losses(task_results: List[MinerResults]) -> Dict[Tuple[float, float
 
     return loss_groups
 
-async def get_earliest_submission(submissions: List[Tuple[int, str]]) -> Tuple[int, str, List[Tuple[int, str]]]:
+async def get_earliest_submission(submissions: list[tuple[int, str]]) -> tuple[int, str, list[tuple[int, str]]]:
     """Determine earliest submission and list of duplicates."""
     timestamps = []
     for node_id, repo in submissions:
@@ -388,7 +387,7 @@ async def get_earliest_submission(submissions: List[Tuple[int, str]]) -> Tuple[i
 
     return earliest_node_id, earliest_repo, duplicates
 
-async def handle_duplicate_submissions(task_results: List[MinerResults]) -> Dict[int, bool]:
+async def handle_duplicate_submissions(task_results: list[MinerResults]) -> dict[int, bool]:
     """Process submissions and identify duplicates."""
     keep_submission = {result.node_id: True for result in task_results}
     loss_groups = group_by_losses(task_results)
@@ -408,7 +407,7 @@ async def handle_duplicate_submissions(task_results: List[MinerResults]) -> Dict
 
     return keep_submission
 
-def zero_duplicate_scores(task_results: List[MinerResults], keep_submission: Dict[int, bool]) -> List[MinerResults]:
+def zero_duplicate_scores(task_results: list[MinerResults], keep_submission: dict[int, bool]) -> list[MinerResults]:
     """Zero out scores for duplicate submissions."""
     for result in task_results:
         if not keep_submission[result.node_id]:
