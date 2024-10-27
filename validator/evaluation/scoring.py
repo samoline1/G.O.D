@@ -347,10 +347,14 @@ async def _update_scores(task: Task, task_results: list[MinerResults], psql_db) 
 async def get_repo_creation_time(repo_name: str) -> datetime:
     """Get the creation timestamp of a Hugging Face repository."""
     try:
-        parts = repo_name.split('/')
+        clean_name = repo_name.replace('https://huggingface.co/', '')
+        parts = clean_name.split('/')
+
         if len(parts) >= 2:
-            username, repo = parts[-2:]
-            url = f"https://huggingface.co/api/repos/{username}/{repo}"
+            org, model = parts[-2], parts[-1]
+            url = f"https://huggingface.co/api/models/{org}/{model}"
+
+            logger.debug(f"Fetching creation time from: {url}")
             response = await process_non_stream_get(url, None)
             if response:
                 return datetime.fromisoformat(response['createdAt'].replace('Z', '+00:00'))
