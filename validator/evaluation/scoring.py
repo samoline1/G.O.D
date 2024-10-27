@@ -83,19 +83,19 @@ def normalise_scores(
     min_score: float,
     node_aggregations: dict[int, NodeAggregationResult]
 ) -> None:
-    """Normalize scores and update node emission values."""
+    """Normalise scores and update node emission values."""
     assert final_scores, "Final scores list cannot be empty"
 
     shift = abs(min_score) + 1e-10 if min_score < 0 else 0
     total = sum(score + shift for _, score in final_scores)
 
     for node_id, score in final_scores:
-        normalized_score = (score + shift) / total if total > 0 else 1.0 / len(final_scores)
-        node_aggregations[node_id].emission = normalized_score
+        normalised_score = (score + shift) / total if total > 0 else 1.0 / len(final_scores)
+        node_aggregations[node_id].emission = normalised_score
         logger.info(str(node_aggregations[node_id]))
 
 async def scoring_aggregation(psql_db: str) -> None:
-    """Aggregate and normalize scores across all nodes."""
+    """Aggregate and normalise scores across all nodes."""
     try:
         a_few_days_ago = datetime.now() - timedelta(days=3)
         task_results: list[TaskResults] = await get_aggregate_scores_since(a_few_days_ago, psql_db)
