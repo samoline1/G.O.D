@@ -45,7 +45,7 @@ def update_node_aggregation(
     node_score: TaskNode,
     task_work_score: float
 ) -> None:
-    """Update node aggregation results with new score.
+    """Update node aggregation results with new scores for a particular task
     """
     if node_score.node_id not in node_aggregations:
         node_aggregations[node_score.node_id] = NodeAggregationResult(node_id=node_score.node_id)
@@ -77,7 +77,7 @@ def normalize_scores(
     min_score: float,
     node_aggregations: dict[int, NodeAggregationResult]
 ) -> None:
-    """Normalize scores and update node emission values.
+    """Normalize scores and update node emission values. (sometimes some final scores could be negative so we need to shift)
     """
     shift = abs(min_score) + 1e-10 if min_score < 0 else 0
     total = sum(score + shift for _, score in final_scores)
