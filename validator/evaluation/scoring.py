@@ -11,7 +11,7 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
-from validator.core.models import Node, NodeAggregationResult, Submission
+from validator.core.models import Node, NodeAggregationResult, Submission, TaskNode
 from validator.core.models import Task
 from validator.core.models import MinerResults
 from validator.db.sql import add_submission, get_aggregate_scores_since
@@ -25,62 +25,98 @@ import re
 logger = get_logger(__name__)
 
 
+# we need to move this to the start when we first create a task, I'm tempted to pass this as the thing that miners can decide on
 def get_task_work_score(task: Task) -> float:
     hours = task.hours_to_complete
     model = task.model_id
     model_size = re.search(r'(\d+)(?=[bB])', model)
-    model_size = int(model_size.group(1)) if model_size else 1
+    model_size = int(model_size.group(1)) if model_size else 1 # this isn't an exact measurement, better to use the model config
     logger.info(f"Task_id {task.task_id} start_time: {task.started_timestamp} model : {model} size {model_size} hours: {hours} data: {task.ds_id}")
-
     return np.log(hours * model_size)
 
 
-# coming back to tidy this up tomorrow - fresh mind for beautiful code and all that jazz, but this works well overall
-async def scoring_aggregation(psql_db):
-    logger.info('Starting to do scoring aggregation')
-    a_few_days_ago = datetime.now() - timedelta(days=3)
-    task_results = await get_aggregate_scores_since(a_few_days_ago, psql_db)
-    node_aggregations = {}
-    total_work_score = 0
-    for task_res in task_results:
-        task_work_score = get_task_work_score(task_res.task)
-        total_work_score += task_work_score
-        for node_score in task_res.node_scores:
-            if node_score.node_id in node_aggregations:
-                node_aggregation_result = node_aggregations[node_score.node_id]
-            else:
-                node_aggregation_result = NodeAggregationResult(
-                    node_id=node_score.node_id,
-                )
-                node_aggregations[node_score.node_id] = node_aggregation_result
-            adjusted_task_score = max(cts.MIN_TASK_SCORE, node_score.quality_score - cts.TASK_SCORE_THRESHOLD) * task_work_score
-            node_aggregation_result.summed_adjusted_task_scores += adjusted_task_score
-            node_aggregation_result.task_raw_scores.append(node_score.quality_score)
-            node_aggregation_result.task_work_scores.append(task_work_score)
+def calculate_adjusted_task_score(quality_score: float, task_work_score: float) -> float:
+    """Calculate adjusted task score based on quality score and work score.
+    """
+    return max(cts.MIN_TASK_SCORE, quality_score - cts.TASK_SCORE_THRESHOLD) * task_work_score
 
+def update_node_aggregation(
+    node_aggregations: dict[int, NodeAggregationResult],
+    node_score: TaskNode,
+    task_work_score: float
+) -> None:
+    """Update node aggregation results with new score.
+    """
+    if node_score.node_id not in node_aggregations:
+        node_aggregations[node_score.node_id] = NodeAggregationResult(node_id=node_score.node_id)
 
+    node_result = node_aggregations[node_score.node_id]
+    adjusted_score = calculate_adjusted_task_score(node_score.quality_score, task_work_score)
+
+    node_result.summed_adjusted_task_scores += adjusted_score
+    node_result.task_raw_scores.append(node_score.quality_score)
+    node_result.task_work_scores.append(task_work_score)
+
+def calculate_node_quality_scores(
+    node_aggregations: dict[int, NodeAggregationResult]
+) -> list[tuple[int, float]]:
     final_scores = []
     min_score = float('inf')
-    for node_id, node_aggregation in node_aggregations.items():
-        node_aggregation.average_raw_score = np.mean(node_aggregation.task_raw_scores)
-        score =  node_aggregation.summed_adjusted_task_scores * node_aggregation.average_raw_score
-        node_aggregation.quality_score = score
+
+    for node_id, node_agg in node_aggregations.items():
+        node_agg.average_raw_score = np.mean(node_agg.task_raw_scores)
+        score = node_agg.summed_adjusted_task_scores * node_agg.average_raw_score
+        node_agg.quality_score = score
         min_score = min(min_score, score)
         final_scores.append((node_id, score))
+    return final_scores, min_score
 
+
+def normalize_scores(
+    final_scores: list[tuple[int, float]],
+    min_score: float,
+    node_aggregations: dict[int, NodeAggregationResult]
+) -> None:
+    """Normalize scores and update node emission values.
+    """
     shift = abs(min_score) + 1e-10 if min_score < 0 else 0
     total = sum(score + shift for _, score in final_scores)
 
     for node_id, score in final_scores:
-            normalized_score = (score + shift) / total if total > 0 else 1.0 / len(final_scores)
-            node_aggregations[node_id].emission = normalized_score
-            logger.info(node_aggregations[node_id])
+        normalized_score = (score + shift) / total if total > 0 else 1.0 / len(final_scores)
+        node_aggregations[node_id].emission = normalized_score
+        logger.info(node_aggregations[node_id])
 
-    sorted_scores = sorted([(node_id, node_aggregations[node_id].emission)
-                              for node_id in node_aggregations],
-                              key=lambda x: x[1], reverse=True)
-    for node_id, score in sorted_scores:
-            logger.info(f'Sorted scores - Node {node_id}: {score * 32}')
+async def scoring_aggregation(psql_db: str) -> None:
+    """Aggregate and normalize scores across all nodes.
+
+    This function:
+    1. Retrieves recent task results
+    2. Calculates work scores and adjusts raw scores
+    3. Aggregates scores per node
+    4. Normalizes final scores and updates emissions
+    """
+    try:
+        # Get recent task results - this is temp for the comp only
+        a_few_days_ago = datetime.now() - timedelta(days=3)
+        task_results = await get_aggregate_scores_since(a_few_days_ago, psql_db)
+
+        # Initialize aggregation Node_id: aggregation_result
+        node_aggregations: dict[int, NodeAggregationResult] = {}
+
+        # Process task results
+        for task_res in task_results:
+            task_work_score = get_task_work_score(task_res.task)
+            for node_score in task_res.node_scores:
+                update_node_aggregation(node_aggregations, node_score, task_work_score)
+
+        final_scores, min_score = calculate_node_quality_scores(node_aggregations)
+        normalize_scores(final_scores, min_score, node_aggregations)
+
+    except Exception as e:
+        logger.error(f"Error in scoring aggregation: {e}")
+        raise
+
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
     """Calculate weighted average of losses with more weight on test loss."""
