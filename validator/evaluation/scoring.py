@@ -340,7 +340,83 @@ async def _update_scores(task: Task, task_results: list[MinerResults], psql_db) 
             result.submission.score = result.score
             await add_submission(result.submission, psql_db)
 
+from typing import Dict, List, Tuple
+from datetime import datetime
+
+async def get_repo_creation_time(repo_name: str) -> datetime:
+    """Get the creation timestamp of a Hugging Face repository."""
+    try:
+        parts = repo_name.split('/')
+        if len(parts) >= 2:
+            username, repo = parts[-2:]
+            url = f"https://huggingface.co/api/repos/{username}/{repo}"
+            response = await process_non_stream_get(url, None)
+            if response:
+                return datetime.fromisoformat(response['createdAt'].replace('Z', '+00:00'))
+    except Exception as e:
+        logger.error(f"Error fetching repo creation time for {repo_name}: {e}")
+    return datetime.max
+
+def group_by_losses(task_results: List[MinerResults]) -> Dict[Tuple[float, float], List[Tuple[int, str]]]:
+    """Group submissions by their loss values."""
+    loss_groups: Dict[Tuple[float, float], List[Tuple[int, str]]] = {}
+
+    for result in task_results:
+        if (result.submission and
+            not np.isnan(result.test_loss) and
+            not np.isnan(result.synth_loss)):
+
+            losses = (float(result.test_loss), float(result.synth_loss))
+            if losses not in loss_groups:
+                loss_groups[losses] = []
+            loss_groups[losses].append((result.node_id, result.submission.repo))
+
+    return loss_groups
+
+async def get_earliest_submission(submissions: List[Tuple[int, str]]) -> Tuple[int, str, List[Tuple[int, str]]]:
+    """Determine earliest submission and list of duplicates."""
+    timestamps = []
+    for node_id, repo in submissions:
+        creation_time = await get_repo_creation_time(repo)
+        timestamps.append((node_id, repo, creation_time))
+
+    timestamps.sort(key=lambda x: x[2])
+    earliest_node_id, earliest_repo, _ = timestamps[0]
+    duplicates = [(node_id, repo) for node_id, repo, _ in timestamps[1:]]
+
+    return earliest_node_id, earliest_repo, duplicates
+
+async def handle_duplicate_submissions(task_results: List[MinerResults]) -> Dict[int, bool]:
+    """Process submissions and identify duplicates."""
+    keep_submission = {result.node_id: True for result in task_results}
+    loss_groups = group_by_losses(task_results)
+
+    for losses, submissions in loss_groups.items():
+        if len(submissions) > 1:
+            logger.warning(f"Found {len(submissions)} submissions with identical losses {losses}")
+            earliest_node_id, earliest_repo, duplicates = await get_earliest_submission(submissions)
+
+            for node_id, repo in duplicates:
+                keep_submission[node_id] = False
+                logger.warning(
+                    f"Setting score to 0 for node {node_id} (repo: {repo}) "
+                    f"as it has identical losses to earlier submission "
+                    f"from node {earliest_node_id} (repo: {earliest_repo})"
+                )
+
+    return keep_submission
+
+def zero_duplicate_scores(task_results: List[MinerResults], keep_submission: Dict[int, bool]) -> List[MinerResults]:
+    """Zero out scores for duplicate submissions."""
+    for result in task_results:
+        if not keep_submission[result.node_id]:
+            result.test_loss = np.nan
+            result.synth_loss = np.nan
+            result.is_finetune = False
+    return task_results
+
 async def evaluate_and_score(task: Task, config: Config) -> Task:
+    """Main function to evaluate and score task submissions."""
     assert task.task_id is not None, "Task ID must be present"
     assert task.synthetic_data is not None, "Synthetic data must be present"
     assert task.test_data is not None, "Test data must be present"
@@ -353,6 +429,10 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
         await _process_miner(miner, task, dataset_type)
         for miner in miner_pool
     ]
+
+    logger.info("Checking for duplicates ...")
+    keep_submission = await handle_duplicate_submissions(task_results)
+    task_results = zero_duplicate_scores(task_results, keep_submission)
 
     logger.info("Calculating final scores...")
     task_results = add_raw_scores_to_miner_results(task_results)
