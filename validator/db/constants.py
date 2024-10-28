@@ -1,4 +1,4 @@
-# Table Names
+# Tables
 NODES_TABLE = "nodes"
 TASKS_TABLE = "tasks"
 TASK_NODES_TABLE = "task_nodes"
@@ -6,15 +6,21 @@ SUBMISSIONS_TABLE = "submissions"
 
 # Node Table Columns
 NODE_ID = "node_id"
-HOTKEY = "coldkey"
-NETUID = "network"
+HOTKEY = "hotkey"
+COLDKEY = "coldkey"
 IP = "ip"
 IP_TYPE = "ip_type"
 PORT = "port"
 SYMMETRIC_KEY = "symmetric_key"
+SYMMETRIC_KEY_UUID = "symmetric_key_uuid"
+NETUID = "netuid"
+NETWORK = "network"
 STAKE = "stake"
-IS_VALIDATOR = "is_validator"
 TRUST = "trust"
+INCENTIVE = "incentive"
+LAST_UPDATED = "last_updated"
+PROTOCOL = "protocol"
+OUR_VALIDATOR = "our_validator"
 
 # Task Table Columns
 TASK_ID = "task_id"

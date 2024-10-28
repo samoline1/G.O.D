@@ -1,4 +1,4 @@
--- migrate:up
+- migrate:up
 ALTER TABLE nodes
     ADD COLUMN IF NOT EXISTS hotkey TEXT,
     ADD COLUMN IF NOT EXISTS incentive FLOAT DEFAULT 0.0,
@@ -9,9 +9,9 @@ ALTER TABLE nodes
     ADD COLUMN IF NOT EXISTS our_validator BOOLEAN DEFAULT FALSE;
 
 ALTER TABLE nodes DROP CONSTRAINT IF EXISTS nodes_pkey;
-
 ALTER TABLE nodes ADD PRIMARY KEY (hotkey, netuid);
 
+-- migrate:down
 ALTER TABLE nodes
     DROP COLUMN IF EXISTS hotkey,
     DROP COLUMN IF EXISTS incentive,

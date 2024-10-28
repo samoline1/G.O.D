@@ -3,6 +3,7 @@ from typing import List
 from typing import Optional
 from uuid import UUID
 from uuid import uuid4
+from cryptography.fernet import Fernet
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -68,7 +69,14 @@ class Node(BaseModel):
     stake: float
     created_timestamp: Optional[datetime] = None
     updated_timestamp: Optional[datetime] = None
-
+    hotkey: str
+    incentive: float = 0.0
+    netuid: int = 0
+    last_updated: Optional[float] = None
+    protocol: int = 4
+    symmetric_key_uuid: Optional[str] = None
+    our_validator: bool = False
+    fernet: Fernet | None = None
 
 class Submission(BaseModel):
     submission_id: UUID = Field(default_factory=uuid4)
