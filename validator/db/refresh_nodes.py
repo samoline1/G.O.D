@@ -8,8 +8,7 @@ import traceback
 
 
 from fiber.networking.models import NodeWithFernet as Node
-#from validator.db.src.sql.nodes import get_nodes, migrate_nodes_to_history, insert_nodes, get_last_updated_time_for_nodes
-from validator.db.sql import add_node, get_all_nodes
+from validator.db.src.sql.nodes import get_nodes, migrate_nodes_to_history, insert_nodes, get_last_updated_time_for_nodes
 from fiber.logging_utils import get_logger
 from fiber.chain import fetch_nodes
 from validator.control_node.src.control_config import Config
@@ -29,7 +28,7 @@ def _format_exception(e: Exception) -> str:
 async def get_and_store_nodes(config: Config) -> list[Node]:
     async with await config.psql_db.connection() as connection:
         if await is_recent_update(connection, config.netuid):
-            return await get_nodes(config.psql_db, config.netuid)
+            return await get_nodes(config.psql_db)
 
     raw_nodes = await fetch_nodes_from_substrate(config)
 
@@ -54,8 +53,6 @@ async def is_recent_update(connection, netuid: int) -> bool:
 
 
 async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
-    # NOTE: Will this cause issues if this method closes the conenction
-    # on substrate interface, but we use the same substrate interface object elsewhere?
     return await asyncio.to_thread(fetch_nodes.get_nodes_for_netuid, config.substrate, config.netuid)
 
 
@@ -74,8 +71,8 @@ async def _handshake(config: Config, node: Node, async_client: httpx.AsyncClient
     node_copy = node.model_copy()
     server_address = client.construct_server_address(
         node=node,
-        replace_with_docker_localhost=config.replace_with_docker_localhost,
-        replace_with_localhost=config.replace_with_localhost,
+        replace_with_docker_localhost=False,
+        replace_with_localhost=False,
     )
 
     try:
