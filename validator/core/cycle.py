@@ -13,6 +13,7 @@ from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.models import Node, Task
+from validator.core.refresh_nodes import get_and_store_nodes
 from validator.db import sql
 from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
 from validator.tasks.task_prep import prepare_task
@@ -201,6 +202,16 @@ async def validator_cycle(config: Config) -> None:
        except Exception as e:
            logger.error(f"Error in validator_cycle: {e}", exc_info=True)
            await asyncio.sleep(30)
+
+
+async def node_refresh_cycle(config: Config) -> None:
+    try:
+        logger.info("Attempting to refresh_nodes")
+        await get_and_store_nodes(config)
+        await asyncio.sleep(300)
+    except Exception as e:
+        logger.error(f"Error in node_refresh_cycle: {e}", exc_info=True)
+        await asyncio.sleep(100)
 
 # Not sure if this is the best solution to the problem of if something within the cycle crashes TT good with this stuff?
 # If not, will come back - let me know  porfa
