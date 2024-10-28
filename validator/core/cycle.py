@@ -13,10 +13,9 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
-from validator.core.models import Node
-from validator.core.models import Task
+from validator.core.models import Node, Task
 from validator.db import sql
-from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation
+from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream
 
@@ -120,8 +119,7 @@ async def assign_miners(task: Task, nodes: list[Node], config: Config):
 
 async def _find_miners_for_task(config: Config):
     pending_tasks = await sql.get_tasks_with_status(status=TaskStatus.DATA_READY, psql_db=config.psql_db)
-    nodes = await sql.get_all_miners(psql_db=config.psql_db)
-
+    nodes = await sql.get_all_nodes(psql_db=config.psql_db)
     await asyncio.gather(*[assign_miners(task, nodes, config) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
 
 
@@ -129,9 +127,6 @@ async def prep_task(task: Task, config: Config):
     logger.info('PREPING TASK')
     try:
         task = await _run_task_prep(task)
-            # Would much prefer you don't update the state every time and rely on that,
-            # but just do the steps for each task sequentially
-            ## ww - leaving this for now - something to come back to.
         await sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error prepping task {task.task_id}: {e}", exc_info=True)
@@ -213,7 +208,7 @@ async def validator_cycle(config: Config) -> None:
 async def run_validator_cycles(config: Config) -> None:
     while True:
         try:
-            await scoring_aggregation(config.psql_db)
+            await scoring_aggregation_from_date(config.psql_db)
             await validator_cycle(config)
         except Exception as e:
             logger.error(f"Validator cycle crashed: {e}", exc_info=True)

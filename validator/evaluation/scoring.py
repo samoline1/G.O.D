@@ -11,9 +11,8 @@ from validator.core.config import Config
 from validator.core.models import Node, NodeAggregationResult, Submission, TaskNode
 from validator.core.models import Task, TaskResults
 from validator.core.models import MinerResults
-from validator.db.sql import add_submission, get_aggregate_scores_since
-from validator.db.sql import get_miners_assigned_to_task
-from validator.db.sql import set_task_node_quality_score
+from validator.db.sql.submissions import add_submission, get_aggregate_scores_since, set_task_node_quality_score
+from validator.db.sql.tasks import get_nodes_assigned_to_task
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.utils.call_endpoint import process_non_stream_get
 import re
@@ -94,11 +93,10 @@ def normalise_scores(
         node_aggregations[node_id].emission = normalised_score
         logger.info(str(node_aggregations[node_id]))
 
-async def scoring_aggregation(psql_db: str) -> None:
+async def scoring_aggregation_from_date(psql_db: str, date: datetime) -> None:
     """Aggregate and normalise scores across all nodes."""
     try:
-        a_few_days_ago = datetime.now() - timedelta(days=3)
-        task_results: list[TaskResults] = await get_aggregate_scores_since(a_few_days_ago, psql_db)
+        task_results: list[TaskResults] = await get_aggregate_scores_since(date, psql_db)
         assert task_results, "No task results found"
 
         node_aggregations: dict[int, NodeAggregationResult] = {}
@@ -426,7 +424,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     assert task.synthetic_data is not None, "Synthetic data must be present"
     assert task.test_data is not None, "Test data must be present"
 
-    miner_pool = await get_miners_assigned_to_task(str(task.task_id), config.psql_db)
+    miner_pool = await get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
     dataset_type = _get_dataset_type(task)
 
     logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")

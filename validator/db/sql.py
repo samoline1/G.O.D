@@ -208,46 +208,18 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
 
     return await get_task(updated_task.task_id, psql_db)
 
-# NOTE: Why are we not happy with NULL trust?
-async def get_all_miners(psql_db: PSQLDB) -> List[Node]:
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        rows = await connection.fetch(
-            # select * :0
-            """
-            SELECT * FROM nodes
-            """
-        )
-        return [Node(**dict(row)) for row in rows]
-
-
-async def get_all_validators(psql_db: PSQLDB) -> List[Node]:
+async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         rows = await connection.fetch(
             """
             SELECT * FROM nodes
-            WHERE vtrust IS NOT NULL
             """
         )
         return [Node(**dict(row)) for row in rows]
 
 
 async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        rows = await connection.fetch(
-            """
-            SELECT nodes.* FROM nodes
-            JOIN task_nodes ON nodes.node_id = task_nodes.node_id
-            WHERE task_nodes.task_id = $1
-            """,
-            task_id,
-        )
-        return [Node(**dict(row)) for row in rows]
-
-
-async def get_miners_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         rows = await connection.fetch(
@@ -273,7 +245,7 @@ async def get_submissions_by_task(task_id: UUID, psql_db: PSQLDB) -> List[Submis
         return [Submission(**dict(row)) for row in rows]
 
 
-async def get_miner_latest_submission(task_id: str, node_id: int, psql_db: PSQLDB) -> Optional[Submission]:
+async def get_node_latest_submission(task_id: str, node_id: int, psql_db: PSQLDB) -> Optional[Submission]:
     async with await psql_db.connection() as connection:
         connection: Connection
         row = await connection.fetchrow(
@@ -292,7 +264,7 @@ async def get_miner_latest_submission(task_id: str, node_id: int, psql_db: PSQLD
         return None
 
 
-async def is_miner_assigned_to_task(task_id: str, node_id: int, psql_db: PSQLDB) -> bool:
+async def is_node_assigned_to_task(task_id: str, node_id: int, psql_db: PSQLDB) -> bool:
     async with await psql_db.connection() as connection:
         connection: Connection
         result = await connection.fetchval(
@@ -439,9 +411,6 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
             task_id,
         )
 
-
-from datetime import datetime, timedelta
-import json
 
 async def get_aggregate_scores_since(start_time: datetime, psql_db) -> list[TaskResults]:
     """
