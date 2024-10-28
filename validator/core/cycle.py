@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import random
-from asyncio import Task as AsyncTask
 from datasets import get_dataset_infos
 from fiber.logging_utils import get_logger
 
@@ -141,7 +140,7 @@ async def _start_training_task(task: Task, config: Config) -> None:
     try:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
-        assigned_miners = await sql.get_miners_assigned_to_task(str(task.task_id), config.psql_db)
+        assigned_miners = await sql.get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
         await _let_miners_know_to_start_training(task, assigned_miners)
         task.status = TaskStatus.TRAINING
         await sql.update_task(task, config.psql_db)

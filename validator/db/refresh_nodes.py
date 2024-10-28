@@ -9,7 +9,7 @@ import traceback
 
 from fiber.networking.models import NodeWithFernet as Node
 #from validator.db.src.sql.nodes import get_nodes, migrate_nodes_to_history, insert_nodes, get_last_updated_time_for_nodes
-from validator.db.sql import add_node, get_all_miners
+from validator.db.sql import add_node, get_all_nodes
 from fiber.logging_utils import get_logger
 from fiber.chain import fetch_nodes
 from validator.control_node.src.control_config import Config
