@@ -55,28 +55,6 @@ class NodeAggregationResult(BaseModel):
         validate_assignment = True
         arbitrary_types_allowed = True
 
-class Node(BaseModel):
-    node_id: int
-    coldkey: str
-    ip: str
-    ip_type: str
-    port: int
-    symmetric_key: str
-    network: float
-    trust: Optional[float] = 0.0
-    vtrust: Optional[float] = 0.0
-    stake: float
-    created_timestamp: Optional[datetime] = None
-    updated_timestamp: Optional[datetime] = None
-    hotkey: str
-    incentive: float = 0.0
-    netuid: int = 0
-    last_updated: Optional[float] = None
-    protocol: int = 4
-    symmetric_key_uuid: Optional[str] = None
-    our_validator: bool = False
-    fernet: Optional[Fernet] = None
-
 class Submission(BaseModel):
     submission_id: UUID = Field(default_factory=uuid4)
     score: Optional[float] = None
