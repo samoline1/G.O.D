@@ -56,7 +56,7 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
             node.ip_type,
             node.port,
             None,
-            176, # do not leave this as it is
+            76, # do not leave this as it is
             node.stake,
             node.hotkey,
             node.incentive,
