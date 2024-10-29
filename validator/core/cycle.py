@@ -206,6 +206,7 @@ async def validator_cycle(config: Config) -> None:
            await asyncio.sleep(30)
 
 
+<<<<<<< HEAD
 async def node_refresh_cycle(config: Config) -> None:
     try:
         logger.info("Attempting to refresh_nodes")
@@ -213,20 +214,49 @@ async def node_refresh_cycle(config: Config) -> None:
     except Exception as e:
         logger.error(f"Error in node_refresh_cycle: {e}", exc_info=True)
         await asyncio.sleep(100)
+=======
+async def node_refresh_cycle(config: Config) -> None:
+    while True:
+        try:
+            logger.info("Attempting to refresh_nodes")
+            # Add timeout to prevent hanging
+            async with asyncio.timeout(300):  # 5 minute timeout
+                await get_and_store_nodes(config)
+            # Success - wait before next refresh
+            await asyncio.sleep(300)  # 5 minute wait between refreshes
+        except asyncio.TimeoutError:
+            logger.error("Node refresh timed out after 5 minutes")
+            await asyncio.sleep(60)
+        except Exception as e:
+            logger.error(f"Error in node_refresh_cycle: {e}", exc_info=True)
+            await asyncio.sleep(60)
+>>>>>>> Snippet
 
 # Not sure if this is the best solution to the problem of if something within the cycle crashes TT good with this stuff?
 # If not, will come back - let me know  porfa
 async def run_validator_cycles(config: Config) -> None:
+    try:
+        # Run node refresh cycle and validator cycle concurrently
+        await asyncio.gather(
+            node_refresh_cycle(config),
+            _run_main_validator_loop(config)
+        )
+    except Exception as e:
+        logger.error(f"Main validator cycles crashed: {e}", exc_info=True)
+        await asyncio.sleep(30)
+
+async def _run_main_validator_loop(config: Config) -> None:
     while True:
         try:
-            await node_refresh_cycle(config)
             node_list = await nodes_sql.get_all_nodes(config.psql_db)
-            logger.info(f"Here is the list node list {node_list}")
+            logger.info(f"Current active nodes: {len(node_list)}")
             testdate = datetime.datetime.now() - datetime.timedelta(days=7)
             await scoring_aggregation_from_date(config.psql_db, testdate)
             await validator_cycle(config)
+            # Add small sleep to prevent tight loop
+            await asyncio.sleep(30)
         except Exception as e:
-            logger.error(f"Validator cycle crashed: {e}", exc_info=True)
+            logger.error(f"Validator loop iteration failed: {e}", exc_info=True)
             await asyncio.sleep(30)
 
 def init_validator_cycles(config: Config) -> Task:
