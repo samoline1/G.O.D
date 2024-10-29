@@ -15,7 +15,7 @@ from validator.core.config import Config
 from validator.core.models import Task
 from fiber.networking.models import NodeWithFernet as Node
 from validator.core.refresh_nodes import get_and_store_nodes
-from validator.db import sql
+import validator.db.sql.tasks as tasks_sql
 from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream
@@ -173,7 +173,7 @@ async def _evaluate_task(task: Task, config: Config):
 
 async def process_completed_tasks(config: Config) -> None:
     while True:
-        completed_tasks = await sql.get_tasks_ready_to_evaluate(config.psql_db)
+        completed_tasks = await tasks_sql.get_tasks_ready_to_evaluate(config.psql_db)
         if len(completed_tasks) > 0:
             logger.info(f"There are {len(completed_tasks)} awaiting evaluation")
             for task in completed_tasks:
