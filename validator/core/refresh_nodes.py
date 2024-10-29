@@ -9,7 +9,7 @@ import traceback
 import httpx
 
 from fiber.networking.models import NodeWithFernet as Node
-from validator.db.sql.nodes import get_all_nodes, insert_nodes, get_last_updated_time_for_nodes
+from validator.db.sql.nodes import get_all_nodes, add_node, get_last_updated_time_for_nodes
 from fiber.logging_utils import get_logger
 from fiber.chain import fetch_nodes
 from validator.core.config import Config
@@ -62,7 +62,7 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 async def store_nodes(config: Config, nodes: list[Node]):
     async with await config.psql_db.connection() as connection:
         await migrate_nodes_to_history(connection)
-        await insert_nodes(connection, nodes, config.subtensor_network)
+        await asyncio.gather(*(add_node(connection, node, config.subtensor_network) for node in nodes))
 
 
 async def update_our_validator_node(config: Config):
