@@ -210,7 +210,6 @@ async def node_refresh_cycle(config: Config) -> None:
     try:
         logger.info("Attempting to refresh_nodes")
         await get_and_store_nodes(config)
-        await asyncio.sleep(300)
     except Exception as e:
         logger.error(f"Error in node_refresh_cycle: {e}", exc_info=True)
         await asyncio.sleep(100)
