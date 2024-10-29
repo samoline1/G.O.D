@@ -219,7 +219,7 @@ async def node_refresh_cycle(config: Config) -> None:
 async def run_validator_cycles(config: Config) -> None:
     while True:
         try:
-            datetimenow = datetime.now()
+            datetimenow = datetime.datetime.now()
             await scoring_aggregation_from_date(config.psql_db, datetimenow)
             await validator_cycle(config)
         except Exception as e:
