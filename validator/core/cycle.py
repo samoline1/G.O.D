@@ -20,7 +20,7 @@ import validator.db.sql.tasks as tasks_sql
 import validator.db.sql.nodes as nodes_sql
 from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
 from validator.tasks.task_prep import prepare_task
-from validator.utils.call_endpoint import process_non_stream, process_non_stream_fiber
+from validator.utils.call_endpoint import process_non_stream_fiber
 
 
 logger = get_logger(__name__)
