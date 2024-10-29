@@ -210,9 +210,7 @@ async def node_refresh_cycle(config: Config) -> None:
     while True:
         try:
             logger.info("Attempting to refresh_nodes")
-            async with asyncio.timeout(300):  # 5 minute timeout
-                await get_and_store_nodes(config)
-            # Success - wait before next refresh
+            await asyncio.wait_for(get_and_store_nodes(config), timeout=300)  # 5 minute timeout
             await asyncio.sleep(300)  # 5 minute wait between refreshes
         except asyncio.TimeoutError:
             logger.error("Node refresh timed out after 5 minutes")
