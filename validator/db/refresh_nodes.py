@@ -12,7 +12,7 @@ from validator.db.src.sql.nodes import get_nodes, migrate_nodes_to_history, inse
 from fiber.logging_utils import get_logger
 from fiber.chain import fetch_nodes
 from validator.control_node.src.control_config import Config
-from validator.db.src.sql.nodes import insert_symmetric_keys_for_nodes, update_our_vali_node_in_db
+from validator.db.sql.nodes import insert_symmetric_keys_for_nodes, update_our_vali_node_in_db
 from fiber.validator import handshake, client
 import httpx
 from datetime import datetime, timedelta
