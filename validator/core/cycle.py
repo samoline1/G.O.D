@@ -220,6 +220,8 @@ async def node_refresh_cycle(config: Config) -> None:
 async def run_validator_cycles(config: Config) -> None:
     while True:
         try:
+            node_list = await nodes_sql.get_all_nodes(config.psql_db)
+            logger.info(f"Here is the list node list {node_list}")
             testdate = datetime.datetime.now() - datetime.timedelta(days=7)
             await scoring_aggregation_from_date(config.psql_db, testdate)
             await validator_cycle(config)
