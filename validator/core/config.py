@@ -31,7 +31,6 @@ class Config:
     redis_db: Redis
     subtensor_network: str | None
     subtensor_address: str | None
-    gpu_server_address: str | None
     netuid: int
     refresh_nodes: bool
     httpx_client: httpx.AsyncClient
@@ -43,14 +42,7 @@ class Config:
 def load_config() -> Config:
     subtensor_network = os.getenv("SUBTENSOR_NETWORK")
     subtensor_address = os.getenv("SUBTENSOR_ADDRESS") or None
-    gpu_server_address = os.getenv("GPU_SERVER_ADDRESS", None)
     dev_env = os.getenv("ENV", "prod").lower() != "prod"
-    if not gpu_server_address:
-        if not dev_env:
-            logger.error("GPU_SERVER_ADDRESS IT NOT SET - Please make sure env is Dev if you want to run without a GPU server")
-            raise ValueError("GPU_SERVER_ADDRESS must be set if env is prod")
-        gpu_server_address = None
-
     wallet_name = os.getenv("WALLET_NAME", "default")
     hotkey_name = os.getenv("HOTKEY_NAME", "default")
     netuid = os.getenv("NETUID")
@@ -92,7 +84,6 @@ def load_config() -> Config:
         netuid=netuid,
         refresh_nodes=refresh_nodes,
         httpx_client=httpx_client,
-        gpu_server_address=gpu_server_address,
         debug=dev_env,
         set_metagraph_weights_with_high_updated_to_not_dereg=set_metagraph_weights_with_high_updated_to_not_dereg,
     )
