@@ -76,7 +76,7 @@ class Node(BaseModel):
     protocol: int = 4
     symmetric_key_uuid: Optional[str] = None
     our_validator: bool = False
-    fernet: Fernet | None = None
+    fernet: Optional[Fernet] = None
 
 class Submission(BaseModel):
     submission_id: UUID = Field(default_factory=uuid4)
