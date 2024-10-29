@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fiber.logging_utils import get_logger
 
-from validator.core.config import factory_config
+from validator.core.config import load_config
 from validator.core.cycle import init_validator_cycles
 from validator.endpoints.health import factory_router as health_router
 from validator.endpoints.nodes import factory_router as nodes_router
@@ -28,7 +28,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.debug("Entering lifespan context manager")
-    config = factory_config()
+    config = load_config()
     logger.debug(f"Config created: {config}")
 
     try:
