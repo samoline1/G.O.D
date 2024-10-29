@@ -33,6 +33,21 @@ async def add_task(task: Task, psql_db: PSQLDB) -> Task:
         )
         return await get_task(task_id, psql_db)
 
+
+async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        rows = await connection.fetch(
+            """
+            SELECT nodes.* FROM nodes
+            JOIN task_nodes ON nodes.node_id = task_nodes.node_id
+            WHERE task_nodes.task_id = $1
+            """,
+            task_id,
+        )
+        return [Node(**dict(row)) for row in rows]
+
+
 async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
     async with await psql_db.connection() as connection:
         connection: Connection
