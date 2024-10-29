@@ -98,7 +98,9 @@ async def scoring_aggregation_from_date(psql_db: str, date: datetime) -> None:
     """Aggregate and normalise scores across all nodes."""
     try:
         task_results: list[TaskResults] = await get_aggregate_scores_since(date, psql_db)
-        assert task_results, "No task results found"
+        if not task_results:
+            logger.info('There were not results to be scored')
+            return
 
         node_aggregations: dict[int, NodeAggregationResult] = {}
 
