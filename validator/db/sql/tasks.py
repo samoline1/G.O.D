@@ -4,7 +4,8 @@ from typing import Dict, List, Optional
 from uuid import UUID
 from asyncpg.connection import Connection
 
-from validator.core.models import Node, Task
+from validator.core.models import Task
+from fiber.networking.models import NodeWithFernet as Node
 from validator.db.database import PSQLDB
 from validator.db.constants import *
 
