@@ -26,6 +26,8 @@ ALTER TABLE nodes
     DROP COLUMN IF EXISTS symmetric_key_uuid,
     DROP COLUMN IF EXISTS our_validator;
 
--- Remove the indexes
 DROP INDEX IF EXISTS idx_nodes_hotkey;
 DROP INDEX IF EXISTS idx_nodes_netuid;
+
+ALTER TABLE nodes
+    ALTER COLUMN symmetric_key SET NOT NULL;
