@@ -1,4 +1,4 @@
-- migrate:up
+-- migrate:up
 ALTER TABLE nodes
     ADD COLUMN IF NOT EXISTS hotkey TEXT,
     ADD COLUMN IF NOT EXISTS incentive FLOAT DEFAULT 0.0,
