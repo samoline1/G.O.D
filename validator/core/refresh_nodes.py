@@ -9,11 +9,10 @@ import traceback
 import httpx
 
 from fiber.networking.models import NodeWithFernet as Node
-from validator.db.sql.nodes import get_nodes, insert_nodes, get_last_updated_time_for_nodes
+from validator.db.sql.nodes import get_all_nodes, insert_nodes, get_last_updated_time_for_nodes
 from fiber.logging_utils import get_logger
 from fiber.chain import fetch_nodes
 from validator.core.config import Config
-from validator.db.sql.nodes import insert_symmetric_keys_for_nodes, update_our_vali_node_in_db
 from fiber.validator import handshake, client
 from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
@@ -28,7 +27,9 @@ def _format_exception(e: Exception) -> str:
 async def get_and_store_nodes(config: Config) -> list[Node]:
     async with await config.psql_db.connection() as connection:
         if await is_recent_update(connection, config.netuid):
-            return await get_nodes(config.psql_db, config.netuid)
+            # come back and add netuid
+            #return await get_all_nodes(config.psql_db, config.netuid)
+            return await get_all_nodes(config.psql_db)
 
     raw_nodes = await fetch_nodes_from_substrate(config)
 
