@@ -8,7 +8,8 @@ import validator.core.constants as cts
 from core.utils import download_s3_file
 from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
 from validator.core.config import Config
-from validator.core.models import Node, NodeAggregationResult, Submission, TaskNode
+from validator.core.models import NodeAggregationResult, Submission, TaskNode
+from fiber.networking.models import NodeWithFernet as Node
 from validator.core.models import Task, TaskResults
 from validator.core.models import MinerResults
 from validator.db.sql.submissions import add_submission, get_aggregate_scores_since, set_task_node_quality_score

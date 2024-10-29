@@ -12,7 +12,8 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
-from validator.core.models import Node, Task
+from validator.core.models import Task
+from fiber.networking.models import NodeWithFernet as Node
 from validator.core.refresh_nodes import get_and_store_nodes
 from validator.db import sql
 from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date

@@ -7,7 +7,8 @@ from uuid import UUID
 
 from asyncpg.connection import Connection
 
-from validator.core.models import Node, TaskNode, TaskResults
+from validator.core.models import TaskNode, TaskResults
+from fiber.networking.models import NodeWithFernet as Node
 from validator.core.models import Submission
 from validator.core.models import Task
 from validator.db.database import PSQLDB
@@ -208,15 +209,29 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
 
     return await get_task(updated_task.task_id, psql_db)
 
-async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        rows = await connection.fetch(
-            """
-            SELECT * FROM nodes
-            """
-        )
-        return [Node(**dict(row)) for row in rows]
+async def get_nodes(psql_db: PSQLDB, netuid: int) -> list[Node]:
+    query = f"""
+        SELECT
+            {dcst.HOTKEY},
+            {dcst.COLDKEY},
+            {dcst.NODE_ID},
+            {dcst.INCENTIVE},
+            {dcst.NETUID},
+            {dcst.STAKE},
+            {dcst.TRUST},
+            {dcst.VTRUST},
+            {dcst.LAST_UPDATED},
+            {dcst.IP},
+            {dcst.IP_TYPE},
+            {dcst.PORT},
+            {dcst.PROTOCOL}
+        FROM {dcst.NODES_TABLE}
+        WHERE {dcst.NETUID} = $1
+    """
+
+    nodes = await psql_db.fetchall(query, netuid)
+
+    return [Node(**node) for node in nodes]
 
 
 async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
