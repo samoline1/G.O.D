@@ -16,6 +16,7 @@ from validator.core.models import Task
 from fiber.networking.models import NodeWithFernet as Node
 from validator.core.refresh_nodes import get_and_store_nodes
 import validator.db.sql.tasks as tasks_sql
+import validator.db.sql.nodes as nodes_sql
 from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream
@@ -71,7 +72,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
 
         if offer_response.accepted is True:
             selected_miners.append(node.node_id)
-            await sql.assign_node_to_task(str(task.task_id), node.node_id, config.psql_db)
+            await tasks_sql.assign_node_to_task(str(task.task_id), node.node_id, config.psql_db)
             logger.info(f"The miner {node.node_id} has officially been assigned the task")
 
     if len(selected_miners) < cst.MINIMUM_MINER_POOL:
@@ -111,16 +112,16 @@ async def _let_miners_know_to_start_training(task: Task, nodes: list[Node]):
 async def assign_miners(task: Task, nodes: list[Node], config: Config):
     try:
         task = await _select_miner_pool_and_add_to_task(task, nodes, config)
-        await sql.update_task(task, config.psql_db)
+        await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
         task.status = TaskStatus.FAILURE
-        await sql.update_task(task, config.psql_db)
+        await tasks_sql.update_task(task, config.psql_db)
 
 
 async def _find_miners_for_task(config: Config):
-    pending_tasks = await sql.get_tasks_with_status(status=TaskStatus.DATA_READY, psql_db=config.psql_db)
-    nodes = await sql.get_all_nodes(psql_db=config.psql_db)
+    pending_tasks = await tasks_sql.get_tasks_with_status(status=TaskStatus.DATA_READY, psql_db=config.psql_db)
+    nodes = await nodes_sql.get_all_nodes(psql_db=config.psql_db)
     await asyncio.gather(*[assign_miners(task, nodes, config) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
 
 
@@ -128,32 +129,32 @@ async def prep_task(task: Task, config: Config):
     logger.info('PREPING TASK')
     try:
         task = await _run_task_prep(task)
-        await sql.update_task(task, config.psql_db)
+        await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error prepping task {task.task_id}: {e}", exc_info=True)
         task.status = TaskStatus.FAILURE
-        await sql.update_task(task, config.psql_db)
+        await tasks_sql.update_task(task, config.psql_db)
 
 async def _process_selected_tasks(config: Config):
-    miner_selected_tasks = await sql.get_tasks_with_status(status=TaskStatus.PENDING, psql_db=config.psql_db)
+    miner_selected_tasks = await tasks_sql.get_tasks_with_status(status=TaskStatus.PENDING, psql_db=config.psql_db)
     await asyncio.gather(*[prep_task(task, config) for task in miner_selected_tasks[: cst.MAX_CONCURRENT_TASK_PREPS]])
 
 async def _start_training_task(task: Task, config: Config) -> None:
     try:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
-        assigned_miners = await sql.get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
+        assigned_miners = await tasks_sql.get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
         await _let_miners_know_to_start_training(task, assigned_miners)
         task.status = TaskStatus.TRAINING
-        await sql.update_task(task, config.psql_db)
+        await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error starting training for task {task.task_id}: {e}", exc_info=True)
         task.status = TaskStatus.FAILURE
-        await sql.update_task(task, config.psql_db)
+        await tasks_sql.update_task(task, config.psql_db)
 
 
 async def _process_ready_to_train_tasks(config: Config):
-    ready_to_train_tasks = await sql.get_tasks_with_status(status=TaskStatus.READY, psql_db=config.psql_db)
+    ready_to_train_tasks = await tasks_sql.get_tasks_with_status(status=TaskStatus.READY, psql_db=config.psql_db)
     if len(ready_to_train_tasks) > 0:
         logger.info(f"There are {len(ready_to_train_tasks)} ready to train")
         await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
@@ -164,16 +165,16 @@ async def _process_ready_to_train_tasks(config: Config):
 async def _evaluate_task(task: Task, config: Config):
     try:
        task = await evaluate_and_score(task, config)
-       await sql.update_task(task, config.psql_db)
+       await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
        logger.error(f"Error evaluating task {task.task_id}: {e}", exc_info=True)
        task.status = TaskStatus.FAILURE
-       await sql.update_task(task, config.psql_db)
+       await tasks_sql.update_task(task, config.psql_db)
 
 
 async def process_completed_tasks(config: Config) -> None:
     while True:
-        completed_tasks = await tasks_sql.get_tasks_ready_to_evaluate(config.psql_db)
+        completed_tasks = await tasks_tasks_sql.get_tasks_ready_to_evaluate(config.psql_db)
         if len(completed_tasks) > 0:
             logger.info(f"There are {len(completed_tasks)} awaiting evaluation")
             for task in completed_tasks:
