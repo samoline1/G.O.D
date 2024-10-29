@@ -45,11 +45,11 @@ async def process_non_stream_fiber(endpoint: str, config: Config, node: Node, pa
             timeout=10,
         )
     except Exception as e:
-        logger.error(f"Failed to fetch capacity from node {node.node_id}: {e}")
+        logger.error(f"Failed to comunication with node {node.node_id}: {e}")
         return None
 
     if response.status_code != 200:
-        logger.warning(f"Failed to fetch capacity from node {node.node_id}")
+        logger.warning(f"Failed to communicate with node {node.node_id}")
         return None
 
     return response.json()
