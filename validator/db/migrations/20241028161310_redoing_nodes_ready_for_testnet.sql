@@ -1,0 +1,25 @@
+- migrate:up
+ALTER TABLE nodes
+    ADD COLUMN IF NOT EXISTS hotkey TEXT,
+    ADD COLUMN IF NOT EXISTS incentive FLOAT DEFAULT 0.0,
+    ADD COLUMN IF NOT EXISTS netuid INTEGER DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS last_updated FLOAT,
+    ADD COLUMN IF NOT EXISTS protocol INTEGER DEFAULT 4,
+    ADD COLUMN IF NOT EXISTS symmetric_key_uuid TEXT,
+    ADD COLUMN IF NOT EXISTS our_validator BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE nodes DROP CONSTRAINT IF EXISTS nodes_pkey;
+ALTER TABLE nodes ADD PRIMARY KEY (hotkey, netuid);
+
+-- migrate:down
+ALTER TABLE nodes
+    DROP COLUMN IF EXISTS hotkey,
+    DROP COLUMN IF EXISTS incentive,
+    DROP COLUMN IF EXISTS netuid,
+    DROP COLUMN IF EXISTS last_updated,
+    DROP COLUMN IF EXISTS protocol,
+    DROP COLUMN IF EXISTS symmetric_key_uuid,
+    DROP COLUMN IF EXISTS our_validator;
+
+ALTER TABLE nodes DROP CONSTRAINT IF EXISTS nodes_pkey;
+ALTER TABLE nodes ADD PRIMARY KEY (node_id);
