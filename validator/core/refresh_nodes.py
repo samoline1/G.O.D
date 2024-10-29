@@ -44,7 +44,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
 
 
 async def is_recent_update(connection, netuid: int) -> bool:
-    last_updated_time = await get_last_updated_time_for_nodes(connection, netuid)
+    last_updated_time = await get_last_updated_time_for_nodes(connection)
     if last_updated_time is not None and datetime.now() - last_updated_time < timedelta(minutes=30):
         logger.info(
             f"Last update for nodes table was at {last_updated_time}, which is less than 30 minutes ago - skipping refresh"
