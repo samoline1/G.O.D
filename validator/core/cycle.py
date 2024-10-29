@@ -174,7 +174,7 @@ async def _evaluate_task(task: Task, config: Config):
 
 async def process_completed_tasks(config: Config) -> None:
     while True:
-        completed_tasks = await tasks_tasks_sql.get_tasks_ready_to_evaluate(config.psql_db)
+        completed_tasks = await tasks_sql.get_tasks_ready_to_evaluate(config.psql_db)
         if len(completed_tasks) > 0:
             logger.info(f"There are {len(completed_tasks)} awaiting evaluation")
             for task in completed_tasks:
