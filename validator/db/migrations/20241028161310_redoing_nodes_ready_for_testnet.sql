@@ -8,7 +8,8 @@ ALTER TABLE nodes
     ADD COLUMN IF NOT EXISTS protocol INTEGER DEFAULT 4,
     ADD COLUMN IF NOT EXISTS symmetric_key_uuid TEXT,
     ADD COLUMN IF NOT EXISTS our_validator BOOLEAN DEFAULT FALSE,
-    ALTER COLUMN ip_type TYPE INTEGER USING ip_type::INTEGER;
+    ALTER COLUMN ip_type TYPE INTEGER USING ip_type::INTEGER,
+    ALTER COLUMN symmetric_key DROP NOT NULL;
 
 -- Create indexes for frequently queried columns
 CREATE INDEX IF NOT EXISTS idx_nodes_hotkey ON nodes(hotkey);
