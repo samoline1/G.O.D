@@ -55,8 +55,8 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
             node.ip,
             node.ip_type,
             node.port,
-            node.symmetric_key,
-            node.network,
+            node.symmetric_key_uuid,
+            'test', # do not leave this as it is
             node.stake,
             node.hotkey,
             node.incentive,
@@ -64,7 +64,7 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
             node.last_updated,
             node.protocol,
             node.symmetric_key_uuid,
-            node.our_validator,
+            False, # assume not our validator
             node.trust,
             node.vtrust
         )
