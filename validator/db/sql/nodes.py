@@ -130,3 +130,13 @@ async def insert_symmetric_keys_for_nodes(connection: Connection, nodes: list[No
             if node.fernet is not None
         ],
     )
+
+async def get_last_updated_time_for_nodes(connection: Connection, netuid: int) -> datetime.datetime | None:
+    query = f"""
+        SELECT MAX({dcst.CREATED_TIMESTAMP})
+        FROM {dcst.NODES_TABLE}
+        WHERE {dcst.NETUID} = $1
+    """
+    return await connection.fetchval(query, netuid)
+
+
