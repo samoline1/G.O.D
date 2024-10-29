@@ -1,9 +1,9 @@
 from typing import List, Optional
 from asyncpg.connection import Connection
-from validator.core.models import Node
 from validator.db.database import PSQLDB
 from validator.db import constants as dcst
 from fiber import utils as futils
+from fiber.networking.models import NodeWithFernet as Node
 from cryptography.fernet import Fernet
 from logging import getLogger
 
