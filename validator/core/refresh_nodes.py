@@ -61,7 +61,7 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 
 async def store_nodes(config: Config, nodes: list[Node]):
     async with await config.psql_db.connection() as connection:
-        await migrate_nodes_to_history(connection)
+#        await migrate_nodes_to_history(connection)
         await asyncio.gather(*(add_node(connection, node, config.subtensor_network) for node in nodes))
 
 
