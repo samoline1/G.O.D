@@ -15,7 +15,7 @@ from validator.core.models import MinerResults
 from validator.db.sql.submissions_and_scoring import add_submission, get_aggregate_scores_since, set_task_node_quality_score
 from validator.db.sql.tasks import get_nodes_assigned_to_task
 from validator.evaluation.docker_evaluation import run_evaluation_docker
-from validator.utils.call_endpoint import process_non_stream_get
+from validator.utils.call_endpoint import process_non_stream_fiber, process_non_stream_get
 import re
 
 logger = get_logger(__name__)
@@ -252,11 +252,10 @@ def _create_failed_miner_result(node_id: int) -> MinerResults:
         submission=None
     )
 
-async def _get_submission_repo(miner: Node, task_id: str) -> str | None:
-    url = f"{miner.ip}:{miner.port}/get_latest_model_submission/{task_id}"
+async def _get_submission_repo(miner: Node, task_id: str, config: Config) -> str | None:
+    url = f"/get_latest_model_submission/{task_id}"
     try:
-        return 'unsloth/Meta-Llama-3.1-8B'
-        return str(await process_non_stream_get(url, None))
+        return str(await process_non_stream_fiber(url, config, miner, {}))
     except Exception as e:
         logger.error(f"Failed to get submission for miner {miner.node_id}: {e}")
         return None
@@ -297,10 +296,11 @@ async def _evaluate_submission(
 async def _process_miner(
     miner: Node,
     task: Task,
-    dataset_type: CustomDatasetType
+    dataset_type: CustomDatasetType,
+    config: Config
 ) -> MinerResults:
     assert task.task_id is not None, "We should have a task id when processing the miner"
-    submission_repo = await _get_submission_repo(miner, str(task.task_id))
+    submission_repo = await _get_submission_repo(miner, str(task.task_id), config)
     logger.info(f"Found repo {submission_repo}")
     if not submission_repo:
         return _create_failed_miner_result(miner.node_id)
@@ -432,7 +432,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
 
     logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
     task_results = [
-        await _process_miner(miner, task, dataset_type)
+        await _process_miner(miner, task, dataset_type, config)
         for miner in miner_pool
     ]
 

@@ -3,6 +3,7 @@ import datetime
 import random
 from datasets import get_dataset_infos
 from fiber.logging_utils import get_logger
+from fsspec.spec import conf
 
 import validator.core.constants as cst
 from core.models.payload_models import MinerTaskRequst
@@ -19,7 +20,7 @@ import validator.db.sql.tasks as tasks_sql
 import validator.db.sql.nodes as nodes_sql
 from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
 from validator.tasks.task_prep import prepare_task
-from validator.utils.call_endpoint import process_non_stream
+from validator.utils.call_endpoint import process_non_stream, process_non_stream_fiber
 
 
 logger = get_logger(__name__)
@@ -40,9 +41,9 @@ async def _run_task_prep(task: Task) -> Task:
     return task
 
 
-async def _make_offer(node: Node, request: MinerTaskRequst) -> MinerTaskResponse:
-    url = f"{node.ip}:{node.port}/{cst.TASK_OFFER_ENDPOINT}/"
-    response = await process_non_stream(url, None, request.model_dump())
+
+async def _make_offer(node: Node, request: MinerTaskRequst, config: Config) -> MinerTaskResponse:
+    response = await process_non_stream_fiber(cst.TASK_OFFER_ENDPOINT, config, node, request.model_dump())
     return MinerTaskResponse(message=response.get('message', 'No message given'), accepted=response.get('accepted', False))
 
 async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], config: Config) -> Task:
@@ -64,7 +65,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
         available_nodes.remove(node)
 
         try:
-            offer_response = await _make_offer(node, task_request)
+            offer_response = await _make_offer(node, task_request, config)
             logger.info(f"Node {node.node_id}'s response to the offer was {offer_response}")
         except:
             logger.info(f"Seems that {node.node_id} has a connection issue")
@@ -88,7 +89,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
     task.status = TaskStatus.READY
     return task
 
-async def _let_miners_know_to_start_training(task: Task, nodes: list[Node]):
+async def _let_miners_know_to_start_training(task: Task, nodes: list[Node], config: Config):
     dataset_type = CustomDatasetType(
         field_system=task.system, field_input=task.input, field_output=task.output, field_instruction=task.instruction
     )
@@ -105,8 +106,7 @@ async def _let_miners_know_to_start_training(task: Task, nodes: list[Node]):
     logger.info(f'We are tellingminers to start training there are  {len(nodes)}')
 
     for node in nodes:
-        url = f"{node.ip}:{node.port}/{cst.START_TRAINING_ENDPOINT}/"
-        response = await process_non_stream(url, None, task_request_body.model_dump())
+        response = await process_non_stream_fiber(cst.START_TRAINING_ENDPOINT, config, node, task_request_body.model_dump())
         logger.info(f"The response we got from {node.node_id} was {response}")
 
 async def assign_miners(task: Task, nodes: list[Node], config: Config):
@@ -144,7 +144,7 @@ async def _start_training_task(task: Task, config: Config) -> None:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
         assigned_miners = await tasks_sql.get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
-        await _let_miners_know_to_start_training(task, assigned_miners)
+        await _let_miners_know_to_start_training(task, assigned_miners, config)
         task.status = TaskStatus.TRAINING
         await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
