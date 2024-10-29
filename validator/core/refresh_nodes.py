@@ -60,9 +60,12 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 
 
 async def store_nodes(config: Config, nodes: list[Node]):
+    nodef = []
     for node in nodes:
         logger.info(f"Adding in this node {node}")
-    await asyncio.gather(*(add_node(node, config.psql_db) for node in nodes))
+        if node.netuid == 60:
+            nodef.append(node)
+    await asyncio.gather(*(add_node(node, config.psql_db) for node in nodef))
 
 
 async def update_our_validator_node(config: Config):
