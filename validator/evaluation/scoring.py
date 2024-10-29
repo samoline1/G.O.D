@@ -12,7 +12,7 @@ from validator.core.models import NodeAggregationResult, Submission, TaskNode
 from fiber.networking.models import NodeWithFernet as Node
 from validator.core.models import Task, TaskResults
 from validator.core.models import MinerResults
-from validator.db.sql.submissions import add_submission, get_aggregate_scores_since, set_task_node_quality_score
+from validator.db.sql.submissions_and_scoring import add_submission, get_aggregate_scores_since, set_task_node_quality_score
 from validator.db.sql.tasks import get_nodes_assigned_to_task
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.utils.call_endpoint import process_non_stream_get
