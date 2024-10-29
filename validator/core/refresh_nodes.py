@@ -60,9 +60,7 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 
 
 async def store_nodes(config: Config, nodes: list[Node]):
-    async with await config.psql_db.connection() as connection:
-#        await migrate_nodes_to_history(connection)
-        await asyncio.gather(*(add_node(connection, node, config.subtensor_network) for node in nodes))
+     await asyncio.gather(*(add_node node(node, config.psql_db) for node in nodes))
 
 
 async def update_our_validator_node(config: Config):
