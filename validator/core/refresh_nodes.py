@@ -60,7 +60,7 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 
 
 async def store_nodes(config: Config, nodes: list[Node]):
-     await asyncio.gather(*(add_node node(node, config.psql_db) for node in nodes))
+    await asyncio.gather(*(add_node(node, config.psql_db) for node in nodes))
 
 
 async def update_our_validator_node(config: Config):
