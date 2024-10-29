@@ -13,12 +13,15 @@ logger = getLogger(__name__)
 def create_node_with_fernet(row: dict) -> Optional[Node]:
     """Helper function to create Node object with fernet from database row"""
     try:
-        row["fernet"] = Fernet(row[dcst.SYMMETRIC_KEY])
+        if row[dcst.SYMMETRIC_KEY] is not None:
+            row["fernet"] = Fernet(row[dcst.SYMMETRIC_KEY])
+        else:
+            row["fernet"] = None
+        return Node(**row)
     except Exception as e:
         logger.error(f"Error creating fernet: {e}")
         logger.error(f"node: {row}")
         return None
-    return Node(**row)
 
 async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
@@ -28,6 +31,39 @@ async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
         """
         rows = await connection.fetch(query)
         nodes = []
+
+async def _fetch_node_capacity(config: Config, node: Node) -> dict[str, float] | None:
+    server_address = client.construct_server_address(
+        node=node,
+        replace_with_docker_localhost=config.replace_with_docker_localhost,
+        replace_with_localhost=config.replace_with_localhost,
+    )
+    public_configs = tcfg.get_public_task_configs()
+    payload = {"task_configs": public_configs}
+    assert node.symmetric_key_uuid is not None
+    try:
+        response = await client.make_non_streamed_post(
+            httpx_client=config.httpx_client,
+            server_address=server_address,
+            validator_ss58_address=config.keypair.ss58_address,
+            miner_ss58_address=node.hotkey,
+            keypair=config.keypair,
+            fernet=node.fernet,
+            symmetric_key_uuid=node.symmetric_key_uuid,
+            endpoint="/capacity",
+            payload=payload,
+            timeout=10,
+        )
+    except Exception as e:
+        logger.error(f"Failed to fetch capacity from node {node.node_id}: {e}")
+        return None
+
+    if response.status_code != 200:
+        logger.warning(f"Failed to fetch capacity from node {node.node_id}")
+        return None
+
+    return response.json()
+
         for row in rows:
             node = create_node_with_fernet(dict(row))
             if node:
