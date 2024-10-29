@@ -206,20 +206,10 @@ async def validator_cycle(config: Config) -> None:
            await asyncio.sleep(30)
 
 
-<<<<<<< HEAD
-async def node_refresh_cycle(config: Config) -> None:
-    try:
-        logger.info("Attempting to refresh_nodes")
-        await get_and_store_nodes(config)
-    except Exception as e:
-        logger.error(f"Error in node_refresh_cycle: {e}", exc_info=True)
-        await asyncio.sleep(100)
-=======
 async def node_refresh_cycle(config: Config) -> None:
     while True:
         try:
             logger.info("Attempting to refresh_nodes")
-            # Add timeout to prevent hanging
             async with asyncio.timeout(300):  # 5 minute timeout
                 await get_and_store_nodes(config)
             # Success - wait before next refresh
@@ -230,7 +220,6 @@ async def node_refresh_cycle(config: Config) -> None:
         except Exception as e:
             logger.error(f"Error in node_refresh_cycle: {e}", exc_info=True)
             await asyncio.sleep(60)
->>>>>>> Snippet
 
 # Not sure if this is the best solution to the problem of if something within the cycle crashes TT good with this stuff?
 # If not, will come back - let me know  porfa
