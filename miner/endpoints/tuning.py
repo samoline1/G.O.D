@@ -79,18 +79,23 @@ async def task_offer(
     config: Config = Depends(get_config),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ) -> MinerTaskResponse:
-    logger.debug(f"MinerTaskRequst class: {MinerTaskRequst}")
-    logger.debug(f"decrypt_general_payload ref: {decrypt_general_payload}")
-    logger.debug(f"Depends ref: {Depends}")
     try:
-        logger.debug(f"Processing task offer with payload: {decrypted_payload}")
+        # Log incoming data type and content
+        logger.debug(f"Raw decrypted_payload: {decrypted_payload}")
+        logger.debug(f"Payload type: {type(decrypted_payload)}")
+        logger.debug(f"Payload dict: {decrypted_payload.model_dump()}")
 
         if decrypted_payload.hours_to_complete < 100:
             return MinerTaskResponse(message="Yes", accepted=True)
         else:
             return MinerTaskResponse(message="I only accept small jobs", accepted=False)
+
+    except ValidationError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        logger.error(f"Error in task_offer handler: {e}")
+        logger.error(f"Unexpected error in task_offer: {str(e)}")
+        logger.error(f"Error type: {type(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing task offer: {str(e)}")
 
 def factory_router() -> APIRouter:
