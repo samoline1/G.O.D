@@ -36,7 +36,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
     # Ensuring the Nodes get converted to NodesWithFernet
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
 
-    await store_nodes(config, nodes)
+    nodes = await store_nodes(config, nodes)
 #    await update_our_validator_node(config) debug add back in
 
     await perform_handshakes(nodes, config)
@@ -67,6 +67,7 @@ async def store_nodes(config: Config, nodes: list[Node]):
             logger.info(f"Adding in this node {node}")
             nodef.append(node)
     await asyncio.gather(*(add_node(node, config.psql_db) for node in nodef))
+    return nodef
 
 
 async def update_our_validator_node(config: Config):
