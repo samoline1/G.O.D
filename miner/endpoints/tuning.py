@@ -91,7 +91,11 @@ async def task_offer(
         raise HTTPException(status_code=500, detail=f"Error processing task offer: {str(e)}")
 def factory_router() -> APIRouter:
     router = APIRouter()
-    router.add_api_route("/task_offer/", task_offer, tags=["Subnet"], methods=["POST"], response_model=MinerTaskResponse)
+    router.add_api_route("/task_offer/",
+                         task_offer,
+                         tags=["Subnet"], methods=["POST"],
+                         response_model=MinerTaskResponse,
+                         dependencies=[Depends(blacklist_low_stake), Depends(verify_request)])
     router.add_api_route(
         "/get_latest_model_submission/{task_id}",
         get_latest_model_submission,
