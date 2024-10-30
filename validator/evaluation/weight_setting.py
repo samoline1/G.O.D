@@ -32,18 +32,17 @@ async def _get_weights_to_set(config: Config, hours_since_last_update: int) -> l
      return await scoring_aggregation_from_date(config.psql_db, hours_since_last_update)
 
 
-async def _get_and_set_weights(config: Config, hours_since_last_update: int) -> None:
+async def _get_and_set_weights(config: Config, hours_since_last_update: int) -> bool:
     validator_node_id = await get_vali_node_id(config.substrate, config.netuid, config.keypair.ss58_address)
     if validator_node_id is None:
         raise ValueError("Validator node id not found")
-    result = await _get_weights_to_set(config, hours_since_last_update)
-    if result is None:
+    node_results = await _get_weights_to_set(config, hours_since_last_update)
+    if node_results is None:
         logger.info("No weights to set. Skipping weight setting.")
-        return
-    node_ids, node_weights = result
-    if len(node_ids) == 0:
+        return False
+    if len(node_results) == 0:
         logger.info("No nodes to set weights for. Skipping weight setting.")
-        return
+        return False
 
     logger.info("Weights calculated, about to set...")
 
