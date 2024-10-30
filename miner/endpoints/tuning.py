@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 import aiohttp
 import yaml
 from fastapi import Depends
+from fastapi import Request
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
 from fiber.logging_utils import get_logger
@@ -18,7 +19,10 @@ from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
 
-
+from fastapi import Depends, APIRouter
+from functools import partial
+from fiber.miner.security.encryption import decrypt_general_payload
+from fiber.miner.dependencies import blacklist_low_stake, verify_request
 logger = get_logger(__name__)
 
 
@@ -69,12 +73,17 @@ async def get_latest_model_submission(task_id: str) -> str:
         raise HTTPException(status_code=404, detail=f"No model submission found for task {task_id}")
 
 
-async def task_offer(request: MinerTaskRequst) -> MinerTaskResponse:
-    if request.hours_to_complete < 100:
-        return MinerTaskResponse(message="Yes", accepted=True)
-    else:
-        return MinerTaskResponse(message="I only accept small jobs", accepted=False)
-
+async def task_offer(
+    decrypted_payload: MinerTaskRequst = Depends(partial(decrypt_general_payload, MinerTaskRequst)),
+) -> MinerTaskResponse:
+    try:
+        if decrypted_payload.hours_to_complete < 100:
+            return MinerTaskResponse(message="Yes", accepted=True)
+        else:
+            return MinerTaskResponse(message="I only accept small jobs", accepted=False)
+    except Exception as e:
+        logger.error(f"Error processing task offer: {e}")
+        raise HTTPException(status_code=500, detail=f"Error processing task offer: {str(e)}")
 
 def factory_router() -> APIRouter:
     router = APIRouter()
