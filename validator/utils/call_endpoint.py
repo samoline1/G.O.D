@@ -30,6 +30,7 @@ async def process_non_stream_fiber(endpoint: str, config: Config, node: Node, pa
         replace_with_docker_localhost=False,
         replace_with_localhost=False,
     )
+    logger.info(f"Attempting to hit {server_address} endpoint {endpoint} with payload {payload}")
     assert node.symmetric_key_uuid is not None
     try:
         response = await client.make_non_streamed_post(
