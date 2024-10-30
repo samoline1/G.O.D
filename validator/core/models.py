@@ -33,6 +33,14 @@ class Task(BaseModel):
     best_submission_repo: Optional[str] = None
     user_id: Optional[str] = None
 
+
+class PeriodScore(BaseModel):
+    quality_score: float
+    summed_task_score: float
+    average_score: float
+    node_id: int
+    normalised_score: Optional[float] = 0.0
+
 class TaskNode(BaseModel):
     task_id: str
     node_id: int

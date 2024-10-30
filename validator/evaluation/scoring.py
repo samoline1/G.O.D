@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from logging import log
 from scipy.stats import gmean
 import numpy as np
 from fiber.logging_utils import get_logger
@@ -8,7 +9,7 @@ import validator.core.constants as cts
 from core.utils import download_s3_file
 from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
 from validator.core.config import Config
-from validator.core.models import NodeAggregationResult, Submission, TaskNode
+from validator.core.models import NodeAggregationResult, PeriodScore, Submission, TaskNode
 from fiber.networking.models import NodeWithFernet as Node
 from validator.core.models import Task, TaskResults
 from validator.core.models import MinerResults
@@ -60,11 +61,11 @@ def update_node_aggregation(
 
 def calculate_node_quality_scores(
     node_aggregations: dict[int, NodeAggregationResult]
-) -> tuple[list[tuple[int, float]], float]:
+) -> tuple[list[PeriodScore], float]:
     """Calculate quality scores for each node."""
     assert node_aggregations, "Node aggregations dictionary cannot be empty"
 
-    final_scores: list[tuple[int, float]] = []
+    final_scores: list[PeriodScore] = []
     min_score = float('inf')
 
     for node_id, node_agg in node_aggregations.items():
@@ -74,33 +75,40 @@ def calculate_node_quality_scores(
         score = node_agg.summed_adjusted_task_scores * node_agg.average_raw_score
         node_agg.quality_score = score
         min_score = min(min_score, score)
-        final_scores.append((node_id, score))
+
+        final_scores.append(PeriodScore(node_id = node_id,
+                                        quality_score=score,
+                                        average_score = node_agg.average_raw_score,
+                                        summed_task_score=node_agg.summed_adjusted_task_scores))
 
     return final_scores, min_score
 
 def normalise_scores(
-    final_scores: list[tuple[int, float]],
+    period_scores: list[PeriodScore],
     min_score: float,
-    node_aggregations: dict[int, NodeAggregationResult]
-) -> None:
+) -> list[PeriodScore]:
     """Normalise scores and update node emission values."""
-    assert final_scores, "Final scores list cannot be empty"
+    assert period_scores, "Period scores list cannot be empty"
 
     shift = abs(min_score) + 1e-10 if min_score < 0 else 0
-    total = sum(score + shift for _, score in final_scores)
+    total = sum(node_period_score.quality_score + shift for node_period_score in period_scores)
 
-    for node_id, score in final_scores:
-        normalised_score = (score + shift) / total if total > 0 else 1.0 / len(final_scores)
-        node_aggregations[node_id].emission = normalised_score
-        logger.info(str(node_aggregations[node_id]))
+    for node_period_score in period_scores:
+        normalised_score = (node_period_score.quality_score + shift) / total if total > 0 else 1.0 / len(final_scores)
+        node_period_score.normalised_score = normalised_score
+    logger.info(f"Here are the node period scores {period_scores}")
+    return period_scores
 
-async def scoring_aggregation_from_date(psql_db: str, date: datetime) -> None:
+
+async def scoring_aggregation_from_date(psql_db: str, hours_since_last_updated: int) -> list[PeriodScore]:
     """Aggregate and normalise scores across all nodes."""
     try:
+
+        date = datetime.now() - timedelta(hours=hours_since_last_updated)
         task_results: list[TaskResults] = await get_aggregate_scores_since(date, psql_db)
         if not task_results:
             logger.info('There were not results to be scored')
-            return
+            return []
 
         node_aggregations: dict[int, NodeAggregationResult] = {}
 
@@ -110,7 +118,8 @@ async def scoring_aggregation_from_date(psql_db: str, date: datetime) -> None:
                 update_node_aggregation(node_aggregations, node_score, task_work_score)
 
         final_scores, min_score = calculate_node_quality_scores(node_aggregations)
-        normalise_scores(final_scores, min_score, node_aggregations)
+        final_scores = normalise_scores(final_scores, min_score)
+        return final_scores
 
     except Exception as e:
         logger.error(f"Error in scoring aggregation: {e}")
