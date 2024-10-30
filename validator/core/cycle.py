@@ -43,6 +43,7 @@ async def _run_task_prep(task: Task) -> Task:
 
 
 async def _make_offer(node: Node, request: MinerTaskRequst, config: Config) -> MinerTaskResponse:
+    logger.info(f"We are making the following offer {request.model_dump()}")
     response = await process_non_stream_fiber(cst.TASK_OFFER_ENDPOINT, config, node, request.model_dump())
     return MinerTaskResponse(message=response.get('message', 'No message given'), accepted=response.get('accepted', False))
 
