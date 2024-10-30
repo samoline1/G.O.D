@@ -63,6 +63,7 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 async def store_nodes(config: Config, nodes: list[Node]):
     nodef = []
     for node in nodes:
+        logger.info(f"Here is a node {node}")
         if node.node_id == 60:
             logger.info(f"Adding in this node {node}")
             nodef.append(node)
