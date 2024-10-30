@@ -94,7 +94,7 @@ def normalise_scores(
     total = sum(node_period_score.quality_score + shift for node_period_score in period_scores)
 
     for node_period_score in period_scores:
-        normalised_score = (node_period_score.quality_score + shift) / total if total > 0 else 1.0 / len(final_scores)
+        normalised_score = (node_period_score.quality_score + shift) / total if total > 0 else 1.0 / len(period_scores)
         node_period_score.normalised_score = normalised_score
     logger.info(f"Here are the node period scores {period_scores}")
     return period_scores
