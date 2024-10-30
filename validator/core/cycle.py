@@ -19,6 +19,7 @@ from validator.core.refresh_nodes import get_and_store_nodes, perform_handshakes
 import validator.db.sql.tasks as tasks_sql
 import validator.db.sql.nodes as nodes_sql
 from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
+from validator.evaluation.weight_setting import set_weights_periodically
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream_fiber
 
@@ -228,6 +229,7 @@ async def run_validator_cycles(config: Config) -> None:
     try:
         # Run node refresh cycle and validator cycle concurrently
         await asyncio.gather(
+            set_weights_periodically(config),
             node_refresh_cycle(config),
             _run_main_validator_loop(config)
         )

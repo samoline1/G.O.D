@@ -1,5 +1,6 @@
 from typing import List, Optional
 from asyncpg.connection import Connection
+from fiber.chain.metagraph import SubstrateInterface
 from validator.db.database import PSQLDB
 from validator.db import constants as dcst
 from fiber import utils as futils
