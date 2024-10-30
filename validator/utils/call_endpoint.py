@@ -23,6 +23,34 @@ retry_with_backoff = retry(
     reraise=True
 )
 
+async def process_non_stream_fiber_get(endpoint: str, config: Config, node: Node) -> dict[str, Any] | None:
+    server_address = client.construct_server_address(
+        node=node,
+        replace_with_docker_localhost=False,
+        replace_with_localhost=False,
+    )
+    logger.info(f"Attempting to hit a GET {server_address} endpoint {endpoint}")
+    logger.info(f"With his keypair {config.keypair} this fernet {node.fernet} this key {node.symmetric_key_uuid}")
+    assert node.symmetric_key_uuid is not None
+    try:
+        response = await client.make_non_streamed_get(
+            httpx_client=config.httpx_client,
+            server_address=server_address,
+            validator_ss58_address=config.keypair.ss58_address,
+            symmetric_key_uuid=node.symmetric_key_uuid,
+            endpoint=endpoint,
+            timeout=10,
+        )
+    except Exception as e:
+        logger.error(f"Failed to comunication with node {node.node_id}: {e}")
+        return None
+
+    if response.status_code != 200:
+        logger.warning(f"Failed to communicate with node {node.node_id}")
+        return None
+
+    return response.json()
+
 
 async def process_non_stream_fiber(endpoint: str, config: Config, node: Node, payload: dict[str, Any]) -> dict[str, Any] | None:
     server_address = client.construct_server_address(

@@ -64,8 +64,6 @@ async def tune_model(
 
 async def get_latest_model_submission(
     task_id: str,
-    _: None = Depends(blacklist_low_stake),
-    __: None = Depends(verify_request)
 ) -> str:
     try:
         config_filename = f"{task_id}.yml"
@@ -84,10 +82,6 @@ async def task_offer(
     worker_config: WorkerConfig = Depends(get_worker_config),
 ) -> MinerTaskResponse:
     try:
-        # Log incoming data type and content
-        logger.debug(f"Raw decrypted_payload: {decrypted_payload}")
-        logger.debug(f"Payload type: {type(decrypted_payload)}")
-        logger.debug(f"Payload dict: {decrypted_payload.model_dump()}")
 
         if decrypted_payload.hours_to_complete < 100:
             return MinerTaskResponse(message="Yes", accepted=True)
@@ -117,6 +111,7 @@ def factory_router() -> APIRouter:
         response_model=str,
         summary="Get Latest Model Submission",
         description="Retrieve the latest model submission for a given task ID",
+        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)]
     )
     router.add_api_route(
         "/start_training/",

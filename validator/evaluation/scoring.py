@@ -15,7 +15,7 @@ from validator.core.models import MinerResults
 from validator.db.sql.submissions_and_scoring import add_submission, get_aggregate_scores_since, set_task_node_quality_score
 from validator.db.sql.tasks import get_nodes_assigned_to_task
 from validator.evaluation.docker_evaluation import run_evaluation_docker
-from validator.utils.call_endpoint import process_non_stream_fiber, process_non_stream_get
+from validator.utils.call_endpoint import process_non_stream_fiber, process_non_stream_fiber_get, process_non_stream_get
 import re
 
 logger = get_logger(__name__)
@@ -253,9 +253,9 @@ def _create_failed_miner_result(node_id: int) -> MinerResults:
     )
 
 async def _get_submission_repo(miner: Node, task_id: str, config: Config) -> str | None:
-    url = f"/get_latest_model_submission/{task_id}"
+    url = f"{cts.SUBMISSION_ENDPOINT}{task_id}"
     try:
-        return str(await process_non_stream_fiber(url, config, miner, {}))
+        return str(await process_non_stream_fiber_get(url, config, miner))
     except Exception as e:
         logger.error(f"Failed to get submission for miner {miner.node_id}: {e}")
         return None
