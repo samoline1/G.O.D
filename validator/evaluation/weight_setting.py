@@ -7,7 +7,6 @@ import os
 
 from validator.core.config import Config
 from validator.core.models import PeriodScore
-from validator.db.sql.nodes import get_all_nodes
 from validator.evaluation.scoring import scoring_aggregation_from_date
 from validator.utils.query_substrate import query_substrate
 
