@@ -73,17 +73,37 @@ async def get_latest_model_submission(task_id: str) -> str:
         raise HTTPException(status_code=404, detail=f"No model submission found for task {task_id}")
 
 
+async def safe_decrypt_payload(
+    request: Request,
+    model_class: type[MinerTaskRequst] = MinerTaskRequst,
+) -> MinerTaskRequst:
+    try:
+        # Get the raw body first
+        body = await request.body()
+        logger.debug(f"Received raw body length: {len(body)}")
+
+        # Try decryption
+        decrypted = await decrypt_general_payload(model_class, request)
+        logger.debug(f"Successfully decrypted payload: {decrypted}")
+        return decrypted
+    except Exception as e:
+        logger.error(f"Decryption failed with error: {str(e)}")
+        logger.error(f"Error type: {type(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to decrypt payload: {str(e)}")
+
 async def task_offer(
-    decrypted_payload: MinerTaskRequst = Depends(partial(decrypt_general_payload, MinerTaskRequst)),
+    decrypted_payload: MinerTaskRequst = Depends(safe_decrypt_payload),
+    config: Config = Depends(get_config),
 ) -> MinerTaskResponse:
     try:
-        logger.info(f"Got a descryted payload {decrypted_payload}")
+        logger.debug(f"Processing task offer with payload: {decrypted_payload}")
+
         if decrypted_payload.hours_to_complete < 100:
             return MinerTaskResponse(message="Yes", accepted=True)
         else:
             return MinerTaskResponse(message="I only accept small jobs", accepted=False)
     except Exception as e:
-        logger.error(f"Error processing task offer: {e}")
+        logger.error(f"Error in task_offer handler: {e}")
         raise HTTPException(status_code=500, detail=f"Error processing task offer: {str(e)}")
 
 def factory_router() -> APIRouter:
