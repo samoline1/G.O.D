@@ -29,32 +29,32 @@ logger = get_logger(__name__)
 
 
 async def tune_model(
-    request: TrainRequest,
+    decrypted_payload: TrainRequest = Depends(partial(decrypt_general_payload, TrainRequest)),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     logger.info("Starting model tuning.")
-    logger.info(f"Job received is {request}")
+    logger.info(f"Job received is {decrypted_payload}")
 
-    if not request.dataset or not request.model:
+    if not decrypted_payload.dataset or not decrypted_payload.model:
         raise HTTPException(status_code=400, detail="Dataset and model are required.")
 
     try:
-        logger.info(request.file_format)
-        if request.file_format != FileFormat.HF:
-            if request.file_format == FileFormat.S3:
-                request.dataset = await download_s3_file(request.dataset)
-                logger.info(request.dataset)
-                request.file_format = FileFormat.JSON
+        logger.info(decrypted_payload.file_format)
+        if decrypted_payload.file_format != FileFormat.HF:
+            if decrypted_payload.file_format == FileFormat.S3:
+                decrypted_payload.dataset = await download_s3_file(decrypted_payload.dataset)
+                logger.info(decrypted_payload.dataset)
+                decrypted_payload.file_format = FileFormat.JSON
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
-        job_id=str(request.task_id),
-        dataset=request.dataset,
-        model=request.model,
-        dataset_type=request.dataset_type,
-        file_format=request.file_format,
+        job_id=str(decrypted_payload.task_id),
+        dataset=decrypted_payload.dataset,
+        model=decrypted_payload.model,
+        dataset_type=decrypted_payload.dataset_type,
+        file_format=decrypted_payload.file_format,
     )
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)
@@ -62,7 +62,11 @@ async def tune_model(
     return {"message": "Training job enqueued.", "task_id": job.job_id}
 
 
-async def get_latest_model_submission(task_id: str) -> str:
+async def get_latest_model_submission(
+    task_id: str,
+    _: None = Depends(blacklist_low_stake),
+    __: None = Depends(verify_request)
+) -> str:
     try:
         config_filename = f"{task_id}.yml"
         config_path = os.path.join(cst.CONFIG_DIR, config_filename)
@@ -120,5 +124,6 @@ def factory_router() -> APIRouter:
         tags=["Subnet"],
         methods=["POST"],
         response_model=TrainResponse,
+        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)]
     )
     return router
