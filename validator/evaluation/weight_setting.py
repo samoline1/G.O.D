@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 
 from validator.core.config import Config
+from validator.core.models import PeriodScore
 from validator.db.sql.nodes import get_all_nodes
 from validator.evaluation.scoring import scoring_aggregation_from_date
 from validator.utils.substrate.query_substrate import query_substrate
@@ -26,15 +27,17 @@ from fiber.chain.interface import get_substrate
 logger = get_logger(__name__)
 
 
-async def _get_weights_to_set(config: Config) -> list[Period_scores]| None:
-     return await scoring_aggregation_from_date(config.psql_db)
+TIME_PER_BLOCK :int = 500
+
+async def _get_weights_to_set(config: Config, hours_since_last_update: int) -> list[PeriodScore]| None:
+     return await scoring_aggregation_from_date(config.psql_db, hours_since_last_update)
 
 
-async def _get_and_set_weights(config: Config) -> None:
+async def _get_and_set_weights(config: Config, hours_since_last_update: int) -> None:
     validator_node_id = await get_vali_node_id(config.substrate, config.netuid, config.keypair.ss58_address)
     if validator_node_id is None:
         raise ValueError("Validator node id not found")
-    result = await _get_weights_to_set(config)
+    result = await _get_weights_to_set(config, hours_since_last_update)
     if result is None:
         logger.info("No weights to set. Skipping weight setting.")
         return
@@ -128,11 +131,13 @@ async def set_weights_periodically(config: Config, just_once: bool = False) -> N
             await asyncio.sleep(12 * 25)  # sleep for 25 blocks
             continue
 
+        number_of_hours_since_last_update: int = updated * TIME_PER_BLOCK
+
         if os.getenv("ENV", "prod").lower() == "dev":
-            success = await _get_and_set_weights(config)
+            success = await _get_and_set_weights(config, number_of_hours_since_last_update)
         else:
             try:
-                success = await _get_and_set_weights(config)
+                success = await _get_and_set_weights(config, number_of_hours_since_last_update)
             except Exception as e:
                 logger.error(f"Failed to set weights with error: {e}")
                 success = False
