@@ -243,7 +243,6 @@ async def _run_main_validator_loop(config: Config) -> None:
             node_list = await nodes_sql.get_all_nodes(config.psql_db)
             node_list = await perform_handshakes(node_list, config)
             logger.info(f"Current active nodes: {len(node_list)}")
-            await scoring_aggregation_from_date(config.psql_db)
             await validator_cycle(config)
             # Add small sleep to prevent tight loop
             await asyncio.sleep(30)
