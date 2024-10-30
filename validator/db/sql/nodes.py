@@ -144,3 +144,19 @@ async def get_last_updated_time_for_nodes(connection: Connection, netuid: int) -
     return await connection.fetchval(query, netuid)
 
 
+
+async def insert_symmetric_keys_for_nodes(connection: Connection, nodes: list[Node]) -> None:
+    logger.info(f"Inserting {len([node for node in nodes if node.fernet is not None])} nodes into {dcst.NODES_TABLE}...")
+    await connection.executemany(
+        f"""
+        UPDATE {dcst.NODES_TABLE}
+        SET {dcst.SYMMETRIC_KEY} = $1, {dcst.SYMMETRIC_KEY_UUID} = $2
+        WHERE {dcst.HOTKEY} = $3 and {dcst.NETUID} = $4
+        """,
+        [
+            (futils.fernet_to_symmetric_key(node.fernet), node.symmetric_key_uuid, node.hotkey, node.netuid)
+            for node in nodes
+            if node.fernet is not None
+        ],
+    )
+

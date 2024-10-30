@@ -9,7 +9,7 @@ import traceback
 import httpx
 
 from fiber.networking.models import NodeWithFernet as Node
-from validator.db.sql.nodes import get_all_nodes, add_node, get_last_updated_time_for_nodes
+from validator.db.sql.nodes import get_all_nodes, add_node, get_last_updated_time_for_nodes, insert_symmetric_keys_for_nodes
 from fiber.logging_utils import get_logger
 from fiber.chain import fetch_nodes
 from validator.core.config import Config
@@ -39,6 +39,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
     await store_nodes(config, nodes)
 #    await update_our_validator_node(config) debug add back in
 
+    await perform_handshakes(nodes, config)
     logger.info(f"Stored {len(nodes)} nodes.")
     return nodes
 
