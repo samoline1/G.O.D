@@ -23,6 +23,8 @@ from functools import partial
 from fiber.miner.security.encryption import decrypt_general_payload
 from fiber.miner.dependencies import blacklist_low_stake, get_config, verify_request
 from fiber.logging_utils import get_logger
+from fiber.miner.core.configuration import Config
+
 logger = get_logger(__name__)
 
 
@@ -88,7 +90,7 @@ async def get_decrypted_payload(
 
 async def task_offer(
     decrypted_payload: MinerTaskRequst = Depends(get_decrypted_payload),
-    config: Config = Depends(get_config),
+    config: Config= Depends(get_config),
 ) -> MinerTaskResponse:
     try:
         logger.debug(f"Processing task offer with payload: {decrypted_payload}")
