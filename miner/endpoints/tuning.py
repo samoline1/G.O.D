@@ -72,18 +72,13 @@ async def get_latest_model_submission(task_id: str) -> str:
         logger.error(f"Error retrieving latest model submission for task {task_id}: {str(e)}")
         raise HTTPException(status_code=404, detail=f"No model submission found for task {task_id}")
 
-
-async def safe_decrypt_payload(
+async def get_decrypted_payload(
     request: Request,
-    model_class: type[MinerTaskRequst] = MinerTaskRequst,
+    config: Config = Depends(get_config)
 ) -> MinerTaskRequst:
     try:
-        # Get the raw body first
-        body = await request.body()
-        logger.debug(f"Received raw body length: {len(body)}")
-
-        # Try decryption
-        decrypted = await decrypt_general_payload(model_class, request)
+        # Pass the request and config to decrypt_general_payload
+        decrypted = await decrypt_general_payload(MinerTaskRequst, request, config)
         logger.debug(f"Successfully decrypted payload: {decrypted}")
         return decrypted
     except Exception as e:
@@ -92,7 +87,8 @@ async def safe_decrypt_payload(
         raise HTTPException(status_code=400, detail=f"Failed to decrypt payload: {str(e)}")
 
 async def task_offer(
-    decrypted_payload: MinerTaskRequst = Depends(safe_decrypt_payload),
+    decrypted_payload: MinerTaskRequst = Depends(get_decrypted_payload),
+    config: Config = Depends(get_config),
 ) -> MinerTaskResponse:
     try:
         logger.debug(f"Processing task offer with payload: {decrypted_payload}")
