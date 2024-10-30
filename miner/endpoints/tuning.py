@@ -77,6 +77,7 @@ async def task_offer(
     decrypted_payload: MinerTaskRequst = Depends(partial(decrypt_general_payload, MinerTaskRequst)),
 ) -> MinerTaskResponse:
     try:
+        logger.info(f"Got a descryted payload {decrypted_payload}")
         if decrypted_payload.hours_to_complete < 100:
             return MinerTaskResponse(message="Yes", accepted=True)
         else:

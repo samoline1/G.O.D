@@ -10,6 +10,9 @@ from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import JobStatus
 from core.models.utility_models import TaskStatus
+from fiber.logging_utils import get_logger
+logger = get_logger(__name__)
+
 
 
 class TrainRequest(BaseModel):
@@ -50,7 +53,10 @@ class MinerTaskRequst(BaseModel):
     model: str
     hours_to_complete: int
     task_id: str
-
+    @classmethod
+    def debug_validate(cls, value):
+        logger.debug(f"Validating data: {value}")
+        return value
 
 
 class MinerTaskResponse(BaseModel):
