@@ -15,12 +15,13 @@ from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.models import Task
 from fiber.networking.models import NodeWithFernet as Node
-from validator.core.refresh_nodes import get_and_store_nodes
+from validator.core.refresh_nodes import get_and_store_nodes, perform_handshakes
 import validator.db.sql.tasks as tasks_sql
 import validator.db.sql.nodes as nodes_sql
 from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream_fiber
+
 
 
 logger = get_logger(__name__)
@@ -145,6 +146,7 @@ async def _start_training_task(task: Task, config: Config) -> None:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
         assigned_miners = await tasks_sql.get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
+        assigned_miners = await perform_handshakes(assigned_miners, config)
         await _let_miners_know_to_start_training(task, assigned_miners, config)
         task.status = TaskStatus.TRAINING
         await tasks_sql.update_task(task, config.psql_db)
@@ -237,6 +239,7 @@ async def _run_main_validator_loop(config: Config) -> None:
     while True:
         try:
             node_list = await nodes_sql.get_all_nodes(config.psql_db)
+            node_list = await perform_handshakes(node_list, config)
             logger.info(f"Current active nodes: {len(node_list)}")
             testdate = datetime.datetime.now() - datetime.timedelta(days=7)
             await scoring_aggregation_from_date(config.psql_db, testdate)
