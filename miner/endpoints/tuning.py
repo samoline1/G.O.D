@@ -77,8 +77,11 @@ async def get_latest_model_submission(task_id: str) -> str:
 async def task_offer(
     decrypted_payload: MinerTaskRequst = Depends(partial(decrypt_general_payload, MinerTaskRequst)),
     config: Config = Depends(get_config),
-    worker_config: WorkerConfig = Depends(get_worker_config),  # Add this if needed
+    worker_config: WorkerConfig = Depends(get_worker_config),
 ) -> MinerTaskResponse:
+    logger.debug(f"MinerTaskRequst class: {MinerTaskRequst}")
+    logger.debug(f"decrypt_general_payload ref: {decrypt_general_payload}")
+    logger.debug(f"Depends ref: {Depends}")
     try:
         logger.debug(f"Processing task offer with payload: {decrypted_payload}")
 
@@ -89,6 +92,7 @@ async def task_offer(
     except Exception as e:
         logger.error(f"Error in task_offer handler: {e}")
         raise HTTPException(status_code=500, detail=f"Error processing task offer: {str(e)}")
+
 def factory_router() -> APIRouter:
     router = APIRouter()
     router.add_api_route("/task_offer/",
