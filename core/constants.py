@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+VERSION_KEY = 61_000
+
 MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
 

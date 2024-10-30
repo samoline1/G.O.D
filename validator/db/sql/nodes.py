@@ -8,6 +8,8 @@ from cryptography.fernet import Fernet
 from logging import getLogger
 import datetime
 
+from validator.utils.query_substrate import query_substrate
+
 logger = getLogger(__name__)
 
 def create_node_with_fernet(row: dict) -> Optional[Node]:
@@ -160,3 +162,25 @@ async def insert_symmetric_keys_for_nodes(connection: Connection, nodes: list[No
         ],
     )
 
+
+async def get_vali_ss58_address(psql_db: PSQLDB, netuid: int) -> str | None:
+    query = f"""
+        SELECT
+            {dcst.HOTKEY}
+        FROM {dcst.NODES_TABLE}
+        WHERE {dcst.OUR_VALIDATOR} = true AND {dcst.NETUID} = $1
+    """
+
+    node = await psql_db.fetchone(query, netuid)
+
+    if node is None:
+        logger.error(f"I cannot find the validator node for netuid {netuid} in the DB. Maybe control node is still syncing?")
+        return None
+
+    return node[dcst.HOTKEY]
+
+async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_address: str) -> str | None:
+    _, uid = query_substrate(
+        substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True
+    )
+    return uid
