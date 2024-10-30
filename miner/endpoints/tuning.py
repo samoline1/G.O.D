@@ -62,6 +62,7 @@ async def tune_model(
     return {"message": "Training job enqueued.", "task_id": job.job_id}
 
 
+# I think we need to be v careful that it's validators that are asking for this, is there a way to ensure we only reply to validators?
 async def get_latest_model_submission(
     task_id: str,
 ) -> str:
@@ -111,7 +112,7 @@ def factory_router() -> APIRouter:
         response_model=str,
         summary="Get Latest Model Submission",
         description="Retrieve the latest model submission for a given task ID",
-        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)]
+        dependencies=[Depends(blacklist_low_stake)]
     )
     router.add_api_route(
         "/start_training/",
