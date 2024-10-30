@@ -62,8 +62,7 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 async def store_nodes(config: Config, nodes: list[Node]):
     nodef = []
     for node in nodes:
-        logger.info(f"heres a node  in this node {node}")
-        if node.netuid == 60:
+        if node.node_id == 60:
             logger.info(f"Adding in this node {node}")
             nodef.append(node)
     await asyncio.gather(*(add_node(node, config.psql_db) for node in nodef))
