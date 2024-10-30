@@ -77,6 +77,7 @@ async def update_our_validator_node(config: Config):
 
 async def _handshake(config: Config, node: Node, async_client: httpx.AsyncClient) -> Node:
     logger.info(f"I am attempting to shake hands with {node}")
+    logger.info(f"Here is my config keypair {config.keypair}")
     node_copy = node.model_copy()
     server_address = client.construct_server_address(
         node=node,
