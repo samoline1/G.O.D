@@ -37,7 +37,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
 
     await store_nodes(config, nodes)
-    await update_our_validator_node(config)
+#    await update_our_validator_node(config) debug add back in
 
     logger.info(f"Stored {len(nodes)} nodes.")
     return nodes
