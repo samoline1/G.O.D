@@ -88,7 +88,6 @@ async def get_decrypted_payload(
 
 async def task_offer(
     decrypted_payload: MinerTaskRequst = Depends(get_decrypted_payload),
-    config: Config = Depends(get_config),
 ) -> MinerTaskResponse:
     try:
         logger.debug(f"Processing task offer with payload: {decrypted_payload}")
