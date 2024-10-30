@@ -6,7 +6,6 @@ from fastapi import Depends
 from fastapi import Request
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
-from fiber.logging_utils import get_logger
 
 import core.constants as cst
 from core.models.payload_models import MinerTaskRequst
@@ -23,6 +22,7 @@ from fastapi import Depends, APIRouter
 from functools import partial
 from fiber.miner.security.encryption import decrypt_general_payload
 from fiber.miner.dependencies import blacklist_low_stake, verify_request
+from fiber.logging_utils import get_logger
 logger = get_logger(__name__)
 
 
