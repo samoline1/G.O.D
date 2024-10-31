@@ -18,7 +18,7 @@ from fiber.networking.models import NodeWithFernet as Node
 from validator.core.refresh_nodes import get_and_store_nodes, perform_handshakes
 import validator.db.sql.tasks as tasks_sql
 import validator.db.sql.nodes as nodes_sql
-from validator.evaluation.scoring import evaluate_and_score, scoring_aggregation_from_date
+from validator.evaluation.scoring import evaluate_and_score
 from validator.evaluation.weight_setting import set_weights_periodically
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream_fiber
@@ -239,7 +239,7 @@ async def run_validator_cycles(config: Config) -> None:
 async def _run_main_validator_loop(config: Config) -> None:
     while True:
         try:
-            node_list = await nodes_sql.get_all_nodes(config.psql_db, config.netuid)
+            node_list = await nodes_sql.get_all_nodes(config.psql_db)
             node_list = await perform_handshakes(node_list, config)
             logger.info(f"Current active nodes: {len(node_list)}")
             await validator_cycle(config, node_list)
