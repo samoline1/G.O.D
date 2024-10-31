@@ -30,11 +30,11 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
         nodes =  await get_all_nodes(config.psql_db, config.netuid)
         return await perform_handshakes(nodes, config)
 
-    await migrate_nodes_to_history(config.psql_db)
     raw_nodes = await fetch_nodes_from_substrate(config)
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
     nodes = await perform_handshakes(nodes, config)
     logger.info(f"Here are the nodes we have shaked hands with {nodes}")
+    await migrate_nodes_to_history(config.psql_db)
     await store_nodes(config, nodes)
 
     logger.info(f"Stored {len(nodes)} nodes.")
@@ -101,9 +101,6 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
     tasks = []
     shaked_nodes: list[Node] = []
     for node in nodes:
-        logger.info(node.node_id)
-        if node.node_id != 60:
-            continue
         if node.fernet is None or node.symmetric_key_uuid is None:
             try:
                 tasks.append(_handshake(config, node, config.httpx_client))
