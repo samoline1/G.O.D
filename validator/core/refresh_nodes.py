@@ -108,6 +108,7 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
                 logger.info(f"Success in shaking hands with {node.node_id}")
             except Exception as e:
                 logger.info(f"Unable to shake hands with {node.node_id} - e")
+                continue
         if len(tasks) > 50:
             shaked_nodes.extend(await asyncio.gather(*tasks))
             tasks = []

@@ -122,9 +122,8 @@ async def assign_miners(task: Task, nodes: list[Node], config: Config):
         await tasks_sql.update_task(task, config.psql_db)
 
 
-async def _find_miners_for_task(config: Config):
+async def _find_miners_for_task(config: Config, nodes: list[Node]):
     pending_tasks = await tasks_sql.get_tasks_with_status(status=TaskStatus.DATA_READY, psql_db=config.psql_db)
-    nodes = await nodes_sql.get_all_nodes(config.psql_db, config.netuid)
     await asyncio.gather(*[assign_miners(task, nodes, config) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
 
 
@@ -188,22 +187,22 @@ async def process_completed_tasks(config: Config) -> None:
             await asyncio.sleep(30)
 
 
-async def process_pending_tasks(config: Config) -> None:
+async def process_pending_tasks(config: Config, nodes: list[Node]) -> None:
     while True:
         try:
             await _process_selected_tasks(config)
-            await _find_miners_for_task(config)
+            await _find_miners_for_task(config, nodes)
             await _process_ready_to_train_tasks(config)
         except Exception as e:
             logger.info(f"There was a problem in processing: {e}")
             await asyncio.sleep(30)
 
 
-async def validator_cycle(config: Config) -> None:
+async def validator_cycle(config: Config, nodes: list[Node]) -> None:
        try:
            await asyncio.gather(
                process_completed_tasks(config),
-               process_pending_tasks(config),
+               process_pending_tasks(config, nodes),
            )
        except Exception as e:
            logger.error(f"Error in validator_cycle: {e}", exc_info=True)
@@ -242,7 +241,7 @@ async def _run_main_validator_loop(config: Config) -> None:
             node_list = await nodes_sql.get_all_nodes(config.psql_db, config.netuid)
             node_list = await perform_handshakes(node_list, config)
             logger.info(f"Current active nodes: {len(node_list)}")
-            await validator_cycle(config)
+            await validator_cycle(config, node_list)
             # Add small sleep to prevent tight loop
             await asyncio.sleep(30)
         except Exception as e:
