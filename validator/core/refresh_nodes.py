@@ -38,7 +38,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
 
     await store_nodes(config, nodes)
-#    await update_our_validator_node(config) debug add back in
+#    Public/await update_our_validator_node(config) debug add back in
 
     await perform_handshakes(nodes, config)
     logger.info(f"Stored {len(nodes)} nodes.")
@@ -62,7 +62,7 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 
 
 async def store_nodes(config: Config, nodes: list[Node]):
-    await asyncio.gather(*(add_node(node, config.psql_db) for node in nodes))
+    await asyncio.gather(*(add_node(node, config.psql_db, config.netuid) for node in nodes))
 
 
 async def update_our_validator_node(config: Config):
