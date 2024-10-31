@@ -68,8 +68,6 @@ async def update_our_validator_node(config: Config):
 
 
 async def _handshake(config: Config, node: Node, async_client: httpx.AsyncClient) -> Node:
-    logger.info(f"I am attempting to shake hands with {node}")
-    logger.info(f"Here is my config keypair {config.keypair}")
     node_copy = node.model_copy()
     server_address = client.construct_server_address(
         node=node,
@@ -83,7 +81,6 @@ async def _handshake(config: Config, node: Node, async_client: httpx.AsyncClient
         )
     except Exception as e:
         error_details = _format_exception(e)
-        logger.debug(f"Failed to perform handshake with {server_address}. Details:\n{error_details}")
 
         if isinstance(e, (httpx.HTTPStatusError, httpx.RequestError, httpx.ConnectError)):
             if hasattr(e, "response"):
@@ -106,7 +103,6 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
                 tasks.append(_handshake(config, node, config.httpx_client))
                 logger.info(f"Success in shaking hands with {node.node_id}")
             except Exception as e:
-                logger.info(f"Unable to shake hands with {node.node_id} - e")
                 continue
         if len(tasks) > 50:
             shaked_nodes.extend(await asyncio.gather(*tasks))
