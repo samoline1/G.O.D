@@ -6,6 +6,7 @@ from asyncpg.connection import Connection
 from fiber import utils as futils
 from fiber.networking.models import NodeWithFernet as Node
 
+from validator.utils.query_substrate import query_substrate
 from validator.db import constants as dcst
 from validator.db.database import PSQLDB
 from core.constants import NETUID
@@ -176,3 +177,9 @@ async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:
             f"DELETE FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1",
             NETUID
         )
+
+async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_address: str) -> str | None:
+    _, uid = query_substrate(
+        substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True
+    )
+    return uid
