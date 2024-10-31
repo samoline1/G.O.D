@@ -31,7 +31,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
 
     raw_nodes = await fetch_nodes_from_substrate(config)
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
-    await perform_handshakes(nodes, config)
+    nodes = await perform_handshakes(nodes, config)
     await store_nodes(config, nodes)
 
     logger.info(f"Stored {len(nodes)} nodes.")
@@ -124,5 +124,6 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
 
     async with await config.psql_db.connection() as connection:
         await insert_symmetric_keys_for_nodes(connection, nodes_where_handshake_worked)
+    logger.info('We have successfully inserted symmetric keys for nodes')
 
     return shaked_nodes
