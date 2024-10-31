@@ -6,6 +6,7 @@ from asyncpg.connection import Connection
 from fiber import utils as futils
 from fiber.networking.models import NodeWithFernet as Node
 
+from fiber import SubstrateInterface
 from validator.utils.query_substrate import query_substrate
 from validator.db import constants as dcst
 from validator.db.database import PSQLDB
