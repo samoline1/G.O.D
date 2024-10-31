@@ -2,13 +2,16 @@ import os
 
 from dotenv import load_dotenv
 
-from validator.db.constants import NETUID
-
-
 load_dotenv()
 
 VERSION_KEY = 61_000
-NETUID = os.getenv("NETUID")
+# Default NETUID if not set in environment
+DEFAULT_NETUID = 176
+
+try:
+    NETUID = int(os.getenv("NETUID", DEFAULT_NETUID))
+except (TypeError, ValueError):
+    NETUID = DEFAULT_NETUID
 
 MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
