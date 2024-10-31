@@ -31,59 +31,7 @@ async def get_all_nodes(psql_db: PSQLDB, netuid: int) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            SELECT * FROM {dcst.NODES_TABLE}
-            WHERE {dcst.NETUID} = $1
-        """
-        rows = await connection.fetch(query, netuid)
-        nodes = []
-        for row in rows:
-            node = create_node_with_fernet(dict(row))
-            nodes.append(node)
-        return nodes
-
-async def add_node(node: Node, psql_db: PSQLDB, network_id: int) -> Optional[Node]:
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        query = f"""
-            INSERT INTO {dcst.NODES_TABLE} (
-                {dcst.NODE_ID}, {dcst.COLDKEY}, {dcst.IP}, {dcst.IP_TYPE},
-                {dcst.PORT}, {dcst.SYMMETRIC_KEY}, {dcst.NETWORK}, {dcst.STAKE},
-                {dcst.HOTKEY}, {dcst.INCENTIVE}, {dcst.NETUID}, {dcst.LAST_UPDATED},
-                {dcst.PROTOCOL}, {dcst.SYMMETRIC_KEY_UUID}, {dcst.OUR_VALIDATOR},
-                {dcst.TRUST}, {dcst.VTRUST}
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-            RETURNING {dcst.HOTKEY}, {dcst.NETUID}
-        """
-        return_values = await connection.fetchrow(
-            query,
-            node.node_id,
-            node.coldkey,
-            node.ip,
-            node.ip_type,
-            node.port,
-            None,
-            network_id, # do not leave this as it is
-            node.stake,
-            node.hotkey,
-            node.incentive,
-            node.netuid,
-            node.last_updated,
-            node.protocol,
-            node.symmetric_key_uuid,
-            False, # assume not our validator
-            node.trust,
-            node.vtrust
-        )
-        if return_values:
-            return await get_node_by_keys(return_values[dcst.HOTKEY], return_values[dcst.NETUID], psql_db)
-        return None
-
-async def get_node(node_id: int, psql_db: PSQLDB) -> Optional[Node]:
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        query = f"""
-            SELECT * FROM {dcst.NODES_TABLE} WHERE {dcst.NODE_ID} = $1
+            SELECT * FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1
         """
         row = await connection.fetchrow(query, node_id)
         if row:
