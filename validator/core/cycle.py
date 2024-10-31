@@ -229,8 +229,8 @@ async def run_validator_cycles(config: Config) -> None:
     try:
         # Run node refresh cycle and validator cycle concurrently
         await asyncio.gather(
-            set_weights_periodically(config),
             node_refresh_cycle(config),
+            set_weights_periodically(config),
             _run_main_validator_loop(config)
         )
     except Exception as e:
