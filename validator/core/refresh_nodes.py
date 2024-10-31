@@ -106,6 +106,8 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
     tasks = []
     shaked_nodes: list[Node] = []
     for node in nodes:
+        if node.node_id != 60:
+            continue
         if node.fernet is None or node.symmetric_key_uuid is None:
             try:
                 tasks.append(_handshake(config, node, config.httpx_client))
