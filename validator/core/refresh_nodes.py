@@ -30,7 +30,8 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
             # come back and add netuid
             #return await get_all_nodes(config.psql_db, config.netuid)
             await migrate_nodes_to_history(connection)
-            return await get_all_nodes(config.psql_db, config.netuid)
+            nodes = await get_all_nodes(config.psql_db, config.netuid)
+            return await perform_handshakes(nodes, config)
 
     raw_nodes = await fetch_nodes_from_substrate(config)
 
