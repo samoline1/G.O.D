@@ -40,7 +40,7 @@ async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node
             """
             SELECT nodes.* FROM nodes
             JOIN task_nodes ON nodes.hotkey = task_nodes.hotkey
-            AND nodes.node_id = task_nodes.node_id
+            AND nodes.netuid = task_nodes.netuid
             WHERE task_nodes.task_id = $1
             """,
             task_id,
@@ -73,13 +73,15 @@ async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[D
         query = f"""
             SELECT {TASKS_TABLE}.*, json_agg(
             json_build_object(
-                '{NODE_ID}', {NODES_TABLE}.{NODE_ID},
                 '{HOTKEY}', {NODES_TABLE}.{HOTKEY},
+                '{NETUID}', {NODES_TABLE}.{NETUID},
                 '{TRUST}', {NODES_TABLE}.{TRUST}
             )) AS miners
             FROM {TASKS_TABLE}
             LEFT JOIN {TASK_NODES_TABLE} ON {TASKS_TABLE}.{TASK_ID} = {TASK_NODES_TABLE}.{TASK_ID}
-            LEFT JOIN {NODES_TABLE} ON {TASK_NODES_TABLE}.{NODE_ID} = {NODES_TABLE}.{NODE_ID}
+            LEFT JOIN {NODES_TABLE} ON 
+                {TASK_NODES_TABLE}.{HOTKEY} = {NODES_TABLE}.{HOTKEY} AND
+                {TASK_NODES_TABLE}.{NETUID} = {NODES_TABLE}.{NETUID}
             WHERE {TASKS_TABLE}.{USER_ID} = $1
             GROUP BY {TASKS_TABLE}.{TASK_ID}
         """
@@ -89,15 +91,14 @@ async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[D
             for row in rows
         ]
 
-
 async def assign_node_to_task(task_id: str, node: Node, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {HOTKEY}, {NODE_ID})
+            INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {HOTKEY}, {NETUID})
             VALUES ($1, $2, $3)
         """
-        await connection.execute(query, task_id, node.hotkey, node.node_id)
+        await connection.execute(query, task_id, node.hotkey, node.netuid)
 
 async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
     existing_task = await get_task(updated_task.task_id, psql_db)
@@ -137,11 +138,12 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
                     updated_task.task_id
                 )
                 if updated_task.assigned_miners:
+                    # Assuming assigned_miners is now a list of tuples (hotkey, netuid)
                     query = f"""
-                        INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {HOTKEY}, {NODE_ID})
-                        SELECT $1, nodes.{HOTKEY}, nodes.{NODE_ID}
+                        INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {HOTKEY}, {NETUID})
+                        SELECT $1, nodes.{HOTKEY}, nodes.{NETUID}
                         FROM {NODES_TABLE} nodes
-                        WHERE nodes.{NODE_ID} = ANY($2)
+                        WHERE (nodes.{HOTKEY}, nodes.{NETUID}) = ANY($2)
                     """
                     await connection.execute(query, updated_task.task_id, updated_task.assigned_miners)
 
