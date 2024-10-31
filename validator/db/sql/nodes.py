@@ -1,5 +1,4 @@
 import datetime
-import os
 from logging import getLogger
 from typing import List, Optional
 
@@ -9,11 +8,9 @@ from fiber.networking.models import NodeWithFernet as Node
 
 from validator.db import constants as dcst
 from validator.db.database import PSQLDB
+from core.constants import NETUID
 
 logger = getLogger(__name__)
-
-# Get NETUID from environment variable
-NETUID = int(os.getenv('NETUID', '176'))  # Default to 176 if not set
 
 
 async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
@@ -28,7 +25,7 @@ async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
         return [Node(**dict(row)) for row in rows]
 
 
-async def add_node(node: Node, psql_db: PSQLDB, network_id: int) -> Optional[Node]:
+async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
     """Add a new node with the current NETUID"""
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -52,7 +49,7 @@ async def add_node(node: Node, psql_db: PSQLDB, network_id: int) -> Optional[Nod
             node.ip_type,
             node.port,
             None,
-            network_id,
+            NETUID,
             node.stake,
             node.incentive,
             node.last_updated,

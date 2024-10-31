@@ -2,10 +2,13 @@ import os
 
 from dotenv import load_dotenv
 
+from validator.db.constants import NETUID
+
 
 load_dotenv()
 
 VERSION_KEY = 61_000
+NETUID = os.getenv("NETUID")
 
 MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
