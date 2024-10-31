@@ -56,6 +56,14 @@ async def _get_and_set_weights(config: Config, hours_since_last_update: int) -> 
     logger.info(f"Node ids: {all_node_ids}")
     logger.info(f"Node weights: {all_node_weights}")
     logger.info(f"Number of non zero node weights: {sum(1 for weight in all_node_weights if weight != 0)}")
+    logger.info(f"Everything going in is {weights.set_node_weights},
+               {config.substrate},
+               {config.keypair},
+               {all_node_ids},
+               {all_node_weights},
+               {config.netuid},
+               {ccst.VERSION_KEY},
+               {validator_node_id}")
 
     try:
         success = await asyncio.to_thread(
