@@ -240,7 +240,7 @@ async def run_validator_cycles(config: Config) -> None:
 async def _run_main_validator_loop(config: Config) -> None:
     while True:
         try:
-            node_list = await nodes_sql.get_all_nodes(config.psql_db)
+            node_list = await nodes_sql.get_all_nodes(config.psql_db, config.netuid)
             node_list = await perform_handshakes(node_list, config)
             logger.info(f"Current active nodes: {len(node_list)}")
             await validator_cycle(config)
