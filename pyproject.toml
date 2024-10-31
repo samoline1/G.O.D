@@ -28,6 +28,7 @@ dependencies = [
     "pandas",
     "minio",
     "scipy",
+    "sqlalchemy"
 ]
 
 [project.optional-dependencies]
