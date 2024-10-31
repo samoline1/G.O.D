@@ -1,5 +1,6 @@
 # Tables
 NODES_TABLE = "nodes"
+NODE_HISTORY_TABLE = "node_history"
 TASKS_TABLE = "tasks"
 TASK_NODES_TABLE = "task_nodes"
 SUBMISSIONS_TABLE = "submissions"

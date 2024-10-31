@@ -9,7 +9,7 @@ import traceback
 import httpx
 
 from fiber.networking.models import NodeWithFernet as Node
-from validator.db.sql.nodes import get_all_nodes, add_node, get_last_updated_time_for_nodes, insert_symmetric_keys_for_nodes
+from validator.db.sql.nodes import get_all_nodes, add_node, get_last_updated_time_for_nodes, insert_symmetric_keys_for_nodes, migrate_nodes_to_history
 from fiber.logging_utils import get_logger
 from fiber.chain import fetch_nodes
 from validator.core.config import Config
@@ -29,6 +29,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
         if await is_recent_update(connection, config.netuid):
             # come back and add netuid
             #return await get_all_nodes(config.psql_db, config.netuid)
+            await migrate_nodes_to_history(connection)
             return await get_all_nodes(config.psql_db)
 
     raw_nodes = await fetch_nodes_from_substrate(config)

@@ -1,6 +1,7 @@
 from typing import List, Optional
 from asyncpg.connection import Connection
 from fiber.chain.metagraph import SubstrateInterface
+from sqlalchemy.sql.operators import ne
 from validator.db.database import PSQLDB
 from validator.db import constants as dcst
 from fiber import utils as futils
@@ -26,13 +27,14 @@ def create_node_with_fernet(row: dict) -> Optional[Node]:
         return None
     return Node(**row)
 
-async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
+async def get_all_nodes(psql_db: PSQLDB, netuid: int) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
             SELECT * FROM {dcst.NODES_TABLE}
+            WHERE  {dcst.NETUID} == $1
         """
-        rows = await connection.fetch(query)
+        rows = await connection.fetch(query, netuid)
         nodes = []
         for row in rows:
             node = create_node_with_fernet(dict(row))
@@ -185,3 +187,47 @@ async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_addr
         substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True
     )
     return uid
+
+
+async def migrate_nodes_to_history(connection: Connection) -> None:  # noqa: F821
+    logger.debug("Migrating NODEs to NODE history")
+    await connection.execute(
+        f"""
+        INSERT INTO {dcst.NODES_HISTORY_TABLE} (
+            {dcst.HOTKEY},
+            {dcst.COLDKEY},
+            {dcst.NODE_ID},
+            {dcst.INCENTIVE},
+            {dcst.NETUID},
+            {dcst.STAKE},
+            {dcst.TRUST},
+            {dcst.VTRUST},
+            {dcst.LAST_UPDATED},
+            {dcst.IP},
+            {dcst.IP_TYPE},
+            {dcst.PORT},
+            {dcst.PROTOCOL},
+            {dcst.NETWORK},
+        )
+        SELECT
+            {dcst.HOTKEY},
+            {dcst.COLDKEY},
+            {dcst.NODE_ID},
+            {dcst.INCENTIVE},
+            {dcst.NETUID},
+            {dcst.STAKE},
+            {dcst.TRUST},
+            {dcst.VTRUST},
+            {dcst.LAST_UPDATED},
+            {dcst.IP},
+            {dcst.IP_TYPE},
+            {dcst.PORT},
+            {dcst.PROTOCOL},
+            {dcst.NETWORK},
+        FROM {dcst.NODES_TABLE}
+    """
+    )
+
+    logger.debug("Truncating NODE info table")
+    await connection.execute(f"DELETE FROM {dcst.NODES_TABLE}")
+
