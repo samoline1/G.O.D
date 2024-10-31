@@ -20,4 +20,4 @@ CREATE TABLE nodes_history (
 );
 
 -- migrate:down
-DROP TABLE IF EXISTS node_history;- migrate:up
+DROP TABLE IF EXISTS nodes_history;- migrate:up
