@@ -150,6 +150,7 @@ async def _start_training_task(task: Task, config: Config) -> None:
         await _let_miners_know_to_start_training(task, assigned_miners, config)
         task.status = TaskStatus.TRAINING
         await tasks_sql.update_task(task, config.psql_db)
+        logger.info('SUCCESS IN STARTING TRAINING')
     except Exception as e:
         logger.error(f"Error starting training for task {task.task_id}: {e}", exc_info=True)
         task.status = TaskStatus.FAILURE

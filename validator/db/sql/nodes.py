@@ -171,45 +171,46 @@ async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_addr
     return uid
 
 
-async def migrate_nodes_to_history(connection: Connection) -> None:  # noqa: F821
+async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:  # noqa: F821
     logger.debug("Migrating NODEs to NODE history")
-    await connection.execute(
-        f"""
-        INSERT INTO {dcst.NODES_HISTORY_TABLE} (
-            {dcst.HOTKEY},
-            {dcst.COLDKEY},
-            {dcst.NODE_ID},
-            {dcst.INCENTIVE},
-            {dcst.NETUID},
-            {dcst.STAKE},
-            {dcst.TRUST},
-            {dcst.VTRUST},
-            {dcst.LAST_UPDATED},
-            {dcst.IP},
-            {dcst.IP_TYPE},
-            {dcst.PORT},
-            {dcst.PROTOCOL},
-            {dcst.NETWORK}
+    async with await psql_db.connection() as connection:
+        await connection.execute(
+            f"""
+            INSERT INTO {dcst.NODES_HISTORY_TABLE} (
+                {dcst.HOTKEY},
+                {dcst.COLDKEY},
+                {dcst.NODE_ID},
+                {dcst.INCENTIVE},
+                {dcst.NETUID},
+                {dcst.STAKE},
+                {dcst.TRUST},
+                {dcst.VTRUST},
+                {dcst.LAST_UPDATED},
+                {dcst.IP},
+                {dcst.IP_TYPE},
+                {dcst.PORT},
+                {dcst.PROTOCOL},
+                {dcst.NETWORK}
+            )
+            SELECT
+                {dcst.HOTKEY},
+                {dcst.COLDKEY},
+                {dcst.NODE_ID},
+                {dcst.INCENTIVE},
+                {dcst.NETUID},
+                {dcst.STAKE},
+                {dcst.TRUST},
+                {dcst.VTRUST},
+                {dcst.LAST_UPDATED},
+                {dcst.IP},
+                {dcst.IP_TYPE},
+                {dcst.PORT},
+                {dcst.PROTOCOL},
+                {dcst.NETWORK},
+            FROM {dcst.NODES_TABLE}
+        """
         )
-        SELECT
-            {dcst.HOTKEY},
-            {dcst.COLDKEY},
-            {dcst.NODE_ID},
-            {dcst.INCENTIVE},
-            {dcst.NETUID},
-            {dcst.STAKE},
-            {dcst.TRUST},
-            {dcst.VTRUST},
-            {dcst.LAST_UPDATED},
-            {dcst.IP},
-            {dcst.IP_TYPE},
-            {dcst.PORT},
-            {dcst.PROTOCOL},
-            {dcst.NETWORK},
-        FROM {dcst.NODES_TABLE}
-    """
-    )
 
-    logger.debug("Truncating NODE info table")
-    await connection.execute(f"DELETE FROM {dcst.NODES_TABLE}")
+        logger.debug("Truncating NODE info table")
+        await connection.execute(f"DELETE FROM {dcst.NODES_TABLE}")
 
