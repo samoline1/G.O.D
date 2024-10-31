@@ -1,22 +1,22 @@
 # submissions.py
 import json
+import os
 from datetime import datetime
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from asyncpg.connection import Connection
 
-from validator.core.models import Submission
-from validator.core.models import Task
-from validator.core.models import TaskNode
-from validator.core.models import TaskResults
+from validator.core.models import Submission, Task, TaskNode, TaskResults
 from validator.db.constants import *
 from validator.db.database import PSQLDB
 
+# Get NETUID from environment variable
+NETUID = int(os.getenv('NETUID', '176'))  # Default to 176 if not set
+
 
 async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
+    """Add a new submission for the current NETUID"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -30,12 +30,14 @@ async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
             query,
             submission.task_id,
             submission.hotkey,
-            submission.netuid,
+            NETUID,
             submission.repo,
         )
         return await get_submission(submission_id, psql_db)
 
+
 async def get_submission(submission_id: UUID, psql_db: PSQLDB) -> Optional[Submission]:
+    """Get a submission by its ID"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -46,16 +48,21 @@ async def get_submission(submission_id: UUID, psql_db: PSQLDB) -> Optional[Submi
             return Submission(**dict(row))
         return None
 
+
 async def get_submissions_by_task(task_id: UUID, psql_db: PSQLDB) -> List[Submission]:
+    """Get all submissions for a task"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            SELECT * FROM {SUBMISSIONS_TABLE} WHERE {TASK_ID} = $1
+            SELECT * FROM {SUBMISSIONS_TABLE} 
+            WHERE {TASK_ID} = $1 AND {NETUID} = $2
         """
-        rows = await connection.fetch(query, task_id)
+        rows = await connection.fetch(query, task_id, NETUID)
         return [Submission(**dict(row)) for row in rows]
 
-async def get_node_latest_submission(task_id: str, hotkey: str, netuid: int, psql_db: PSQLDB) -> Optional[Submission]:
+
+async def get_node_latest_submission(task_id: str, hotkey: str, psql_db: PSQLDB) -> Optional[Submission]:
+    """Get the latest submission for a node on a task"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -66,23 +73,27 @@ async def get_node_latest_submission(task_id: str, hotkey: str, netuid: int, psq
             ORDER BY {CREATED_ON} DESC
             LIMIT 1
         """
-        row = await connection.fetchrow(query, task_id, hotkey, netuid)
+        row = await connection.fetchrow(query, task_id, hotkey, NETUID)
         if row:
             return Submission(**dict(row))
         return None
 
+
 async def submission_repo_is_unique(repo: str, psql_db: PSQLDB) -> bool:
+    """Check if a repository URL is unique"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
             SELECT 1 FROM {SUBMISSIONS_TABLE}
-            WHERE {REPO} = $1
+            WHERE {REPO} = $1 AND {NETUID} = $2
             LIMIT 1
         """
-        result = await connection.fetchval(query, repo)
+        result = await connection.fetchval(query, repo, NETUID)
         return result is None
 
-async def set_task_node_quality_score(task_id: UUID, hotkey: str, netuid: int, quality_score: float, psql_db: PSQLDB) -> None:
+
+async def set_task_node_quality_score(task_id: UUID, hotkey: str, quality_score: float, psql_db: PSQLDB) -> None:
+    """Set quality score for a node's task submission"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -93,9 +104,11 @@ async def set_task_node_quality_score(task_id: UUID, hotkey: str, netuid: int, q
             ON CONFLICT ({TASK_ID}, {HOTKEY}, {NETUID}) DO UPDATE
             SET {TASK_NODE_QUALITY_SCORE} = $4
         """
-        await connection.execute(query, task_id, hotkey, netuid, quality_score)
+        await connection.execute(query, task_id, hotkey, NETUID, quality_score)
 
-async def get_task_node_quality_score(task_id: UUID, hotkey: str, netuid: int, psql_db: PSQLDB) -> Optional[float]:
+
+async def get_task_node_quality_score(task_id: UUID, hotkey: str, psql_db: PSQLDB) -> Optional[float]:
+    """Get quality score for a node's task submission"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -105,24 +118,30 @@ async def get_task_node_quality_score(task_id: UUID, hotkey: str, netuid: int, p
             AND {HOTKEY} = $2
             AND {NETUID} = $3
         """
-        return await connection.fetchval(query, task_id, hotkey, netuid)
+        return await connection.fetchval(query, task_id, hotkey, NETUID)
 
-async def get_all_quality_scores_for_task(task_id: UUID, psql_db: PSQLDB) -> Dict[tuple[str, int], float]:
+
+async def get_all_quality_scores_for_task(task_id: UUID, psql_db: PSQLDB) -> Dict[str, float]:
+    """Get all quality scores for a task, keyed by hotkey"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            SELECT {HOTKEY}, {NETUID}, {TASK_NODE_QUALITY_SCORE}
+            SELECT {HOTKEY}, {TASK_NODE_QUALITY_SCORE}
             FROM {TASK_NODES_TABLE}
-            WHERE {TASK_ID} = $1 AND {TASK_NODE_QUALITY_SCORE} IS NOT NULL
+            WHERE {TASK_ID} = $1 
+            AND {NETUID} = $2 
+            AND {TASK_NODE_QUALITY_SCORE} IS NOT NULL
         """
-        rows = await connection.fetch(query, task_id)
-        return {(row[HOTKEY], row[NETUID]): row[TASK_NODE_QUALITY_SCORE] for row in rows}
+        rows = await connection.fetch(query, task_id, NETUID)
+        return {row[HOTKEY]: row[TASK_NODE_QUALITY_SCORE] for row in rows}
+
 
 async def set_multiple_task_node_quality_scores(
     task_id: UUID,
-    quality_scores: Dict[tuple[str, int], float],
+    quality_scores: Dict[str, float],
     psql_db: PSQLDB
 ) -> None:
+    """Set multiple quality scores for task nodes"""
     async with await psql_db.connection() as connection:
         connection: Connection
         async with connection.transaction():
@@ -136,9 +155,10 @@ async def set_multiple_task_node_quality_scores(
             """
             await connection.executemany(
                 query,
-                [(task_id, node_key[0], node_key[1], score)
-                 for node_key, score in quality_scores.items()]
+                [(task_id, hotkey, NETUID, score)
+                 for hotkey, score in quality_scores.items()]
             )
+
 
 async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> List[TaskResults]:
     """
@@ -155,7 +175,6 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
                         json_build_object(
                             '{TASK_ID}', t.{TASK_ID}::text,
                             '{HOTKEY}', tn.{HOTKEY},
-                            '{NETUID}', tn.{NETUID},
                             '{QUALITY_SCORE}', tn.{TASK_NODE_QUALITY_SCORE}
                         )
                         ORDER BY tn.{TASK_NODE_QUALITY_SCORE} DESC NULLS LAST
@@ -166,16 +185,18 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
             LEFT JOIN {TASK_NODES_TABLE} tn ON t.{TASK_ID} = tn.{TASK_ID}
             WHERE t.{STATUS} = 'success'
             AND t.created_timestamp >= $1
+            AND tn.{NETUID} = $2
             AND EXISTS (
                 SELECT 1
                 FROM {TASK_NODES_TABLE} tn2
                 WHERE tn2.{TASK_ID} = t.{TASK_ID}
                 AND tn2.{TASK_NODE_QUALITY_SCORE} > 0
+                AND tn2.{NETUID} = $2
             )
             GROUP BY t.{TASK_ID}
             ORDER BY t.created_timestamp DESC
         """
-        rows = await connection.fetch(query, start_time)
+        rows = await connection.fetch(query, start_time, NETUID)
 
         results = []
         for row in rows:
@@ -191,7 +212,6 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
                 TaskNode(
                     task_id=str(node[TASK_ID]),
                     hotkey=node[HOTKEY],
-                    netuid=int(node[NETUID]),
                     quality_score=float(node[QUALITY_SCORE]) if node[QUALITY_SCORE] is not None else None
                 )
                 for node in node_scores_data
