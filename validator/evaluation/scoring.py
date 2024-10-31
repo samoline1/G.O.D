@@ -100,11 +100,11 @@ def normalise_scores(
     return period_scores
 
 
-async def scoring_aggregation_from_date(psql_db: str, hours_since_last_updated: int) -> list[PeriodScore]:
+async def scoring_aggregation_from_date(psql_db: str) -> list[PeriodScore]:
     """Aggregate and normalise scores across all nodes."""
     try:
 
-        date = datetime.now() - timedelta(hours=hours_since_last_updated)
+        date = datetime.now() - timedelta(hours=24)
         task_results: list[TaskResults] = await get_aggregate_scores_since(date, psql_db)
         if not task_results:
             logger.info('There were not results to be scored')

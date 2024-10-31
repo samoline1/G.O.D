@@ -28,15 +28,15 @@ logger = get_logger(__name__)
 
 TIME_PER_BLOCK :int = 500
 
-async def _get_weights_to_set(config: Config, hours_since_last_update: int) -> list[PeriodScore]| None:
-     return await scoring_aggregation_from_date(config.psql_db, hours_since_last_update)
+async def _get_weights_to_set(config: Config) -> list[PeriodScore]| None:
+     return await scoring_aggregation_from_date(config.psql_d)
 
 
-async def _get_and_set_weights(config: Config, hours_since_last_update: int) -> bool:
+async def _get_and_set_weights(config: Config) -> bool:
     validator_node_id = await get_vali_node_id(config.substrate, config.netuid, config.keypair.ss58_address)
     if validator_node_id is None:
         raise ValueError("Validator node id not found")
-    node_results = await _get_weights_to_set(config, hours_since_last_update)
+    node_results = await _get_weights_to_set(config)
     if node_results is None:
         logger.info("No weights to set. Skipping weight setting.")
         return False
@@ -131,13 +131,12 @@ async def set_weights_periodically(config: Config, just_once: bool = False) -> N
             await asyncio.sleep(12 * 25)  # sleep for 25 blocks
             continue
 
-        number_of_hours_since_last_update: int = updated * TIME_PER_BLOCK
 
         if os.getenv("ENV", "prod").lower() == "dev":
-            success = await _get_and_set_weights(config, number_of_hours_since_last_update)
+            success = await _get_and_set_weights(config)
         else:
             try:
-                success = await _get_and_set_weights(config, number_of_hours_since_last_update)
+                success = await _get_and_set_weights(config)
             except Exception as e:
                 logger.error(f"Failed to set weights with error: {e}")
                 success = False
