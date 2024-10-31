@@ -9,6 +9,7 @@ import traceback
 import httpx
 
 from fiber.networking.models import NodeWithFernet as Node
+from sqlalchemy import except_
 from validator.db.sql.nodes import get_all_nodes, add_node, get_last_updated_time_for_nodes, insert_symmetric_keys_for_nodes, migrate_nodes_to_history
 from fiber.logging_utils import get_logger
 from fiber.chain import fetch_nodes
@@ -107,7 +108,11 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
     shaked_nodes: list[Node] = []
     for node in nodes:
         if node.fernet is None or node.symmetric_key_uuid is None:
-            tasks.append(_handshake(config, node, config.httpx_client))
+            try:
+                tasks.append(_handshake(config, node, config.httpx_client))
+                logger.info(f"Success in shaking hands with {node.node_id}")
+            except Exception as e:
+                logger.info(f"Unable to shake hands with {node.node_id} - e")
         if len(tasks) > 50:
             shaked_nodes.extend(await asyncio.gather(*tasks))
             tasks = []
