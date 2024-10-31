@@ -1,4 +1,4 @@
---- migrate:up
+-- migrate:up
 CREATE TABLE nodes_history (
     id SERIAL PRIMARY KEY,
     hotkey TEXT NOT NULL,
