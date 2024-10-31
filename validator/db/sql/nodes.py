@@ -34,10 +34,14 @@ async def get_all_nodes(psql_db: PSQLDB, netuid: int) -> List[Node]:
             SELECT * FROM {dcst.NODES_TABLE}
             WHERE {dcst.NETUID} = $1
         """
-        nodes = await connection.fetch(query, netuid)
+        rows = await connection.fetch(query, netuid)
+        nodes = []
+        for row in rows:
+            node = create_node_with_fernet(dict(row))
+            nodes.append(node)
         return nodes
 
-async def add_node(node: Node, psql_db: PSQLDB, netuid: int) -> Optional[Node]:
+async def add_node(node: Node, psql_db: PSQLDB, network_id: int) -> Optional[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -59,7 +63,7 @@ async def add_node(node: Node, psql_db: PSQLDB, netuid: int) -> Optional[Node]:
             node.ip_type,
             node.port,
             None,
-            netuid, # do not leave this as it is
+            network_id, # do not leave this as it is
             node.stake,
             node.hotkey,
             node.incentive,
