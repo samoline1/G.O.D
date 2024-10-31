@@ -26,34 +26,27 @@ def _format_exception(e: Exception) -> str:
 
 
 async def get_and_store_nodes(config: Config) -> list[Node]:
-    async with await config.psql_db.connection() as connection:
-        if await is_recent_update(connection, config.netuid):
-            # come back and add netuid
-            #return await get_all_nodes(config.psql_db, config.netuid)
-#            await migrate_nodes_to_history(connection)
-            nodes = await get_all_nodes(config.psql_db, config.netuid)
-            return await perform_handshakes(nodes, config)
+    if await(is_recent_update(config)):
+        return await get_all_nodes(config.psql_db, config.netuid)
 
     raw_nodes = await fetch_nodes_from_substrate(config)
-
-    # Ensuring the Nodes get converted to NodesWithFernet
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
     await perform_handshakes(nodes, config)
     await store_nodes(config, nodes)
-#    Public/await update_our_validator_node(config) debug add back in
 
     logger.info(f"Stored {len(nodes)} nodes.")
     return nodes
 
 
-async def is_recent_update(connection, netuid: int) -> bool:
-    last_updated_time = await get_last_updated_time_for_nodes(connection, netuid)
-    if last_updated_time is not None and datetime.now() - last_updated_time.replace(tzinfo=None) < timedelta(minutes=30):
-        logger.info(
-            f"Last update for nodes table was at {last_updated_time}, which is less than 30 minutes ago - skipping refresh"
-        )
-        return True
-    return False
+async def is_recent_update(config: Config) -> bool:
+    async with await config.psql_db.connection() as connection:
+        last_updated_time = await get_last_updated_time_for_nodes(connection, config.netuid)
+        if last_updated_time is not None and datetime.now() - last_updated_time.replace(tzinfo=None) < timedelta(minutes=30):
+            logger.info(
+                f"Last update for nodes table was at {last_updated_time}, which is less than 30 minutes ago - skipping refresh"
+            )
+            return True
+        return False
 
 
 async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
