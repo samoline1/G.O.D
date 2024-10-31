@@ -37,15 +37,15 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
                 {dcst.IP_TYPE}, {dcst.PORT}, {dcst.SYMMETRIC_KEY}, {dcst.NETWORK},
                 {dcst.STAKE}, {dcst.INCENTIVE}, {dcst.LAST_UPDATED},
                 {dcst.PROTOCOL}, {dcst.SYMMETRIC_KEY_UUID}, {dcst.OUR_VALIDATOR},
-                {dcst.TRUST}, {dcst.VTRUST}
+                {dcst.TRUST}, {dcst.VTRUST}, {dcst.NODE_ID}
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             RETURNING {dcst.HOTKEY}
         """
         return_value = await connection.fetchval(
             query,
             node.hotkey,
-            NETUID,
+            NETUID, # why is this twice, what is the diff between network and netuid
             node.coldkey,
             node.ip,
             node.ip_type,
@@ -59,7 +59,8 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
             node.symmetric_key_uuid,
             False,  # assume not our validator
             node.trust,
-            node.vtrust
+            node.vtrust,
+            node.node_id
         )
         if return_value:
             return await get_node_by_hotkey(return_value, psql_db)
@@ -151,7 +152,8 @@ async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:
                 {dcst.IP_TYPE},
                 {dcst.PORT},
                 {dcst.PROTOCOL},
-                {dcst.NETWORK}
+                {dcst.NETWORK},
+                {dcst.NODE_ID}
             )
             SELECT
                 {dcst.HOTKEY},
@@ -166,7 +168,8 @@ async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:
                 {dcst.IP_TYPE},
                 {dcst.PORT},
                 {dcst.PROTOCOL},
-                {dcst.NETWORK}
+                {dcst.NETWORK},
+                {dcst.NODE_ID}
             FROM {dcst.NODES_TABLE}
             WHERE {dcst.NETUID} = $1
         """,

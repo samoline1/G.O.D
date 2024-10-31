@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE TABLE IF NOT EXISTS nodes (
     hotkey TEXT NOT NULL,
     netuid INTEGER NOT NULL,
+    node_id INTEGER NOT NULL,
     coldkey TEXT NOT NULL,
     ip TEXT NOT NULL,
     ip_type INTEGER NOT NULL,
@@ -88,6 +89,7 @@ CREATE TABLE IF NOT EXISTS nodes_history (
     hotkey TEXT NOT NULL,
     netuid INTEGER NOT NULL,
     coldkey TEXT NOT NULL,
+    node_id INTEGER NOT NULL,
     incentive FLOAT NOT NULL,
     stake FLOAT NOT NULL,
     trust FLOAT NOT NULL,
