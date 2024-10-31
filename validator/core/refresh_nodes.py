@@ -30,14 +30,14 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
             # come back and add netuid
             #return await get_all_nodes(config.psql_db, config.netuid)
             await migrate_nodes_to_history(connection)
-            return await get_all_nodes(config.psql_db)
+            return await get_all_nodes(config.psql_db, config.netuid)
 
     raw_nodes = await fetch_nodes_from_substrate(config)
 
     # Ensuring the Nodes get converted to NodesWithFernet
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
 
-    nodes = await store_nodes(config, nodes)
+    await store_nodes(config, nodes)
 #    await update_our_validator_node(config) debug add back in
 
     await perform_handshakes(nodes, config)
@@ -62,14 +62,7 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
 
 
 async def store_nodes(config: Config, nodes: list[Node]):
-    nodef = []
-    for node in nodes:
-        logger.info(f"Here is a node {node}")
-        if node.node_id == 60:
-            logger.info(f"Adding in this node {node}")
-            nodef.append(node)
-    await asyncio.gather(*(add_node(node, config.psql_db) for node in nodef))
-    return nodef
+    await asyncio.gather(*(add_node(node, config.psql_db) for node in nodes))
 
 
 async def update_our_validator_node(config: Config):
