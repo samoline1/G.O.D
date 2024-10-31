@@ -32,9 +32,8 @@ async def get_all_nodes(psql_db: PSQLDB, netuid: int) -> List[Node]:
         connection: Connection
         query = f"""
             SELECT * FROM {dcst.NODES_TABLE}
-            WHERE {dcst.NETUID} = $1
         """
-        rows = await connection.fetch(query, netuid)
+        rows = await connection.fetch(query)
         nodes = []
         for row in rows:
             node = create_node_with_fernet(dict(row))
@@ -63,7 +62,7 @@ async def add_node(node: Node, psql_db: PSQLDB, network_id: int) -> Optional[Nod
             node.ip_type,
             node.port,
             None,
-            network_id, # do not leave this as it is
+            176, # do not leave this as it is
             node.stake,
             node.hotkey,
             node.incentive,
@@ -222,7 +221,7 @@ async def migrate_nodes_to_history(connection: Connection) -> None:  # noqa: F82
             {dcst.IP_TYPE},
             {dcst.PORT},
             {dcst.PROTOCOL},
-            {dcst.NETWORK}
+            {dcst.NETWORK},
         FROM {dcst.NODES_TABLE}
     """
     )
