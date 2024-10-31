@@ -29,7 +29,7 @@ logger = get_logger(__name__)
 TIME_PER_BLOCK :int = 500
 
 async def _get_weights_to_set(config: Config) -> list[PeriodScore]| None:
-     return await scoring_aggregation_from_date(config.psql_d)
+     return await scoring_aggregation_from_date(config.psql_db)
 
 
 async def _get_and_set_weights(config: Config) -> bool:
