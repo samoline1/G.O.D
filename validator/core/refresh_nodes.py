@@ -101,7 +101,6 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
         if node.fernet is None or node.symmetric_key_uuid is None:
             try:
                 tasks.append(_handshake(config, node, config.httpx_client))
-                logger.info(f"Success in shaking hands with {node.node_id}")
             except Exception as e:
                 continue
         if len(tasks) > 50:
