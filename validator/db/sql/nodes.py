@@ -206,7 +206,7 @@ async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:  # noqa: F821
                 {dcst.IP_TYPE},
                 {dcst.PORT},
                 {dcst.PROTOCOL},
-                {dcst.NETWORK},
+                {dcst.NETWORK}
             FROM {dcst.NODES_TABLE}
         """
         )
