@@ -14,18 +14,6 @@ from validator.utils.query_substrate import query_substrate
 
 logger = getLogger(__name__)
 
-def create_node_with_fernet(row: dict) -> Optional[Node]:
-    """Helper function to create Node object with fernet from database row"""
-    try:
-        if dcst.SYMMETRIC_KEY in row:
-            row["fernet"] = Fernet(row[dcst.SYMMETRIC_KEY])
-        else:
-            row["fernet"] = None
-    except Exception as e:
-        logger.error(f"Error creating fernet: {e}")
-        logger.error(f"node: {row}")
-        return None
-    return Node(**row)
 
 async def get_all_nodes(psql_db: PSQLDB, netuid: int) -> List[Node]:
     async with await psql_db.connection() as connection:
@@ -34,11 +22,7 @@ async def get_all_nodes(psql_db: PSQLDB, netuid: int) -> List[Node]:
             SELECT * FROM {dcst.NODES_TABLE}
         """
         rows = await connection.fetch(query)
-        nodes = []
-        for row in rows:
-            node = create_node_with_fernet(dict(row))
-            nodes.append(node)
-        return nodes
+        return [Node(**dict(row)) for row in rows]
 
 async def add_node(node: Node, psql_db: PSQLDB, network_id: int) -> Optional[Node]:
     async with await psql_db.connection() as connection:
@@ -86,7 +70,7 @@ async def get_node(node_id: int, psql_db: PSQLDB) -> Optional[Node]:
         """
         row = await connection.fetchrow(query, node_id)
         if row:
-            return create_node_with_fernet(dict(row))
+            return Node(**dict(row))
         return None
 
 async def get_node_by_keys(hotkey: str, netuid: int, psql_db: PSQLDB) -> Optional[Node]:
@@ -99,7 +83,7 @@ async def get_node_by_keys(hotkey: str, netuid: int, psql_db: PSQLDB) -> Optiona
         """
         row = await connection.fetchrow(query, hotkey, netuid)
         if row:
-            return create_node_with_fernet(dict(row))
+            return Node(**dict(row))
         return None
 
 async def update_our_vali_node_in_db(connection: Connection, ss58_address: str, netuid: int) -> None:
