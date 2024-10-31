@@ -34,13 +34,9 @@ async def get_all_nodes(psql_db: PSQLDB, netuid: int) -> List[Node]:
             SELECT * FROM {dcst.NODES_TABLE}
             WHERE {dcst.NETUID} = $1
         """
-        rows = await connection.fetch(query, netuid)
-        nodes = []
-        for row in rows:
-            node = create_node_with_fernet(dict(row))
-            if node:
-                nodes.append(node)
+        nodes = await connection.fetch(query, netuid)
         return nodes
+
 async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
