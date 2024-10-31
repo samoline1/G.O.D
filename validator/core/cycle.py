@@ -227,7 +227,7 @@ async def node_refresh_cycle(config: Config) -> None:
 # If not, will come back - let me know  porfa
 async def run_validator_cycles(config: Config) -> None:
     try:
-        await asyncio.wait_for(get_and_store_nodes(config), timeout=300)  # 5 minute timeout
+        await asyncio.wait_for(get_and_store_nodes(config), timeout=30)  # 30 sec
         await asyncio.gather(
             node_refresh_cycle(config),
             set_weights_periodically(config),
