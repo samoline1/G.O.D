@@ -206,7 +206,7 @@ async def migrate_nodes_to_history(connection: Connection) -> None:  # noqa: F82
             {dcst.IP_TYPE},
             {dcst.PORT},
             {dcst.PROTOCOL},
-            {dcst.NETWORK},
+            {dcst.NETWORK}
         )
         SELECT
             {dcst.HOTKEY},
@@ -222,7 +222,7 @@ async def migrate_nodes_to_history(connection: Connection) -> None:  # noqa: F82
             {dcst.IP_TYPE},
             {dcst.PORT},
             {dcst.PROTOCOL},
-            {dcst.NETWORK},
+            {dcst.NETWORK}
         FROM {dcst.NODES_TABLE}
     """
     )
