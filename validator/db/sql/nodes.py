@@ -37,7 +37,7 @@ async def get_all_nodes(psql_db: PSQLDB, netuid: int) -> List[Node]:
         nodes = await connection.fetch(query, netuid)
         return nodes
 
-async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
+async def add_node(node: Node, psql_db: PSQLDB, netuid: int) -> Optional[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -59,7 +59,7 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
             node.ip_type,
             node.port,
             None,
-            176, # do not leave this as it is
+            netuid, # do not leave this as it is
             node.stake,
             node.hotkey,
             node.incentive,
