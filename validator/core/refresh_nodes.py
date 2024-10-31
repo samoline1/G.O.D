@@ -36,6 +36,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
 
     # Ensuring the Nodes get converted to NodesWithFernet
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
+    logger.info(nodes)
 
     await store_nodes(config, nodes)
 #    Public/await update_our_validator_node(config) debug add back in
