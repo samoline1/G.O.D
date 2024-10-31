@@ -198,13 +198,13 @@ async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[Task]:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            SELECT t.* FROM {TASKS_TABLE} t
-            WHERE t.{STATUS} = 'training'
-            AND NOW() AT TIME ZONE 'UTC' > t.{END_TIMESTAMP} AT TIME ZONE 'UTC'
+            SELECT * FROM {TASKS_TABLE}
+            WHERE {STATUS} = 'training'
+            AND NOW() AT TIME ZONE 'UTC' > {END_TIMESTAMP} AT TIME ZONE 'UTC'
             AND EXISTS (
-                SELECT 1 FROM {TASK_NODES_TABLE} tn
-                WHERE tn.{TASK_ID} = t.{TASK_ID}
-                AND tn.{NETUID} = $1
+                SELECT 1 FROM {TASK_NODES_TABLE}
+                WHERE {TASK_ID} = {TASK_ID}
+                AND {NETUID} = $1
             )
         """
         rows = await connection.fetch(query, NETUID)
