@@ -27,7 +27,7 @@ def _format_exception(e: Exception) -> str:
 
 async def get_and_store_nodes(config: Config) -> list[Node]:
     if await(is_recent_update(config)):
-        nodes =  await get_all_nodes(config.psql_db, config.netuid)
+        nodes =  await get_all_nodes(config.psql_db)
         return await perform_handshakes(nodes, config)
 
     raw_nodes = await fetch_nodes_from_substrate(config)
@@ -43,7 +43,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
 
 async def is_recent_update(config: Config) -> bool:
     async with await config.psql_db.connection() as connection:
-        last_updated_time = await get_last_updated_time_for_nodes(connection, config.netuid)
+        last_updated_time = await get_last_updated_time_for_nodes(connection)
         if last_updated_time is not None and datetime.now() - last_updated_time.replace(tzinfo=None) < timedelta(minutes=30):
             logger.info(
                 f"Last update for nodes table was at {last_updated_time}, which is less than 30 minutes ago - skipping refresh"
