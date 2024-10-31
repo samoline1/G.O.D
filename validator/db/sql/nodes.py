@@ -1,14 +1,15 @@
-from typing import List, Optional
+import datetime
+from logging import getLogger
+from typing import List
+from typing import Optional
+
 from asyncpg.connection import Connection
-from fiber.chain.metagraph import SubstrateInterface
-from validator.db.database import PSQLDB
-from validator.db import constants as dcst
 from fiber import utils as futils
 from fiber.networking.models import NodeWithFernet as Node
-from logging import getLogger
-import datetime
 
-from validator.utils.query_substrate import query_substrate
+from validator.db import constants as dcst
+from validator.db.database import PSQLDB
+
 
 logger = getLogger(__name__)
 
@@ -28,8 +29,8 @@ async def add_node(node: Node, psql_db: PSQLDB, network_id: int) -> Optional[Nod
         connection: Connection
         query = f"""
             INSERT INTO {dcst.NODES_TABLE} (
-                {dcst.HOTKEY}, {dcst.NETUID}, {dcst.COLDKEY}, {dcst.IP}, 
-                {dcst.IP_TYPE}, {dcst.PORT}, {dcst.SYMMETRIC_KEY}, {dcst.NETWORK}, 
+                {dcst.HOTKEY}, {dcst.NETUID}, {dcst.COLDKEY}, {dcst.IP},
+                {dcst.IP_TYPE}, {dcst.PORT}, {dcst.SYMMETRIC_KEY}, {dcst.NETWORK},
                 {dcst.STAKE}, {dcst.INCENTIVE}, {dcst.LAST_UPDATED},
                 {dcst.PROTOCOL}, {dcst.SYMMETRIC_KEY_UUID}, {dcst.OUR_VALIDATOR},
                 {dcst.TRUST}, {dcst.VTRUST}

@@ -1,13 +1,20 @@
 # submissions.py
-from datetime import datetime
 import json
-from typing import Dict, List, Optional
+from datetime import datetime
+from typing import Dict
+from typing import List
+from typing import Optional
 from uuid import UUID
+
 from asyncpg.connection import Connection
 
-from validator.core.models import TaskNode, TaskResults, Submission, Task
-from validator.db.database import PSQLDB
+from validator.core.models import Submission
+from validator.core.models import Task
+from validator.core.models import TaskNode
+from validator.core.models import TaskResults
 from validator.db.constants import *
+from validator.db.database import PSQLDB
+
 
 async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
     async with await psql_db.connection() as connection:
@@ -94,8 +101,8 @@ async def get_task_node_quality_score(task_id: UUID, hotkey: str, netuid: int, p
         query = f"""
             SELECT {TASK_NODE_QUALITY_SCORE}
             FROM {TASK_NODES_TABLE}
-            WHERE {TASK_ID} = $1 
-            AND {HOTKEY} = $2 
+            WHERE {TASK_ID} = $1
+            AND {HOTKEY} = $2
             AND {NETUID} = $3
         """
         return await connection.fetchval(query, task_id, hotkey, netuid)
@@ -112,8 +119,8 @@ async def get_all_quality_scores_for_task(task_id: UUID, psql_db: PSQLDB) -> Dic
         return {(row[HOTKEY], row[NETUID]): row[TASK_NODE_QUALITY_SCORE] for row in rows}
 
 async def set_multiple_task_node_quality_scores(
-    task_id: UUID, 
-    quality_scores: Dict[tuple[str, int], float], 
+    task_id: UUID,
+    quality_scores: Dict[tuple[str, int], float],
     psql_db: PSQLDB
 ) -> None:
     async with await psql_db.connection() as connection:
@@ -129,7 +136,7 @@ async def set_multiple_task_node_quality_scores(
             """
             await connection.executemany(
                 query,
-                [(task_id, node_key[0], node_key[1], score) 
+                [(task_id, node_key[0], node_key[1], score)
                  for node_key, score in quality_scores.items()]
             )
 

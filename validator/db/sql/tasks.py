@@ -1,13 +1,17 @@
 # tasks.py
 import json
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 from uuid import UUID
+
 from asyncpg.connection import Connection
+from fiber.networking.models import NodeWithFernet as Node
 
 from validator.core.models import Task
-from fiber.networking.models import NodeWithFernet as Node
-from validator.db.database import PSQLDB
 from validator.db.constants import *
+from validator.db.database import PSQLDB
+
 
 async def add_task(task: Task, psql_db: PSQLDB) -> Task:
     async with await psql_db.connection() as connection:
@@ -79,7 +83,7 @@ async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[D
             )) AS miners
             FROM {TASKS_TABLE}
             LEFT JOIN {TASK_NODES_TABLE} ON {TASKS_TABLE}.{TASK_ID} = {TASK_NODES_TABLE}.{TASK_ID}
-            LEFT JOIN {NODES_TABLE} ON 
+            LEFT JOIN {NODES_TABLE} ON
                 {TASK_NODES_TABLE}.{HOTKEY} = {NODES_TABLE}.{HOTKEY} AND
                 {TASK_NODES_TABLE}.{NETUID} = {NODES_TABLE}.{NETUID}
             WHERE {TASKS_TABLE}.{USER_ID} = $1
