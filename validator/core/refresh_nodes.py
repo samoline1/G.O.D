@@ -27,7 +27,8 @@ def _format_exception(e: Exception) -> str:
 
 async def get_and_store_nodes(config: Config) -> list[Node]:
     if await(is_recent_update(config)):
-        return await get_all_nodes(config.psql_db, config.netuid)
+        nodes =  await get_all_nodes(config.psql_db, config.netuid)
+        return await perform_handshakes(nodes, config)
 
     raw_nodes = await fetch_nodes_from_substrate(config)
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
