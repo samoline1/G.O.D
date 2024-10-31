@@ -13,14 +13,15 @@ async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            INSERT INTO {SUBMISSIONS_TABLE} ({TASK_ID}, {NODE_ID}, {REPO})
-            VALUES ($1, $2, $3)
+            INSERT INTO {SUBMISSIONS_TABLE} ({TASK_ID}, {NODE_ID}, {HOTKEY}, {REPO})
+            VALUES ($1, $2, $3, $4)
             RETURNING {SUBMISSION_ID}
         """
         submission_id = await connection.fetchval(
             query,
             submission.task_id,
             submission.node_id,
+            submission.hotkey,
             submission.repo,
         )
         return await get_submission(submission_id, psql_db)
@@ -71,16 +72,16 @@ async def submission_repo_is_unique(repo: str, psql_db: PSQLDB) -> bool:
         result = await connection.fetchval(query, repo)
         return result is None
 
-async def set_task_node_quality_score(task_id: UUID, node_id: int, quality_score: float, psql_db: PSQLDB) -> None:
+async def set_task_node_quality_score(task_id: UUID, hotkey: str, quality_score: float, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {NODE_ID}, {TASK_NODE_QUALITY_SCORE})
+            INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {HOTKEY}, {TASK_NODE_QUALITY_SCORE})
             VALUES ($1, $2, $3)
-            ON CONFLICT ({TASK_ID}, {NODE_ID}) DO UPDATE
+            ON CONFLICT ({TASK_ID}, {HOTKEY}) DO UPDATE
             SET {TASK_NODE_QUALITY_SCORE} = $3
         """
-        await connection.execute(query, task_id, node_id, quality_score)
+        await connection.execute(query, task_id, hotkey, quality_score)
 
 async def get_task_node_quality_score(task_id: UUID, node_id: int, psql_db: PSQLDB) -> Optional[float]:
     async with await psql_db.connection() as connection:

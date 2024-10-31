@@ -33,20 +33,19 @@ async def add_task(task: Task, psql_db: PSQLDB) -> Task:
         )
         return await get_task(task_id, psql_db)
 
-
 async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
     async with await psql_db.connection() as connection:
         connection: Connection
         rows = await connection.fetch(
             """
             SELECT nodes.* FROM nodes
-            JOIN task_nodes ON nodes.node_id = task_nodes.node_id
+            JOIN task_nodes ON nodes.hotkey = task_nodes.hotkey
+            AND nodes.node_id = task_nodes.node_id
             WHERE task_nodes.task_id = $1
             """,
             task_id,
         )
         return [Node(**dict(row)) for row in rows]
-
 
 async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
     async with await psql_db.connection() as connection:
@@ -90,14 +89,15 @@ async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[D
             for row in rows
         ]
 
-async def assign_node_to_task(task_id: str, node_id: int, psql_db: PSQLDB) -> None:
+
+async def assign_node_to_task(task_id: str, node: Node, psql_db: PSQLDB) -> None:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {NODE_ID})
-            VALUES ($1, $2)
+            INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {HOTKEY}, {NODE_ID})
+            VALUES ($1, $2, $3)
         """
-        await connection.execute(query, task_id, node_id)
+        await connection.execute(query, task_id, node.hotkey, node.node_id)
 
 async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
     existing_task = await get_task(updated_task.task_id, psql_db)
@@ -138,13 +138,12 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
                 )
                 if updated_task.assigned_miners:
                     query = f"""
-                        INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {NODE_ID})
-                        VALUES ($1, $2)
+                        INSERT INTO {TASK_NODES_TABLE} ({TASK_ID}, {HOTKEY}, {NODE_ID})
+                        SELECT $1, nodes.{HOTKEY}, nodes.{NODE_ID}
+                        FROM {NODES_TABLE} nodes
+                        WHERE nodes.{NODE_ID} = ANY($2)
                     """
-                    await connection.executemany(
-                        query,
-                        [(updated_task.task_id, miner_id) for miner_id in updated_task.assigned_miners]
-                    )
+                    await connection.execute(query, updated_task.task_id, updated_task.assigned_miners)
 
     return await get_task(updated_task.task_id, psql_db)
 
