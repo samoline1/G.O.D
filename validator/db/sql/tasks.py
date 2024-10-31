@@ -11,8 +11,7 @@ from validator.core.models import Task
 from validator.db.constants import *
 from validator.db.database import PSQLDB
 
-# Get NETUID from environment variable
-NETUID = int(os.getenv('NETUID', '176'))  # Default to 176 if not set
+from core.constants import NETUID
 
 
 async def add_task(task: Task, psql_db: PSQLDB) -> Task:
@@ -95,7 +94,7 @@ async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[D
             )) AS miners
             FROM {TASKS_TABLE}
             LEFT JOIN {TASK_NODES_TABLE} ON {TASKS_TABLE}.{TASK_ID} = {TASK_NODES_TABLE}.{TASK_ID}
-            LEFT JOIN {NODES_TABLE} ON 
+            LEFT JOIN {NODES_TABLE} ON
                 {TASK_NODES_TABLE}.{HOTKEY} = {NODES_TABLE}.{HOTKEY} AND
                 {NODES_TABLE}.{NETUID} = $2
             WHERE {TASKS_TABLE}.{USER_ID} = $1
@@ -232,17 +231,17 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
             # First delete task_nodes entries for this netuid
             await connection.execute(
                 f"""
-                DELETE FROM {TASK_NODES_TABLE} 
+                DELETE FROM {TASK_NODES_TABLE}
                 WHERE {TASK_ID} = $1 AND {NETUID} = $2
                 """,
                 task_id,
                 NETUID
             )
-            
+
             # Then delete the task if it has no more node assignments
             await connection.execute(
                 f"""
-                DELETE FROM {TASKS_TABLE} 
+                DELETE FROM {TASKS_TABLE}
                 WHERE {TASK_ID} = $1
                 AND NOT EXISTS (
                     SELECT 1 FROM {TASK_NODES_TABLE}

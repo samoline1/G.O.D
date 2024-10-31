@@ -11,8 +11,7 @@ from validator.core.models import Submission, Task, TaskNode, TaskResults
 from validator.db.constants import *
 from validator.db.database import PSQLDB
 
-# Get NETUID from environment variable
-NETUID = int(os.getenv('NETUID', '176'))  # Default to 176 if not set
+from core.constants import NETUID
 
 
 async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
@@ -54,7 +53,7 @@ async def get_submissions_by_task(task_id: UUID, psql_db: PSQLDB) -> List[Submis
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            SELECT * FROM {SUBMISSIONS_TABLE} 
+            SELECT * FROM {SUBMISSIONS_TABLE}
             WHERE {TASK_ID} = $1 AND {NETUID} = $2
         """
         rows = await connection.fetch(query, task_id, NETUID)
@@ -128,8 +127,8 @@ async def get_all_quality_scores_for_task(task_id: UUID, psql_db: PSQLDB) -> Dic
         query = f"""
             SELECT {HOTKEY}, {TASK_NODE_QUALITY_SCORE}
             FROM {TASK_NODES_TABLE}
-            WHERE {TASK_ID} = $1 
-            AND {NETUID} = $2 
+            WHERE {TASK_ID} = $1
+            AND {NETUID} = $2
             AND {TASK_NODE_QUALITY_SCORE} IS NOT NULL
         """
         rows = await connection.fetch(query, task_id, NETUID)
