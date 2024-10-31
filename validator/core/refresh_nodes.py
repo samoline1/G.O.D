@@ -32,6 +32,7 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
     raw_nodes = await fetch_nodes_from_substrate(config)
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
     nodes = await perform_handshakes(nodes, config)
+    logger.info(f"Here are the nodes we have shaked hands with {nodes}")
     await store_nodes(config, nodes)
 
     logger.info(f"Stored {len(nodes)} nodes.")
