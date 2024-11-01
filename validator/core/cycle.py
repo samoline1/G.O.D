@@ -55,7 +55,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
         task.status = TaskStatus.FAILURE
         return task
 
-    selected_miners: list[int] = []
+    selected_miners: list[str] = []
     ds_size = _get_total_dataset_size(task.ds_id)
     task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete, task_id= str(task.task_id))
 
@@ -71,11 +71,11 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
             offer_response = await _make_offer(node, task_request, config)
             logger.info(f"Node {node.node_id}'s response to the offer was {offer_response}")
         except:
-            logger.info(f"Seems that {node.node_id} has a connection issue")
+            logger.info(f"Seems that {node.hotkey} has a connection issue")
             offer_response = MinerTaskResponse(accepted=False, message="Connection error")
 
         if offer_response.accepted is True:
-            selected_miners.append(node.node_id)
+            selected_miners.append(node.hotkey)
             await tasks_sql.assign_node_to_task(str(task.task_id), node, config.psql_db)
             logger.info(f"The miner {node.node_id} has officially been assigned the task")
 
