@@ -98,12 +98,14 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
     tasks = []
     shaked_nodes: list[Node] = []
     for node in nodes:
+        logger.info(f"We found a node lets say hi {node.node_id}")
         if node.fernet is None or node.symmetric_key_uuid is None:
             try:
                 if node.node_id == 60:
                     logger.info('Attempting to shake hands with 60!')
                     tasks.append(_handshake(config, node, config.httpx_client))
             except Exception as e:
+                logger.info(f"Problem {e}")
                 continue
         if len(tasks) > 50:
             shaked_nodes.extend(await asyncio.gather(*tasks))
