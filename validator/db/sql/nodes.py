@@ -186,3 +186,14 @@ async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_addr
         substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True
     )
     return uid
+
+
+async def get_node_id_by_hotkey(hotkey: str, psql_db: PSQLDB) -> int | None:
+    """Get node_id by hotkey for the current NETUID"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT {dcst.NODE_ID} FROM {dcst.NODES_TABLE}
+            WHERE {dcst.HOTKEY} = $1 AND {dcst.NETUID} = $2
+        """
+        return await connection.fetchval(query, hotkey, NETUID)

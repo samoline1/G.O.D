@@ -18,7 +18,7 @@ import asyncio
 from fiber.chain import weights
 from fiber.logging_utils import get_logger
 from core import constants as ccst
-from validator.db.sql.nodes import get_vali_node_id
+from validator.db.sql.nodes import get_node_by_hotkey, get_node_id_by_hotkey, get_vali_node_id
 from fiber.chain import fetch_nodes
 from fiber.networking.models import NodeWithFernet as Node
 from fiber.chain.interface import get_substrate
@@ -51,7 +51,9 @@ async def _get_and_set_weights(config: Config) -> bool:
     all_node_weights = [0.0 for _ in all_nodes]
     for node_result in node_results:
         if node_result.normalised_score is not None:
-            all_node_weights[node_result.node_id] = node_result.normalised_score
+            node_id = await get_node_id_by_hotkey(node_result.hotkey, config.psql_db)
+            if node_id is not None:
+                all_node_weights[node_id] = node_result.normalised_score
 
     logger.info(f"Node ids: {all_node_ids}")
     logger.info(f"Node weights: {all_node_weights}")
