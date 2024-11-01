@@ -123,6 +123,7 @@ async def assign_miners(task: Task, nodes: list[Node], config: Config):
 
 
 async def _find_miners_for_task(config: Config, nodes: list[Node]):
+    logger.info(f"HERE ARE THE POSSIBLE MIENRS FOR THE TASK {nodes}")
     pending_tasks = await tasks_sql.get_tasks_with_status(status=TaskStatus.DATA_READY, psql_db=config.psql_db)
     await asyncio.gather(*[assign_miners(task, nodes, config) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
 
