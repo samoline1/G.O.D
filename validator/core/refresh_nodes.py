@@ -48,7 +48,7 @@ async def is_recent_update(config: Config) -> bool:
             logger.info(
                 f"Last update for nodes table was at {last_updated_time}, which is less than 30 minutes ago - skipping refresh"
             )
-            return True
+            return False  # temp shoudl be true
         return False
 
 
