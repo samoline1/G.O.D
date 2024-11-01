@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS task_nodes (
     hotkey TEXT NOT NULL,
     netuid INTEGER NOT NULL,
     quality_score FLOAT,
-    PRIMARY KEY (task_id, hotkey, netuid),
+    PRIMARY KEY (task_id, hotkey, netuid)
 );
 
 -- Submissions table
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS submissions (
     netuid INTEGER NOT NULL,
     repo TEXT NOT NULL,
     created_on TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_on TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_on TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Nodes history table
