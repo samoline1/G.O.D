@@ -190,7 +190,7 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
                 FROM {TASK_NODES_TABLE} tn2
                 WHERE tn2.{TASK_ID} = t.{TASK_ID}
                 AND tn2.{TASK_NODE_QUALITY_SCORE} > 0
-                AND tn2.{NETUID} = $2
+                AND {NETUID} = $2
             )
             GROUP BY t.{TASK_ID}
             ORDER BY t.created_timestamp DESC
