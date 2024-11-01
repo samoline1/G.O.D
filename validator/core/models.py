@@ -43,7 +43,7 @@ class PeriodScore(BaseModel):
 
 class TaskNode(BaseModel):
     task_id: str
-    node_id: int
+    hotkey: int
     quality_score: float
 
 class TaskResults(BaseModel):
