@@ -58,12 +58,6 @@ CREATE TABLE IF NOT EXISTS task_nodes (
     netuid INTEGER NOT NULL,
     quality_score FLOAT,
     PRIMARY KEY (task_id, hotkey, netuid),
-    CONSTRAINT fk_task
-        FOREIGN KEY (task_id)
-        REFERENCES tasks (task_id),
-    CONSTRAINT fk_node
-        FOREIGN KEY (hotkey, netuid)
-        REFERENCES nodes (hotkey, netuid)
 );
 
 -- Submissions table
@@ -75,12 +69,6 @@ CREATE TABLE IF NOT EXISTS submissions (
     repo TEXT NOT NULL,
     created_on TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_on TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_task
-        FOREIGN KEY (task_id)
-        REFERENCES tasks (task_id),
-    CONSTRAINT fk_node
-        FOREIGN KEY (hotkey, netuid)
-        REFERENCES nodes (hotkey, netuid)
 );
 
 -- Nodes history table
