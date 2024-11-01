@@ -21,7 +21,6 @@ async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
         connection: Connection
         query = f"""
             SELECT * FROM {dcst.NODES_TABLE}
-            WHERE {dcst.NETUID} = $1
         """
         rows = await connection.fetch(query, NETUID)
         return [Node(**dict(row)) for row in rows]
