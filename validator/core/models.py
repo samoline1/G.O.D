@@ -38,7 +38,7 @@ class PeriodScore(BaseModel):
     quality_score: float
     summed_task_score: float
     average_score: float
-    node_id: int
+    hotkey: str
     normalised_score: Optional[float] = 0.0
 
 class TaskNode(BaseModel):
@@ -58,7 +58,7 @@ class NodeAggregationResult(BaseModel):
     quality_score: Optional[float] = Field(default=0.0)
     emission: Optional[float] = Field(default=0.0)
     task_raw_scores: List[float] = Field(default_factory=list)
-    node_id: int
+    hotkey: str
     class Config:
         validate_assignment = True
         arbitrary_types_allowed = True
@@ -67,13 +67,13 @@ class Submission(BaseModel):
     submission_id: UUID = Field(default_factory=uuid4)
     score: Optional[float] = None
     task_id: UUID
-    node_id: int
+    hotkey: str
     repo: str
     created_on: Optional[datetime]
     updated_on: Optional[datetime]
 
 class MinerResults(BaseModel):
-    node_id: int
+    hotkey: str
     test_loss: float
     synth_loss: float
     is_finetune: bool
