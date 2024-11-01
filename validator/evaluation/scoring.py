@@ -106,6 +106,7 @@ async def scoring_aggregation_from_date(psql_db: str) -> list[PeriodScore]:
 
         date = datetime.now() - timedelta(hours=24)
         task_results: list[TaskResults] = await get_aggregate_scores_since(date, psql_db)
+        logger.info(f"Gto task results {task_results}")
         if not task_results:
             logger.info('There were not results to be scored')
             return []
@@ -114,7 +115,9 @@ async def scoring_aggregation_from_date(psql_db: str) -> list[PeriodScore]:
 
         for task_res in task_results:
             task_work_score = get_task_work_score(task_res.task)
+            logger.info(f"Got work socre {task_work_score}")
             for node_score in task_res.node_scores:
+                logger.info(f"Looking at node score {node_score}")
                 update_node_aggregation(node_aggregations, node_score, task_work_score)
 
         final_scores, min_score = calculate_node_quality_scores(node_aggregations)
