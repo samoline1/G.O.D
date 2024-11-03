@@ -10,7 +10,14 @@ from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import JobStatus
 from core.models.utility_models import TaskStatus
+from fiber.logging_utils import get_logger
+logger = get_logger(__name__)
 
+class MinerTaskRequst(BaseModel):
+    ds_size: int
+    model: str
+    hours_to_complete: int
+    task_id: str
 
 class TrainRequest(BaseModel):
     dataset: str = Field(..., description="Path to the dataset file or Hugging Face dataset name")
@@ -43,14 +50,6 @@ class EvaluationResult(BaseModel):
     is_finetune: bool
     eval_loss: float
     perplexity: float
-
-
-class MinerTaskRequst(BaseModel):
-    ds_size: int
-    model: str
-    hours_to_complete: int
-    task_id: str
-
 
 
 class MinerTaskResponse(BaseModel):

@@ -3,6 +3,7 @@ from typing import List
 from typing import Optional
 from uuid import UUID
 from uuid import uuid4
+from cryptography.fernet import Fernet
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -32,9 +33,17 @@ class Task(BaseModel):
     best_submission_repo: Optional[str] = None
     user_id: Optional[str] = None
 
+
+class PeriodScore(BaseModel):
+    quality_score: float
+    summed_task_score: float
+    average_score: float
+    hotkey: str
+    normalised_score: Optional[float] = 0.0
+
 class TaskNode(BaseModel):
     task_id: str
-    node_id: int
+    hotkey: str
     quality_score: float
 
 class TaskResults(BaseModel):
@@ -49,38 +58,22 @@ class NodeAggregationResult(BaseModel):
     quality_score: Optional[float] = Field(default=0.0)
     emission: Optional[float] = Field(default=0.0)
     task_raw_scores: List[float] = Field(default_factory=list)
-
-    node_id: int
+    hotkey: str
     class Config:
         validate_assignment = True
         arbitrary_types_allowed = True
-
-class Node(BaseModel):
-    node_id: int
-    coldkey: str
-    ip: str
-    ip_type: str
-    port: int
-    symmetric_key: str
-    network: float
-    trust: Optional[float] = 0.0
-    vtrust: Optional[float] = 0.0
-    stake: float
-    created_timestamp: Optional[datetime] = None
-    updated_timestamp: Optional[datetime] = None
-
 
 class Submission(BaseModel):
     submission_id: UUID = Field(default_factory=uuid4)
     score: Optional[float] = None
     task_id: UUID
-    node_id: int
+    hotkey: str
     repo: str
     created_on: Optional[datetime]
     updated_on: Optional[datetime]
 
 class MinerResults(BaseModel):
-    node_id: int
+    hotkey: str
     test_loss: float
     synth_loss: float
     is_finetune: bool

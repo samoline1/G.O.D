@@ -16,9 +16,11 @@ COLDKEY = "coldkey"
 VALI_CONFIG_PATH = "validator/test_axolotl.yml"
 
 
-#api stuff
-START_TRAINING_ENDPOINT = 'start_training'
-TASK_OFFER_ENDPOINT = 'task_offer'
+#api stuff should move this out to be shared by both miner and vali code?
+START_TRAINING_ENDPOINT = '/start_training/'
+TASK_OFFER_ENDPOINT = '/task_offer/'
+SUBMISSION_ENDPOINT = '/get_latest_model_submission/'
+
 # data stuff
 TEST_SIZE = 0.1
 TRAIN_TEST_SPLIT_PERCENTAGE = 0.1

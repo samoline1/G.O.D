@@ -1,239 +1,199 @@
 import datetime
+from logging import getLogger
+from typing import List, Optional
 
-from asyncpg import Connection
-from cryptography.fernet import Fernet
-from fiber import SubstrateInterface
+from asyncpg.connection import Connection
 from fiber import utils as futils
-from fiber.logging_utils import get_logger
 from fiber.networking.models import NodeWithFernet as Node
 
-from validator.db.src.database import PSQLDB
-from validator.utils.database import database_constants as dcst
-from validator.utils.substrate.query_substrate import query_substrate
+from fiber import SubstrateInterface
+from validator.utils.query_substrate import query_substrate
+from validator.db import constants as dcst
+from validator.db.database import PSQLDB
+from core.constants import NETUID
+
+logger = getLogger(__name__)
 
 
-logger = get_logger(__name__)
+async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
+    """Get all nodes for the current NETUID"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT * FROM {dcst.NODES_TABLE}
+        """
+        rows = await connection.fetch(query) # , NETUID)
+        return [Node(**dict(row)) for row in rows]
 
 
-async def insert_nodes(connection: Connection, nodes: list[Node], network: str) -> None:
-    logger.debug(f"Inserting {len(nodes)} nodes into {dcst.NODES_TABLE}...")
-    await connection.executemany(
-        f"""
-        INSERT INTO {dcst.NODES_TABLE} (
-            {dcst.HOTKEY},
-            {dcst.COLDKEY},
-            {dcst.NODE_ID},
-            {dcst.INCENTIVE},
-            {dcst.NETUID},
-            {dcst.STAKE},
-            {dcst.TRUST},
-            {dcst.VTRUST},
-            {dcst.LAST_UPDATED},
-            {dcst.IP},
-            {dcst.IP_TYPE},
-            {dcst.PORT},
-            {dcst.PROTOCOL},
-            {dcst.NETWORK},
-            {dcst.SYMMETRIC_KEY}
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-        """,
-        [
-            (
-                node.hotkey,
-                node.coldkey,
-                node.node_id,
-                node.incentive,
-                node.netuid,
-                node.stake,
-                node.trust,
-                node.vtrust,
-                node.last_updated,
-                node.ip,
-                node.ip_type,
-                node.port,
-                node.protocol,
-                network,
-                None,
+async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
+    """Add a new node with the current NETUID"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            INSERT INTO {dcst.NODES_TABLE} (
+                {dcst.HOTKEY}, {dcst.NETUID}, {dcst.COLDKEY}, {dcst.IP},
+                {dcst.IP_TYPE}, {dcst.PORT}, {dcst.SYMMETRIC_KEY}, {dcst.NETWORK},
+                {dcst.STAKE}, {dcst.INCENTIVE}, {dcst.LAST_UPDATED},
+                {dcst.PROTOCOL}, {dcst.SYMMETRIC_KEY_UUID}, {dcst.OUR_VALIDATOR},
+                {dcst.TRUST}, {dcst.VTRUST}, {dcst.NODE_ID}
             )
-            for node in nodes
-        ],
-    )
-
-
-async def migrate_nodes_to_history(connection: Connection) -> None:  # noqa: F821
-    logger.debug("Migrating NODEs to NODE history")
-    await connection.execute(
-        f"""
-        INSERT INTO {dcst.NODES_HISTORY_TABLE} (
-            {dcst.HOTKEY},
-            {dcst.COLDKEY},
-            {dcst.NODE_ID},
-            {dcst.INCENTIVE},
-            {dcst.NETUID},
-            {dcst.STAKE},
-            {dcst.TRUST},
-            {dcst.VTRUST},
-            {dcst.LAST_UPDATED},
-            {dcst.IP},
-            {dcst.IP_TYPE},
-            {dcst.PORT},
-            {dcst.PROTOCOL},
-            {dcst.NETWORK},
-            {dcst.CREATED_AT}
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            RETURNING {dcst.HOTKEY}
+        """
+        return_value = await connection.fetchval(
+            query,
+            node.hotkey,
+            NETUID, # why is this twice, what is the diff between network and netuid
+            node.coldkey,
+            node.ip,
+            node.ip_type,
+            node.port,
+            None,
+            NETUID,
+            node.stake,
+            node.incentive,
+            node.last_updated,
+            node.protocol,
+            node.symmetric_key_uuid,
+            False,  # assume not our validator
+            node.trust,
+            node.vtrust,
+            node.node_id
         )
-        SELECT
-            {dcst.HOTKEY},
-            {dcst.COLDKEY},
-            {dcst.NODE_ID},
-            {dcst.INCENTIVE},
-            {dcst.NETUID},
-            {dcst.STAKE},
-            {dcst.TRUST},
-            {dcst.VTRUST},
-            {dcst.LAST_UPDATED},
-            {dcst.IP},
-            {dcst.IP_TYPE},
-            {dcst.PORT},
-            {dcst.PROTOCOL},
-            {dcst.NETWORK},
-            {dcst.CREATED_AT}
-        FROM {dcst.NODES_TABLE}
-    """
-    )
-
-    logger.debug("Truncating NODE info table")
-    await connection.execute(f"DELETE FROM {dcst.NODES_TABLE}")
+        if return_value:
+            return await get_node_by_hotkey(return_value, psql_db)
+        return None
 
 
-async def get_last_updated_time_for_nodes(connection: Connection, netuid: int) -> datetime.datetime | None:
+async def get_node_by_hotkey(hotkey: str, psql_db: PSQLDB) -> Optional[Node]:
+    """Get node by hotkey for the current NETUID"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT * FROM {dcst.NODES_TABLE}
+            WHERE {dcst.HOTKEY} = $1 AND {dcst.NETUID} = $2
+        """
+        row = await connection.fetchrow(query, hotkey, NETUID)
+        if row:
+            return Node(**dict(row))
+        return None
+
+
+async def update_our_vali_node_in_db(connection: Connection, ss58_address: str) -> None:
+    """Update validator node for the current NETUID"""
     query = f"""
-        SELECT MAX({dcst.CREATED_AT})
-        FROM {dcst.NODES_TABLE}
-        WHERE {dcst.NETUID} = $1
+        UPDATE {dcst.NODES_TABLE}
+        SET {dcst.OUR_VALIDATOR} = true
+        WHERE {dcst.HOTKEY} = $1 AND {dcst.NETUID} = $2
     """
-    return await connection.fetchval(query, netuid)
+    await connection.execute(query, ss58_address, NETUID)
+
+
+async def get_vali_ss58_address(psql_db: PSQLDB) -> str | None:
+    """Get validator SS58 address for the current NETUID"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT {dcst.HOTKEY}
+            FROM {dcst.NODES_TABLE}
+            WHERE {dcst.OUR_VALIDATOR} = true AND {dcst.NETUID} = $1
+        """
+        row = await connection.fetchrow(query, NETUID)
+        if row is None:
+            logger.error(f"Cannot find validator node for netuid {NETUID} in the DB. Maybe control node is still syncing?")
+            return None
+        return row[dcst.HOTKEY]
 
 
 async def insert_symmetric_keys_for_nodes(connection: Connection, nodes: list[Node]) -> None:
-    logger.info(f"Inserting {len([node for node in nodes if node.fernet is not None])} nodes into {dcst.NODES_TABLE}...")
+    """Insert symmetric keys for nodes in the current NETUID"""
     await connection.executemany(
         f"""
         UPDATE {dcst.NODES_TABLE}
         SET {dcst.SYMMETRIC_KEY} = $1, {dcst.SYMMETRIC_KEY_UUID} = $2
-        WHERE {dcst.HOTKEY} = $3 and {dcst.NETUID} = $4
+        WHERE {dcst.HOTKEY} = $3 AND {dcst.NETUID} = $4
         """,
         [
-            (futils.fernet_to_symmetric_key(node.fernet), node.symmetric_key_uuid, node.hotkey, node.netuid)
+            (futils.fernet_to_symmetric_key(node.fernet), node.symmetric_key_uuid, node.hotkey, NETUID)
             for node in nodes
             if node.fernet is not None
         ],
     )
 
 
-async def get_nodes(psql_db: PSQLDB, netuid: int) -> list[Node]:
+async def get_last_updated_time_for_nodes(connection: Connection) -> datetime.datetime | None:
+    """Get last updated time for nodes in the current NETUID"""
     query = f"""
-        SELECT
-            {dcst.HOTKEY},
-            {dcst.COLDKEY},
-            {dcst.NODE_ID},
-            {dcst.INCENTIVE},
-            {dcst.NETUID},
-            {dcst.STAKE},
-            {dcst.TRUST},
-            {dcst.VTRUST},
-            {dcst.LAST_UPDATED},
-            {dcst.IP},
-            {dcst.IP_TYPE},
-            {dcst.PORT},
-            {dcst.PROTOCOL}
+        SELECT MAX({dcst.CREATED_TIMESTAMP})
         FROM {dcst.NODES_TABLE}
         WHERE {dcst.NETUID} = $1
     """
-
-    nodes = await psql_db.fetchall(query, netuid)
-
-    return [Node(**node) for node in nodes]
+    return await connection.fetchval(query, NETUID)
 
 
-async def get_node_stakes(psql_db: PSQLDB, netuid: int) -> dict[str, float]:
-    NODEs = await psql_db.fetchall(
-        f"""
-        SELECT {dcst.HOTKEY}, {dcst.STAKE}
-        FROM {dcst.NODES_TABLE}
-        WHERE {dcst.NETUID} = $1
+async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:
+    """Migrate nodes to history table for the current NETUID"""
+    logger.debug(f"Migrating nodes to history for NETUID {NETUID}")
+    async with await psql_db.connection() as connection:
+        await connection.execute(
+            f"""
+            INSERT INTO {dcst.NODES_HISTORY_TABLE} (
+                {dcst.HOTKEY},
+                {dcst.COLDKEY},
+                {dcst.INCENTIVE},
+                {dcst.NETUID},
+                {dcst.STAKE},
+                {dcst.TRUST},
+                {dcst.VTRUST},
+                {dcst.LAST_UPDATED},
+                {dcst.IP},
+                {dcst.IP_TYPE},
+                {dcst.PORT},
+                {dcst.PROTOCOL},
+                {dcst.NETWORK},
+                {dcst.NODE_ID}
+            )
+            SELECT
+                {dcst.HOTKEY},
+                {dcst.COLDKEY},
+                {dcst.INCENTIVE},
+                {dcst.NETUID},
+                {dcst.STAKE},
+                {dcst.TRUST},
+                {dcst.VTRUST},
+                {dcst.LAST_UPDATED},
+                {dcst.IP},
+                {dcst.IP_TYPE},
+                {dcst.PORT},
+                {dcst.PROTOCOL},
+                {dcst.NETWORK},
+                {dcst.NODE_ID}
+            FROM {dcst.NODES_TABLE}
+            WHERE {dcst.NETUID} = $1
         """,
-        netuid,
-    )
-    hotkey_to_stake = {NODE[dcst.HOTKEY]: NODE[dcst.STAKE] for NODE in NODEs}
+            NETUID
+        )
 
-    return hotkey_to_stake
+        logger.debug(f"Truncating node info table for NETUID {NETUID}")
+        await connection.execute(
+            f"DELETE FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1",
+            NETUID
+        )
 
-
-async def get_node(psql_db: PSQLDB, node_id: int, netuid: int) -> Node | None:
-    query = f"""
-        SELECT
-            {dcst.HOTKEY},
-            {dcst.COLDKEY},
-            {dcst.NODE_ID},
-            {dcst.INCENTIVE},
-            {dcst.NETUID},
-            {dcst.STAKE},
-            {dcst.TRUST},
-            {dcst.VTRUST},
-            {dcst.LAST_UPDATED},
-            {dcst.IP},
-            {dcst.IP_TYPE},
-            {dcst.PORT},
-            {dcst.PROTOCOL},
-            {dcst.SYMMETRIC_KEY},
-            {dcst.SYMMETRIC_KEY_UUID}
-        FROM {dcst.NODES_TABLE}
-        WHERE {dcst.NODE_ID} = $1 AND {dcst.NETUID} = $2
-    """
-
-    node = await psql_db.fetchone(query, node_id, netuid)
-
-    if node is None:
-        logger.error(f"No node found for node id {node_id} and netuid {netuid}")
-        logger.error(f"all nodes: {await psql_db.fetchall(f'SELECT * FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1', netuid)}")
-        raise ValueError(f"No node found for node id {node_id} and netuid {netuid}")
-    try:
-        node["fernet"] = Fernet(node[dcst.SYMMETRIC_KEY])
-    except Exception as e:
-        logger.error(f"Error creating fernet: {e}")
-        logger.error(f"node: {node}")
-        return None
-    return Node(**node)
-
-
-async def update_our_vali_node_in_db(connection: Connection, ss58_address: str, netuid: int) -> None:
-    query = f"""
-        UPDATE {dcst.NODES_TABLE}
-        SET {dcst.OUR_VALIDATOR} = true
-        WHERE {dcst.HOTKEY} = $1 AND {dcst.NETUID} = $2
-    """
-    await connection.execute(query, ss58_address, netuid)
-
-
-async def get_vali_ss58_address(psql_db: PSQLDB, netuid: int) -> str | None:
-    query = f"""
-        SELECT
-            {dcst.HOTKEY}
-        FROM {dcst.NODES_TABLE}
-        WHERE {dcst.OUR_VALIDATOR} = true AND {dcst.NETUID} = $1
-    """
-
-    node = await psql_db.fetchone(query, netuid)
-
-    if node is None:
-        logger.error(f"I cannot find the validator node for netuid {netuid} in the DB. Maybe control node is still syncing?")
-        return None
-
-    return node[dcst.HOTKEY]
-
-
-# not sure if we need this
 async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_address: str) -> str | None:
-    _, uid = query_substrate(substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True)
+    _, uid = query_substrate(
+        substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True
+    )
     return uid
+
+
+async def get_node_id_by_hotkey(hotkey: str, psql_db: PSQLDB) -> int | None:
+    """Get node_id by hotkey for the current NETUID"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT {dcst.NODE_ID} FROM {dcst.NODES_TABLE}
+            WHERE {dcst.HOTKEY} = $1 AND {dcst.NETUID} = $2
+        """
+        return await connection.fetchval(query, hotkey, NETUID)

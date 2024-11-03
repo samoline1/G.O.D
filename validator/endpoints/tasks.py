@@ -18,7 +18,7 @@ from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_config
 from validator.core.models import Task
-from validator.db import sql
+from validator.db.sql import tasks as task_sql
 
 ## TT leavin this one for you snr
 
@@ -43,7 +43,7 @@ async def delete_task(
 
     user_id = authorization
 
-    task = await sql.get_task(task_id, config.psql_db)
+    task = await task_sql.get_task(task_id, config.psql_db)
 
     # If task is none you mean?
     if not task:
@@ -52,7 +52,7 @@ async def delete_task(
     if task.user_id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this task.")
 
-    await sql.delete_task(task_id, config.psql_db)
+    await task_sql.delete_task(task_id, config.psql_db)
     return Response(success=True)
 
 
@@ -65,7 +65,7 @@ async def get_tasks(
 
     user_id = authorization
 
-    tasks_with_miners = await sql.get_tasks_with_miners_by_user(user_id, config.psql_db)
+    tasks_with_miners = await task_sql.get_tasks_with_miners_by_user(user_id, config.psql_db)
 
     logger.info(tasks_with_miners)
 
@@ -117,7 +117,7 @@ async def create_task(
 
     logger.info(f"The Task is {task}")
 
-    task = await sql.add_task(task, config.psql_db)
+    task = await task_sql.add_task(task, config.psql_db)
 
     logger.info(task.task_id)
     return NewTaskResponse(success=True, task_id=task.task_id)
@@ -127,7 +127,7 @@ async def get_task_status(
     task_id: UUID,
     config: Config = Depends(get_config),
 ) -> TaskStatusResponse:
-    task = await sql.get_task(task_id, config.psql_db)
+    task = await task_sql.get_task(task_id, config.psql_db)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 

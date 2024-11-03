@@ -5,7 +5,7 @@ from fiber.logging_utils import get_logger
 
 from validator.core.config import Config
 from validator.core.dependencies import get_config
-from validator.core.models import Node
+from fiber.networking.models import NodeWithFernet as Node
 from validator.db import sql
 
 

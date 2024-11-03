@@ -90,7 +90,7 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     config["HOTKEY_NAME"] = input("Enter hotkey name (default: default): ") or "default"
     config["SUBTENSOR_NETWORK"] = input("Enter subtensor network (default: finney): ") or "finney"
     config["SUBTENSOR_ADDRESS"] = validate_input("Enter subtensor address (default: None): ", websocket_validator)
-    config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 64
+    config["NETUID"] = 76 if config["SUBTENSOR_NETWORK"] == "test" else 64
     organic_server_port = input("Enter port for your organic server (optional) (default: None): ")
     if organic_server_port:
         config["ORGANIC_SERVER_PORT"] = organic_server_port
