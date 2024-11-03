@@ -2,6 +2,7 @@ from typing import List
 from typing import Optional
 from uuid import UUID
 
+from fiber.logging_utils import get_logger
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -10,7 +11,8 @@ from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import JobStatus
 from core.models.utility_models import TaskStatus
-from fiber.logging_utils import get_logger
+
+
 logger = get_logger(__name__)
 
 class MinerTaskRequst(BaseModel):
@@ -90,10 +92,13 @@ class NewTaskRequest(BaseModel):
     ds_repo: str
     input_col: str
     hours_to_complete: int
+    fingerprint: str
     system_col: Optional[str] = None
     output_col: Optional[str] = None
     instruction_col: Optional[str] = None
 
+class GetTasksRequest(BaseModel):
+    fingerprint: str
 
 class NewTaskResponse(BaseModel):
     success: bool
@@ -109,5 +114,3 @@ class TaskStatusResponse(BaseModel):
     dataset: str
     created: str
     hours_to_complete: int
-
-
