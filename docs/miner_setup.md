@@ -9,6 +9,8 @@ This guide will walk you through the process of setting up and running a miner f
 - Hugging Face account and API token
 - WANDB token for training
 
+
+
 ## Setup Steps
 
 1. Install system dependencies:
@@ -23,20 +25,39 @@ This guide will walk you through the process of setting up and running a miner f
     ```
 
 2. Set up your wallet:
-    - Get your wallet (hotkey) on the machine
-    - Run `core/create_config.py --miner`
-    - For developers: use `SUBTENSOR_ADDRESS=wss://test.finney.opentensor.ai:443/`
+   ## Setting up a wallet 
 
-3. Configure environment variables:
+```bash
+btcli wallet new-coldkey
+btcli wallet new-hotkey
+# shows your hot and coldkey addresses
+btcli wallet list
+```
+
+Once you have some key on your coldkey. Register to the subnet. 
+
+```bash
+btcli s register --subtensor.network test 
+```
+
+Then to connect to fiber
+
+```
+fiber-post-ip --netuid 176 --subtensor.network test --external_port 7999 --wallet.name default --wallet.hotkey default --external_ip [YOUR-IP]
+```
+
+4. Configure environment variables:
     Create a `.1.env` file with the following:
     - `HUGGINGFACE_TOKEN`
     - `WANDB_TOKEN`
+    - `NETUID=176`
+    - `SUBTENSOR_NETWORK=test`
 
-4. Update the configuration:
+5. Update the configuration:
     - Update your `entity_id` in the wandb section of the config to be your wandb username+org_name [here](core/config/base.yml)
-    - In the same config, change the `hub_model_id` to be the huggingface hub repo you want to upload to
+    - In the same config, change the `hub_model_id` to be the huggingface hub repo you want to upload to - note, you'll probably want to make this dynamically updating, where for different tasks you have different `hub_model_id`'s else they will overwrite each other. 
 
-5. Start the miner service:
+6. Start the miner service:
     ```bash
     task miner
     ```
