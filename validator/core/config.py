@@ -11,13 +11,11 @@ from validator.db.database import PSQLDB
 load_dotenv()
 
 
-from fiber.logging_utils import get_logger
-
-from fiber.chain import interface
 from fiber.chain import chain_utils
-
-
-from substrateinterface import SubstrateInterface, Keypair
+from fiber.chain import interface
+from fiber.logging_utils import get_logger
+from substrateinterface import Keypair
+from substrateinterface import SubstrateInterface
 
 
 logger = get_logger(__name__)
@@ -29,6 +27,7 @@ class Config:
     keypair: Keypair
     psql_db: PSQLDB
     redis_db: Redis
+    api_key: str
     subtensor_network: str | None
     subtensor_address: str | None
     netuid: int
@@ -45,6 +44,7 @@ def load_config() -> Config:
     dev_env = os.getenv("ENV", "prod").lower() != "prod"
     wallet_name = os.getenv("WALLET_NAME", "default")
     hotkey_name = os.getenv("HOTKEY_NAME", "default")
+    api_key = os.getenv("API_KEY", "default")
     netuid = os.getenv("NETUID")
     if netuid is None:
         raise ValueError("NETUID must be set")
@@ -78,6 +78,7 @@ def load_config() -> Config:
     return Config(
         substrate=substrate,
         keypair=keypair,
+        api_key=api_key,
         psql_db=PSQLDB(),
         redis_db=Redis(host=redis_host),
         subtensor_network=subtensor_network,
