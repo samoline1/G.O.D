@@ -102,8 +102,6 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
         logger.info(f"We found a node lets say hi {node.node_id}")
         if node.fernet is None or node.symmetric_key_uuid is None:
             try:
-                if node.node_id == 60:
-                    logger.info(f'Attempting to shake hands with 60! {node}')
                     tasks.append(_handshake(config, node, config.httpx_client))
             except Exception as e:
                 logger.info(f"Problem {e}")
