@@ -25,7 +25,7 @@ This guide will walk you through the process of setting up and running a miner f
     ```
 
 2. Set up your wallet:
-   ## Setting up a wallet 
+   ## Setting up a wallet
 
 ```bash
 btcli wallet new-coldkey
@@ -34,10 +34,10 @@ btcli wallet new-hotkey
 btcli wallet list
 ```
 
-Once you have some key on your coldkey. Register to the subnet. 
+Once you have some key on your coldkey. Register to the subnet.
 
 ```bash
-btcli s register --subtensor.network test 
+btcli s register --subtensor.network test
 ```
 
 Then to connect to fiber
@@ -48,14 +48,15 @@ fiber-post-ip --netuid 176 --subtensor.network test --external_port 7999 --walle
 
 4. Configure environment variables:
     Create a `.1.env` file with the following:
-    - `HUGGINGFACE_TOKEN`
-    - `WANDB_TOKEN`
-    - `NETUID=176`
-    - `SUBTENSOR_NETWORK=test`
+
+```
+python3 core/create_config.py --miner
+
+```
 
 5. Update the configuration:
     - Update your `entity_id` in the wandb section of the config to be your wandb username+org_name [here](core/config/base.yml)
-    - In the same config, change the `hub_model_id` to be the huggingface hub repo you want to upload to - note, you'll probably want to make this dynamically updating, where for different tasks you have different `hub_model_id`'s else they will overwrite each other. 
+    - In the same config, change the `hub_model_id` to be the huggingface hub repo you want to upload to - note, you'll probably want to make this dynamically updating, where for different tasks you have different `hub_model_id`'s else they will overwrite each other.
 
 6. Start the miner service:
     ```bash
