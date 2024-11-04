@@ -101,7 +101,6 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     config["MINIO_ENDPOINT"] = input("Enter minio endpoint")
     config["MINIO_ACCESS_KEY"] = input("Enter minio access key")
     config["MINIO_SECRET_KEY"] = input("Enter minio secret key")
-    config["CORCEL_TOKEN"] = input("Enter corcel token if you're planning to use this  for synth gen") or None
     config["OPEN_AI"] = input("Enter OpenAI key if you would rather use this for synth") or None
     config["API_KEY"] = input("Enter Parachutes API if you want to use that for synth generation") or None
     if address:
