@@ -90,7 +90,8 @@ def write_config_to_file(config: dict[str, Any], env: str) -> None:
     filename = f".{env}.env"
     with open(filename, "w") as f:
         for key, value in config.items():
-            f.write(f"{key.upper()}={value}\n")
+            if value is not None:
+                f.write(f"{key.upper()}={value}\n")
 
 if __name__ == "__main__":
     args = parse_args()
