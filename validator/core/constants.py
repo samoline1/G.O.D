@@ -31,13 +31,22 @@ ADDITIONAL_SYNTH_DATA_PERCENTAGE = 1.0 # same size as training set
 # synth stuff
 SYNTH_GEN_BATCH_SIZE = 2
 SYNTH_MODEL_TEMPERATURE = 0.4
-#SYNTH_MODEL = "llama-3-1-8b"
-SYNTH_MODEL = "gpt-4o-mini"
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
-#PROMPT_GEN_ENDPOINT = "https://api.corcel.io/v1/chat/completions"
-PROMPT_GEN_ENDPOINT = "https://api.openai.com/v1/chat/completions"
-PROMPT_GEN_TOKEN = os.getenv("OPEN_AI")
-#PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
+GPU_SERVER =  os.getenv("GPU_SERVER")
+USE_OPENAI = True
+
+if GPU_SERVER:
+    SYNTH_MODEL = "llama-3-1-8b"
+    PROMPT_GEN_ENDPOINT = GPU_SERVER
+    PROMPT_GEN_TOKEN = None
+elif USE_OPENAI:
+    SYNTH_MODEL = "gpt-4o-mini"
+    PROMPT_GEN_ENDPOINT = "https://api.openai.com/v1/chat/completions"
+    PROMPT_GEN_TOKEN = os.getenv("OPEN_AI")
+else:
+    SYNTH_MODEL = "llama-3-1-8b"
+    PROMPT_GEN_ENDPOINT = "https://api.openai.com/v1/chat/completions"
+    PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
 PROMPT_PATH = "validator/prompts.yml"
 
 # Task Stuff

@@ -93,14 +93,18 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     config["WALLET_NAME"] = input("Enter wallet name (default: default): ") or "default"
     config["HOTKEY_NAME"] = input("Enter hotkey name (default: default): ") or "default"
     config["SUBTENSOR_NETWORK"] = input("Enter subtensor network (default: finney): ") or "finney"
-    config["SUBTENSOR_ADDRESS"] = validate_input("Enter subtensor address (default: None): ", websocket_validator)
-    config["NETUID"] = 76 if config["SUBTENSOR_NETWORK"] == "test" else 64
-    organic_server_port = input("Enter port for your organic server (optional) (default: None): ")
-    if organic_server_port:
-        config["ORGANIC_SERVER_PORT"] = organic_server_port
-    config["GPU_SERVER_ADDRESS"] = validate_input(
-        "Enter GPU server address: ", lambda x: x == "" or re.match(r"^https?://.+", x) is not None
-    )
+    address = validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
+    if address:
+        config["SUBTENSOR_ADDRESS"]  = address
+    config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 64
+    gpu_server = input(
+                "Enter GPU server address if you're using one : (optional) (default:None)"
+        )
+    if gpu_server:
+            config['GPU_SERVER'] = validate_input(
+                gpu_server,
+                lambda x: x == "" or re.match(r"^https?://.+", x) is not None
+            )
     config["SET_METAGRAPH_WEIGHTS_WITH_HIGH_UPDATED_TO_NOT_DEREG"] = (
         "true"
         if validate_input(
