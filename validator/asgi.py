@@ -16,7 +16,6 @@ from fiber.logging_utils import get_logger
 from validator.core.config import load_config
 from validator.core.cycle import init_validator_cycles
 from validator.endpoints.health import factory_router as health_router
-from validator.endpoints.nodes import factory_router as nodes_router
 from validator.endpoints.tasks import factory_router as tasks_router
 
 
@@ -73,7 +72,6 @@ def factory() -> FastAPI:
 
     app.include_router(health_router())
     app.include_router(tasks_router())
-    app.include_router(nodes_router())
 
     app.add_middleware(
         CORSMiddleware,
