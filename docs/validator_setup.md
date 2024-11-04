@@ -33,6 +33,11 @@ your corcel token below:
 python3 -m core.create_config
 ```
 
+Link to fiber
+
+```base
+fiber-post-ip --netuid 176 --subtensor.network test --external_port 9001 --wallet.name default --wallet.hotkey default --external_ip [YOUR-IP]
+```
 3. Run service dependencies for local development:
 
 ```bash
