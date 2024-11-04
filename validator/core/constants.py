@@ -48,8 +48,8 @@ elif os.getenv("OPEN_AI"):
     PROMPT_GEN_TOKEN = os.getenv("OPEN_AI")
 else:
     SYNTH_MODEL = "llama-3-1-8b"
-    PROMPT_GEN_ENDPOINT = "https://parachutes-dev-api.onrender.com/v1/chat/completions"
-#    PROMPT_GEN_ENDPOINT = "https://api.corcel.io/v1/chat/completions"
+#    PROMPT_GEN_ENDPOINT = "https://parachutes-dev-api.onrender.com/v1/chat/completions"
+    PROMPT_GEN_ENDPOINT = "https://api.corcel.io/v1/chat/completions"
     PROMPT_GEN_TOKEN = os.getenv("API_KEY")
 PROMPT_PATH = "validator/prompts.yml"
 
