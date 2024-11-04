@@ -1,5 +1,6 @@
 import argparse
 from typing import Any, Dict
+
 from core.models.config_models import MinerConfig, ValidatorConfig
 from core.validators import InputValidators, validate_input
 

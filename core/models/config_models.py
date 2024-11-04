@@ -28,9 +28,9 @@ class ValidatorConfig(BaseConfig):
     minio_endpoint: str
     minio_access_key: str
     minio_secret_key: str
-    gpu_server: Optional[str]
-    open_ai_key: Optional[str]
-    api_key: Optional[str]
     set_metagraph_weights: bool
+    gpu_server: Optional[str] = None
+    open_ai_key: Optional[str] = None
+    api_key: Optional[str] = None
     localhost: bool = False
     env_file: str = ".vali.env"
