@@ -36,7 +36,9 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
     logger.info(f"Here are the nodes we have shaked hands with {nodes}")
     for node in nodes:
         print(f"I should be storing {node.node_id}")
+    logger.info('DOING MIGRATION')
     await migrate_nodes_to_history(config.psql_db)
+    logger.info('STORING')
     await store_nodes(config, nodes)
 
     logger.info(f"Stored {len(nodes)} nodes.")
