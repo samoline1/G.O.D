@@ -87,18 +87,28 @@ def generate_miner_config(dev: bool = False) -> dict[str, Any]:
     config["REFRESH_NODES"] = "true"
     return config
 
-
 def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     config: dict[str, Any] = {}
     config["WALLET_NAME"] = input("Enter wallet name (default: default): ") or "default"
     config["HOTKEY_NAME"] = input("Enter hotkey name (default: default): ") or "default"
     config["SUBTENSOR_NETWORK"] = input("Enter subtensor network (default: finney): ") or "finney"
     address = validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
+    config["POSTGRES_USER"] = input("Enter postgres user (default: user): ") or "user"
+    config["POSTGRES_PASSWORD"] = input("Enter postgres password ")
+    config["POSTGRES_DB"] = input("Enter postgres database (default: db): ") or "db"
+    config["POSTGRES_HOST"] = input("Enter postgres host (default: localhost): ") or "localhost"
+    config["POSTGRES_PORT"] = input("Enter postgres port (default: 5432): ") or "5432"
+    config["MINIO_ENDPOINT"] = input("Enter minio endpoint")
+    config["MINIO_ACCESS_KEY"] = input("Enter minio access key")
+    config["MINIO_SECRET_KEY"] = input("Enter minio secret key")
+    config["CORCEL_TOKEN"] = input("Enter corcel token if you're planning to use this  for synth gen") or None
+    config["OPEN_AI"] = input("Enter OpenAI key if you would rather use this for synth") or None
+    config["API_KEY"] = input("Enter Parachutes API if you want to use that for synth generation") or None
     if address:
         config["SUBTENSOR_ADDRESS"]  = address
     config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 64
     gpu_server = input(
-                "Enter GPU server address if you're using one : (optional) (default:None)"
+                "Enter GPU server address if you're using one for synth generation: (optional) (default:None)"
         )
     if gpu_server:
             config['GPU_SERVER'] = validate_input(
@@ -130,7 +140,6 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
 
     config["ENV_FILE"] = ".vali.env"
     return config
-
 
 def generate_config(dev: bool = False, miner: bool = False) -> dict[str, Any]:
     if miner:
