@@ -30,22 +30,7 @@ To generate the synthetic data you'll also need to either setup your own LLM ser
 your corcel token below:
 
 ```bash
-touch .vali.env
-cat << EOF >> .vali.env
-POSTGRES_USER=user
-POSTGRES_PASSWORD=$(openssl rand -hex 32)
-POSTGRES_DB=db
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-LOCALHOST=true
-REDIS_HOST=localhost
-DATABASE_URL=postgres:/user:password@postgresql:5432/db?sslmode=disable
-MINIO_ENDPOINT=
-MINIO_ACCESS_KEY=
-MINIO_SECRET_KEY=
-HUGGINGFACE_TOKEN=
-CORCEL_TOKEN=
-EOF
+python3 -m core.create_config
 ```
 
 3. Run service dependencies for local development:
@@ -59,6 +44,4 @@ task dev_setup
 ```bash
 task validator
 ```
-
-Note: The Hugging Face token token should be added to your environment variables or a separate `.env` file.
 

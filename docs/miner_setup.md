@@ -55,7 +55,7 @@ fiber-post-ip --netuid 176 --subtensor.network test --external_port 7999 --walle
     Create a `.1.env` file with the following (you'll need a huggingface and wandb token):
 
 ```
-python3 core/create_config.py --miner
+python3 -m core.create_config --miner
 
 ```
 
