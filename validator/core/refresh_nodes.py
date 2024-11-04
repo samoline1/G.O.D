@@ -34,6 +34,8 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
     nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
     nodes = await perform_handshakes(nodes, config)
     logger.info(f"Here are the nodes we have shaked hands with {nodes}")
+    for node in nodes:
+        print(f"I should be storing {node.node_id}")
     await migrate_nodes_to_history(config.psql_db)
     await store_nodes(config, nodes)
 
