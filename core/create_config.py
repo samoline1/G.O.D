@@ -145,6 +145,7 @@ if __name__ == "__main__":
     if args.miner:
         config = generate_config(miner=True)
         name = config["HOTKEY_NAME"]
+        config['ENV_FILE'] = f".{name}.env"
     else:
         env = "dev" if args.dev else "prod"
         config = generate_config(dev=args.dev)
