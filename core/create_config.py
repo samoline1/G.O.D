@@ -53,6 +53,9 @@ def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
     gpu_server = validate_input(gpu_server_input, InputValidators.http_url) if gpu_server_input else None
 
     print("\n👤 Identity Configuration")
+    print("\n🗄️  Database Configuration")
+    print("\n📦 MinIO Configuration")
+
     config = ValidatorConfig(
         wallet_name=input("💼 Enter wallet name (default: default): ") or "default",
         hotkey_name=input("🔑 Enter hotkey name (default: default): ") or "default",
@@ -60,21 +63,17 @@ def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
         subtensor_address=address,
         netuid=176 if network == "test" else 64,
         env="dev" if dev else "prod",
-
-        print("\n🗄️  Database Configuration")
         postgres_user=input("👤 Enter postgres user (default: user): ") or "user",
         postgres_password=input("🔒 Enter postgres password: "),
         postgres_db=input("📁 Enter postgres database (default: db): ") or "db",
         postgres_host=input("🏠 Enter postgres host (default: localhost): ") or "localhost",
         postgres_port=input("🔌 Enter postgres port (default: 5432): ") or "5432",
-
-        print("\n📦 MinIO Configuration")
         minio_endpoint=input("🎯 Enter minio endpoint: "),
         minio_access_key=input("🔑 Enter minio access key: "),
         minio_secret_key=input("🔐 Enter minio secret key: "),
         gpu_server=gpu_server,
-        open_ai_key=input("Enter OpenAI key if you would rather use this for synth") or None,
-        api_key=input("Enter Parachutes API if you want to use that for synth generation") or None,
+        open_ai_key=input("Enter OpenAI key if you would rather use this for synth: ") or None,
+        api_key=input("Enter Parachutes API if you want to use that for synth generation: ") or None,
         set_metagraph_weights=parse_bool_input(
             "Set metagraph weights when updated gets really high to not dereg?",
             default=False
