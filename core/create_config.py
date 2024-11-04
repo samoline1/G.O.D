@@ -22,14 +22,16 @@ def parse_args() -> argparse.Namespace:
 
 
 def generate_miner_config(dev: bool = False) -> Dict[str, Any]:
-    network = input("Enter subtensor network (default: test): ") or "test"
-    address = validate_input("Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
+    print("\n🤖 Let's configure your Miner! 🛠️\n")
+
+    network = input("🌐 Enter subtensor network (default: test): ") or "test"
+    address = validate_input("🔌 Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
 
     config = MinerConfig(
-        wallet_name=input("Enter wallet name (default: default): ") or "default",
-        hotkey_name=input("Enter hotkey name (default: default): ") or "default",
-        wandb_token=input("Enter wandb token (default: default): ") or "default",
-        huggingface_token=input("Enter huggingface token (default: default): ") or "default",
+        wallet_name=input("\n💼 Enter wallet name (default: default): ") or "default",
+        hotkey_name=input("🔑 Enter hotkey name (default: default): ") or "default",
+        wandb_token=input("📊 Enter wandb token (default: default): ") or "default",
+        huggingface_token=input("🤗 Enter huggingface token (default: default): ") or "default",
         subtensor_network=network,
         subtensor_address=address,
         netuid=176 if network == "test" else 19,
@@ -41,27 +43,35 @@ def generate_miner_config(dev: bool = False) -> Dict[str, Any]:
     return vars(config)
 
 def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
-    network = input("Enter subtensor network (default: finney): ") or "finney"
-    address = validate_input("Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
+    print("\n🎯 Let's set up your Validator! 🚀\n")
 
-    gpu_server_input = input("Enter GPU server address if you're using one for synth generation: (optional) (default:None)")
+    network = input("🌐 Enter subtensor network (default: finney): ") or "finney"
+    address = validate_input("🔌 Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
+
+    print("\n📡 GPU Server Configuration")
+    gpu_server_input = input("🖥️  Enter GPU server address if you're using one for synth generation: (optional) (default:None)")
     gpu_server = validate_input(gpu_server_input, InputValidators.http_url) if gpu_server_input else None
 
+    print("\n👤 Identity Configuration")
     config = ValidatorConfig(
-        wallet_name=input("Enter wallet name (default: default): ") or "default",
-        hotkey_name=input("Enter hotkey name (default: default): ") or "default",
+        wallet_name=input("💼 Enter wallet name (default: default): ") or "default",
+        hotkey_name=input("🔑 Enter hotkey name (default: default): ") or "default",
         subtensor_network=network,
         subtensor_address=address,
         netuid=176 if network == "test" else 64,
         env="dev" if dev else "prod",
-        postgres_user=input("Enter postgres user (default: user): ") or "user",
-        postgres_password=input("Enter postgres password "),
-        postgres_db=input("Enter postgres database (default: db): ") or "db",
-        postgres_host=input("Enter postgres host (default: localhost): ") or "localhost",
-        postgres_port=input("Enter postgres port (default: 5432): ") or "5432",
-        minio_endpoint=input("Enter minio endpoint"),
-        minio_access_key=input("Enter minio access key"),
-        minio_secret_key=input("Enter minio secret key"),
+
+        print("\n🗄️  Database Configuration")
+        postgres_user=input("👤 Enter postgres user (default: user): ") or "user",
+        postgres_password=input("🔒 Enter postgres password: "),
+        postgres_db=input("📁 Enter postgres database (default: db): ") or "db",
+        postgres_host=input("🏠 Enter postgres host (default: localhost): ") or "localhost",
+        postgres_port=input("🔌 Enter postgres port (default: 5432): ") or "5432",
+
+        print("\n📦 MinIO Configuration")
+        minio_endpoint=input("🎯 Enter minio endpoint: "),
+        minio_access_key=input("🔑 Enter minio access key: "),
+        minio_secret_key=input("🔐 Enter minio secret key: "),
         gpu_server=gpu_server,
         open_ai_key=input("Enter OpenAI key if you would rather use this for synth") or None,
         api_key=input("Enter Parachutes API if you want to use that for synth generation") or None,
@@ -91,7 +101,8 @@ def write_config_to_file(config: dict[str, Any], env: str) -> None:
 
 if __name__ == "__main__":
     args = parse_args()
-    print("Welcome to the configuration generator!")
+    print("\n✨ Welcome to the Configuration Generator! ✨\n")
+    print("Let's make your setup process fun and easy! 🎮\n")
 
     if args.miner:
         config = generate_config(miner=True)
