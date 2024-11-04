@@ -73,6 +73,7 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
             "stream": True
         }
         try:
+            logger.info(f'Attempting to process with {PROMPT_GEN_ENDPOINT} {PROMPT_GEN_TOKEN}')
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
             json_synthetic_data_point = json.loads(synthetic_data_point)
             if check_the_synthetic_data(json_synthetic_data_point, row.keys()):

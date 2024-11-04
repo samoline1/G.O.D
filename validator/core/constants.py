@@ -50,7 +50,6 @@ else:
     SYNTH_MODEL = "llama-3-1-8b"
     PROMPT_GEN_ENDPOINT = "http://24.199.109.169:8091/v1/chat/completions"
     PROMPT_GEN_TOKEN = os.getenv("API_KEY")
-
 PROMPT_PATH = "validator/prompts.yml"
 
 # Task Stuff
