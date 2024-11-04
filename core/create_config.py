@@ -48,13 +48,8 @@ def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
     network = input("🌐 Enter subtensor network (default: finney): ") or "finney"
     address = validate_input("🔌 Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
 
-    print("\n📡 GPU Server Configuration")
     gpu_server_input = input("🖥️  Enter GPU server address if you're using one for synth generation: (optional) (default:None)")
     gpu_server = validate_input(gpu_server_input, InputValidators.http_url) if gpu_server_input else None
-
-    print("\n👤 Identity Configuration")
-    print("\n🗄️  Database Configuration")
-    print("\n📦 MinIO Configuration")
 
     config = ValidatorConfig(
         wallet_name=input("💼 Enter wallet name (default: default): ") or "default",
