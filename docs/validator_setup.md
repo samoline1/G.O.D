@@ -13,10 +13,10 @@ Steps to set-up the validator.
 1. Install system dependencies (Ubuntu 24.04 LTS):
 
 ```bash
-sudo apt update && sudo apt install snapd python3.12 python3.12-venv
-python3.12 -m ensurepip --upgrade
+sudo apt update && sudo apt install snapd python3.10 python3.10-venv
+python3.10 -m ensurepip --upgrade
 sudo snap install task --classic
-python3.12 -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
 pre-commit install
