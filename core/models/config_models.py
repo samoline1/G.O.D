@@ -11,14 +11,12 @@ class BaseConfig:
     env: str
     refresh_nodes: bool = True
 
-@dataclass
 class MinerConfig(BaseConfig):
     wandb_token: str
     huggingface_token: str
     min_stake_threshold: str
     is_validator: bool = False
 
-@dataclass
 class ValidatorConfig(BaseConfig):
     postgres_user: str
     postgres_password: str
