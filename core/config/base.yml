@@ -52,7 +52,8 @@ wandb_mode: online
 wandb_run: miner_id_24
 wandb_runid: default
 
-hub_model_id: cwaud/test
+hub_model_id:
+hub_repo: cwaud
 hub_strategy: checkpoint
 hub_token:
 

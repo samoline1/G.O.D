@@ -13,14 +13,11 @@ from miner.logic.job_handler import start_tuning_container
 logger = get_logger(__name__)
 
 
-# one of the only classes I promise
 class TrainingWorker:
     def __init__(self):
         logger.info("STARTING A TRAINING WORKER")
         self.job_queue: queue.Queue[Job] = queue.Queue()
         self.job_store: dict[str, Job] = {}
-        # Why do we need a separate thread here? dangerous - when I removed it it didn't work any more
-        # will dig into why
         self.thread = threading.Thread(target=self._worker, daemon=True)
         self.thread.start()
         self.docker_client = docker.from_env()
