@@ -42,7 +42,7 @@ btcli wallet list
 Once you have some key on your coldkey. Register to the subnet.
 
 ```bash
-btcli s register --subtensor.network test
+btcli s register --network test
 ```
 
 Then to connect to fiber
