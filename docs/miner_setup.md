@@ -25,7 +25,8 @@ This guide will walk you through the process of setting up and running a miner f
     ```
 
 2. Set up your wallet:
-   ## Setting up a wallet
+
+Make sure you have bittensor installed to the lastest version then: 
 
 ```bash
 btcli wallet new-coldkey
