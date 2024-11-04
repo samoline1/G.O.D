@@ -61,10 +61,10 @@ async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
     # on substrate interface, but we use the same substrate interface object elsewhere?
     return await asyncio.to_thread(fetch_nodes.get_nodes_for_netuid, config.substrate, config.netuid)
 
-
 async def store_nodes(config: Config, nodes: list[Node]):
-    await asyncio.gather(*(add_node(node, config.psql_db) for node in nodes))
-
+    for i in range(0, len(nodes), 10): # I found that when I make it more it froze - not sure why @tt know?
+        batch = nodes[i:i + 10]
+        await asyncio.gather(*(add_node(node, config.psql_db) for node in batch))
 
 async def update_our_validator_node(config: Config):
     async with await config.psql_db.connection() as connection:
