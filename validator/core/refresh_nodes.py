@@ -103,8 +103,8 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
         if node.fernet is None or node.symmetric_key_uuid is None:
             try:
                     tasks.append(_handshake(config, node, config.httpx_client))
-            except Exception as e:
-                logger.info(f"Problem {e}")
+            except Exception:
+                logger.info('Could not shake with {node.node_id}')
                 continue
         if len(tasks) > 50:
             shaked_nodes.extend(await asyncio.gather(*tasks))
