@@ -100,8 +100,7 @@ def write_config_to_file(config: dict[str, Any], env: str) -> None:
 
 if __name__ == "__main__":
     args = parse_args()
-    print("\n✨ Welcome to the Configuration Generator! ✨\n")
-    print("Let's make your setup process fun and easy! 🎮\n")
+    print("\n✨ Welcome to the Config Enviroment Generator! ✨\n")
 
     if args.miner:
         config = generate_config(miner=True)
