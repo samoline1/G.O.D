@@ -1,63 +1,16 @@
 import argparse
-import random
-import re
-import secrets
-import string
-from typing import Any
-from typing import Callable
+from typing import Any, Dict
+from core.models.config_models import MinerConfig, ValidatorConfig
+from core.validators import InputValidators, validate_input
 
 
-# Lots of this was taken from sn19, some of which might not be needed, will come back to clean one we have an end2end
-# right now we're not using any of this - just here for shitz and gigz apparently
-
-
-def generate_secure_password(length: int = 16) -> str:
-    alphabet = string.ascii_letters + string.digits
-    password = [
-        secrets.choice(string.ascii_uppercase),
-        secrets.choice(string.ascii_lowercase),
-        secrets.choice(string.digits),
-    ]
-    password += [secrets.choice(alphabet) for _ in range(length - 3)]
-    password = list(password)  # Convert to list for shuffling
-    random.shuffle(password)  # Use random.shuffle instead of secrets.shuffle
-    return "".join(password)
-
-
-def validate_input(prompt: str, validator: Callable[[str], bool], default: str | None = None) -> str:
-    while True:
-        value = input(prompt)
-        if validator(value):
-            return value
-        elif default and not value:
-            return default
-        print("Invalid input. Please try again.")
-
-
-def yes_no_validator(value: str) -> bool:
-    return value.lower() in ["y", "n", "yes", "no"] or not value
-
-
-def non_empty_bool(value: str) -> bool:
-    return bool(value.strip())
-
-
-def number_validator(value: str) -> bool:
-    return value.isdigit()
-
-
-def float_validator(value: str) -> bool:
-    try:
-        float(value)
-        return True
-    except ValueError:
-        return False
-
-
-def websocket_validator(value: str | None) -> bool:
-    if not value:
-        return True
-    return re.match(r"^wss?://", value) is not None
+def parse_bool_input(prompt: str, default: bool = False) -> bool:
+    result = validate_input(
+        f"{prompt} (y/n): (default: {'y' if default else 'n'}) ",
+        InputValidators.yes_no,
+        default="y" if default else "n"
+    )
+    return result.lower().startswith("y")
 
 
 def parse_args() -> argparse.Namespace:
@@ -67,80 +20,59 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def generate_miner_config(dev: bool = False) -> dict[str, Any]:
-    config: dict[str, Any] = {}
-    config["WALLET_NAME"] = input("Enter wallet name (default: default): ") or "default"
-    config["HOTKEY_NAME"] = input("Enter hotkey name (default: default): ") or "default"
-    config["WANDB_TOKEN"] = input("Enter wandb token (default: default): ") or "default"
-    config["HUGGINGFACE_TOKEN"] = input("Enter huggingface token (default: default): ") or "default"
-    config["SUBTENSOR_NETWORK"] = input("Enter subtensor network (default: test): ") or "test"
-    address = validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
-    if address:
-        config["SUBTENSOR_ADDRESS"]  = address
-    default_stake_threshold = "0" if config["SUBTENSOR_NETWORK"] == "test" else "1000"
-    config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 19
-    config["ENV"] = "dev" if dev else "prod"
-    config["IS_VALIDATOR"] = "False"
-#    config["NODE_PORT"] = input("Enter NODE_PORT (default: 4002): ") or "4002"
-#    config["NODE_EXTERNAL_IP"] = input("Enter NODE_EXTERNAL_IP (leave blank if not needed): ")
-    config["MIN_STAKE_THRESHOLD"] = input("Enter MIN_STAKE_THRESHOLD (default: 1000): ") or default_stake_threshold
-    config["REFRESH_NODES"] = "true"
-    return config
+def generate_miner_config(dev: bool = False) -> Dict[str, Any]:
+    network = input("Enter subtensor network (default: test): ") or "test"
+    address = validate_input("Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
 
-def generate_validator_config(dev: bool = False) -> dict[str, Any]:
-    config: dict[str, Any] = {}
-    config["WALLET_NAME"] = input("Enter wallet name (default: default): ") or "default"
-    config["HOTKEY_NAME"] = input("Enter hotkey name (default: default): ") or "default"
-    config["SUBTENSOR_NETWORK"] = input("Enter subtensor network (default: finney): ") or "finney"
-    address = validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
-    config["POSTGRES_USER"] = input("Enter postgres user (default: user): ") or "user"
-    config["POSTGRES_PASSWORD"] = input("Enter postgres password ")
-    config["POSTGRES_DB"] = input("Enter postgres database (default: db): ") or "db"
-    config["POSTGRES_HOST"] = input("Enter postgres host (default: localhost): ") or "localhost"
-    config["POSTGRES_PORT"] = input("Enter postgres port (default: 5432): ") or "5432"
-    config["MINIO_ENDPOINT"] = input("Enter minio endpoint")
-    config["MINIO_ACCESS_KEY"] = input("Enter minio access key")
-    config["MINIO_SECRET_KEY"] = input("Enter minio secret key")
-    gpu_server = input(
-                "Enter GPU server address if you're using one for synth generation: (optional) (default:None)"
-        )
-    if gpu_server:
-            config['GPU_SERVER'] = validate_input(
-                gpu_server,
-                lambda x: x == "" or re.match(r"^https?://.+", x) is not None
-            )
-    open_api_key = input("Enter OpenAI key if you would rather use this for synth") or None
-    if open_api_key:
-        config["OPEN_AI"] = open_api_key
-    config["API_KEY"] = input("Enter Parachutes API if you want to use that for synth generation") or None
-    if address:
-        config["SUBTENSOR_ADDRESS"]  = address
-    config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 64
-    config["SET_METAGRAPH_WEIGHTS_WITH_HIGH_UPDATED_TO_NOT_DEREG"] = (
-        "true"
-        if validate_input(
-            "Set metagraph weights when updated gets really high to not dereg? (y/n): (default: n)",
-            yes_no_validator,
-            default="n",
-        )
-        .lower()
-        .startswith("y")
-        else "false"
+    config = MinerConfig(
+        wallet_name=input("Enter wallet name (default: default): ") or "default",
+        hotkey_name=input("Enter hotkey name (default: default): ") or "default",
+        wandb_token=input("Enter wandb token (default: default): ") or "default",
+        huggingface_token=input("Enter huggingface token (default: default): ") or "default",
+        subtensor_network=network,
+        subtensor_address=address,
+        netuid=176 if network == "test" else 19,
+        env="dev" if dev else "prod",
+        min_stake_threshold=input(f"Enter MIN_STAKE_THRESHOLD (default: {'0' if network == 'test' else '1000'}): ")
+            or ("0" if network == "test" else "1000")
     )
 
-    if dev:
-        config["ENV"] = "dev"
-        config["REFRESH_NODES"] = (
-            "true" if validate_input("Refresh nodes? (y/n): (default: y)", yes_no_validator).lower().startswith("y") else "false"
-        )
-        config["LOCALHOST"] = (
-            "true" if validate_input("Use localhost? (y/n): (default: y)", yes_no_validator).lower().startswith("y") else "false"
-        )
-    else:
-        config["ENV"] = "prod"
+    return vars(config)
 
-    config["ENV_FILE"] = ".vali.env"
-    return config
+def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
+    network = input("Enter subtensor network (default: finney): ") or "finney"
+    address = validate_input("Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
+
+    gpu_server_input = input("Enter GPU server address if you're using one for synth generation: (optional) (default:None)")
+    gpu_server = validate_input(gpu_server_input, InputValidators.http_url) if gpu_server_input else None
+
+    config = ValidatorConfig(
+        wallet_name=input("Enter wallet name (default: default): ") or "default",
+        hotkey_name=input("Enter hotkey name (default: default): ") or "default",
+        subtensor_network=network,
+        subtensor_address=address,
+        netuid=176 if network == "test" else 64,
+        env="dev" if dev else "prod",
+        postgres_user=input("Enter postgres user (default: user): ") or "user",
+        postgres_password=input("Enter postgres password "),
+        postgres_db=input("Enter postgres database (default: db): ") or "db",
+        postgres_host=input("Enter postgres host (default: localhost): ") or "localhost",
+        postgres_port=input("Enter postgres port (default: 5432): ") or "5432",
+        minio_endpoint=input("Enter minio endpoint"),
+        minio_access_key=input("Enter minio access key"),
+        minio_secret_key=input("Enter minio secret key"),
+        gpu_server=gpu_server,
+        open_ai_key=input("Enter OpenAI key if you would rather use this for synth") or None,
+        api_key=input("Enter Parachutes API if you want to use that for synth generation") or None,
+        set_metagraph_weights=parse_bool_input(
+            "Set metagraph weights when updated gets really high to not dereg?",
+            default=False
+        ),
+        refresh_nodes=parse_bool_input("Refresh nodes?", default=True) if dev else True,
+        localhost=parse_bool_input("Use localhost?", default=True) if dev else False
+    )
+
+    return vars(config)
 
 def generate_config(dev: bool = False, miner: bool = False) -> dict[str, Any]:
     if miner:
