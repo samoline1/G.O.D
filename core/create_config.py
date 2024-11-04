@@ -101,11 +101,6 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
     config["MINIO_ENDPOINT"] = input("Enter minio endpoint")
     config["MINIO_ACCESS_KEY"] = input("Enter minio access key")
     config["MINIO_SECRET_KEY"] = input("Enter minio secret key")
-    config["OPEN_AI"] = input("Enter OpenAI key if you would rather use this for synth") or None
-    config["API_KEY"] = input("Enter Parachutes API if you want to use that for synth generation") or None
-    if address:
-        config["SUBTENSOR_ADDRESS"]  = address
-    config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 64
     gpu_server = input(
                 "Enter GPU server address if you're using one for synth generation: (optional) (default:None)"
         )
@@ -114,6 +109,13 @@ def generate_validator_config(dev: bool = False) -> dict[str, Any]:
                 gpu_server,
                 lambda x: x == "" or re.match(r"^https?://.+", x) is not None
             )
+    open_api_key = input("Enter OpenAI key if you would rather use this for synth") or None
+    if open_api_key:
+        config["OPEN_AI"] = open_api_key
+    config["API_KEY"] = input("Enter Parachutes API if you want to use that for synth generation") or None
+    if address:
+        config["SUBTENSOR_ADDRESS"]  = address
+    config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 64
     config["SET_METAGRAPH_WEIGHTS_WITH_HIGH_UPDATED_TO_NOT_DEREG"] = (
         "true"
         if validate_input(
