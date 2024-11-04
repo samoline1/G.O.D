@@ -31,7 +31,6 @@ Make sure you have bittensor installed to the lastest version then:
 ```bash
 btcli wallet new-coldkey
 btcli wallet new-hotkey
-btcli wallet list
 ```
 
 To check see your wallet address'
