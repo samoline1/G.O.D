@@ -81,7 +81,6 @@ async def _handshake(config: Config, node: Node, async_client: httpx.AsyncClient
         )
     except Exception as e:
         error_details = _format_exception(e)
-        logger.info(f'There was an issue with shaking hands {error_details}')
 
         if isinstance(e, (httpx.HTTPStatusError, httpx.RequestError, httpx.ConnectError)):
             if hasattr(e, "response"):
