@@ -9,14 +9,16 @@ class BaseConfig:
     subtensor_address: Optional[str]
     netuid: int
     env: str
-    refresh_nodes: bool = True
+    refresh_nodes: bool
 
+@dataclass
 class MinerConfig(BaseConfig):
     wandb_token: str
     huggingface_token: str
     min_stake_threshold: str
     is_validator: bool = False
 
+@dataclass
 class ValidatorConfig(BaseConfig):
     postgres_user: str
     postgres_password: str
