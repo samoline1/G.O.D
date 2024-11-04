@@ -34,6 +34,7 @@ def generate_miner_config(dev: bool = False) -> Dict[str, Any]:
         huggingface_token=input("🤗 Enter huggingface token (default: default): ") or "default",
         subtensor_network=network,
         subtensor_address=address,
+        refresh_nodes=True,
         netuid=176 if network == "test" else 19,
         env="dev" if dev else "prod",
         min_stake_threshold=input(f"Enter MIN_STAKE_THRESHOLD (default: {'0' if network == 'test' else '1000'}): ")
