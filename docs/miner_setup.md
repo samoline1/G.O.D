@@ -67,25 +67,3 @@ python3 -m core.create_config --miner
     ```bash
     task miner
     ```
-
-## Testing
-
-You'll want to check that jobs are accepted as expected. Here's an example payload for testing:
-
-```bash
-curl -X POST http://localhost:7999/train/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "dataset": "mhenrichsen/alpaca_2k_test",    # any hf dataset
-    "model": "unsloth/Llama-3.2-3B-Instruct",   # any hf model
-    "dataset_type": {                           # you can define the columns to use here
-      "system_prompt": "you are helpful",
-      "system_format": "{system}",
-      "field_system": "text",
-      "field_instruction": "instruction",
-      "field_input": "input",
-      "field_output": "output"
-    },
-    "file_format": "hf"
-  }'
-```
