@@ -39,14 +39,15 @@ if GPU_SERVER:
     SYNTH_MODEL = "llama-3-1-8b"
     PROMPT_GEN_ENDPOINT = GPU_SERVER
     PROMPT_GEN_TOKEN = None
-elif USE_OPENAI:
-    SYNTH_MODEL = "gpt-4o-mini"
+
+elif os.getenv("OPEN_AI"):
+    SYTN_MODEL = "gpt-4o-mini"
     PROMPT_GEN_ENDPOINT = "https://api.openai.com/v1/chat/completions"
     PROMPT_GEN_TOKEN = os.getenv("OPEN_AI")
 else:
     SYNTH_MODEL = "llama-3-1-8b"
-    PROMPT_GEN_ENDPOINT = "https://api.openai.com/v1/chat/completions"
-    PROMPT_GEN_TOKEN = os.getenv("CORCEL_TOKEN")
+    PROMPT_GEN_ENDPOINT = "http://24.199.109.169:8091/v1/chat/completions"
+    PROMPT_GEN_TOKEN = os.getenv("API_KEY")
 PROMPT_PATH = "validator/prompts.yml"
 
 # Task Stuff
