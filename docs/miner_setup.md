@@ -61,7 +61,7 @@ python3 -m core.create_config --miner
 
 5. Update the configuration:
     - Update your `entity_id` in the wandb section of the config to be your wandb username+org_name [here](core/config/base.yml)
-    - In the same config, change the `hub_model_id` to be the huggingface hub repo you want to upload to - note, you'll probably want to make this dynamically updating, where for different tasks you have different `hub_model_id`'s else they will overwrite each other.
+    - In the same config, change the `hub_repo' to be your huggingface repo that you want the saves (under job id) to be autosaved to
 
 6. Start the miner service:
     ```bash
