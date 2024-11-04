@@ -152,13 +152,14 @@ if __name__ == "__main__":
 
     if args.miner:
         config = generate_config(miner=True)
-        name = config["HOTKEY_NAME"]
+        name = "1"
+
     else:
         env = "dev" if args.dev else "prod"
         config = generate_config(dev=args.dev)
         name = "vali"
 
-    write_config_to_file(config, "1")
+    write_config_to_file(config, name)
     print(f"Configuration has been written to .1.env")
     if not args.miner:
         print("Please make sure to keep your database credentials secure.")
