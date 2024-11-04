@@ -30,7 +30,12 @@ This guide will walk you through the process of setting up and running a miner f
 ```bash
 btcli wallet new-coldkey
 btcli wallet new-hotkey
-# shows your hot and coldkey addresses
+btcli wallet list
+```
+
+To check see your wallet address'
+
+```bash
 btcli wallet list
 ```
 
@@ -47,7 +52,7 @@ fiber-post-ip --netuid 176 --subtensor.network test --external_port 7999 --walle
 ```
 
 4. Configure environment variables:
-    Create a `.1.env` file with the following:
+    Create a `.1.env` file with the following (you'll need a huggingface and wandb token):
 
 ```
 python3 core/create_config.py --miner

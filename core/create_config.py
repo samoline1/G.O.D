@@ -71,6 +71,8 @@ def generate_miner_config(dev: bool = False) -> dict[str, Any]:
     config: dict[str, Any] = {}
     config["WALLET_NAME"] = input("Enter wallet name (default: default): ") or "default"
     config["HOTKEY_NAME"] = input("Enter hotkey name (default: default): ") or "default"
+    config["WANDB_TOKEN"] = input("Enter wandb token (default: default): ") or "default"
+    config["HUGGINGFACE_TOKEN"] = input("Enter huggingface token (default: default): ") or "default"
     config["SUBTENSOR_NETWORK"] = input("Enter subtensor network (default: test): ") or "test"
     address = validate_input("Enter subtensor address (default: None): ", websocket_validator) or None
     if address:
@@ -79,8 +81,8 @@ def generate_miner_config(dev: bool = False) -> dict[str, Any]:
     config["NETUID"] = 176 if config["SUBTENSOR_NETWORK"] == "test" else 19
     config["ENV"] = "dev" if dev else "prod"
     config["IS_VALIDATOR"] = "False"
-    config["NODE_PORT"] = input("Enter NODE_PORT (default: 4002): ") or "4002"
-    config["NODE_EXTERNAL_IP"] = input("Enter NODE_EXTERNAL_IP (leave blank if not needed): ")
+#    config["NODE_PORT"] = input("Enter NODE_PORT (default: 4002): ") or "4002"
+#    config["NODE_EXTERNAL_IP"] = input("Enter NODE_EXTERNAL_IP (leave blank if not needed): ")
     config["MIN_STAKE_THRESHOLD"] = input("Enter MIN_STAKE_THRESHOLD (default: 1000): ") or default_stake_threshold
     config["REFRESH_NODES"] = "true"
     return config
