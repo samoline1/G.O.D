@@ -13,10 +13,10 @@ Steps to set-up the validator.
 1. Install system dependencies (Ubuntu 24.04 LTS):
 
 ```bash
-sudo apt update && sudo apt install snapd python3.12 python3.12-venv
-python3.12 -m ensurepip --upgrade
+sudo apt update && sudo apt install snapd python3.10 python3.10-venv
+python3.10 -m ensurepip --upgrade
 sudo snap install task --classic
-python3.12 -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
 pre-commit install
@@ -33,6 +33,11 @@ your corcel token below:
 python3 -m core.create_config
 ```
 
+Link to fiber
+
+```base
+fiber-post-ip --netuid 176 --subtensor.network test --external_port 9001 --wallet.name default --wallet.hotkey default --external_ip [YOUR-IP]
+```
 3. Run service dependencies for local development:
 
 ```bash
