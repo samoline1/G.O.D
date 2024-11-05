@@ -17,13 +17,16 @@ logger = getLogger(__name__)
 
 async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
     """Get all nodes for the current NETUID"""
+    logger.info('Attempting to get all nodes')
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
             SELECT * FROM {dcst.NODES_TABLE}
         """
         rows = await connection.fetch(query) # , NETUID)
-        return [Node(**dict(row)) for row in rows]
+        nodes = [Node(**dict(row)) for row in rows]
+        logger.info(f'Here is the list of nodes {nodes}')
+        return nodes
 
 
 async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
