@@ -1,23 +1,34 @@
-from datetime import datetime, timedelta
-from logging import log
-from scipy.stats import gmean
+import re
+from datetime import datetime
+from datetime import timedelta
+
 import numpy as np
 from fiber.logging_utils import get_logger
-
-from core.models.payload_models import EvaluationResult
-import validator.core.constants as cts
-from core.utils import download_s3_file
-from core.models.utility_models import CustomDatasetType, FileFormat, TaskStatus
-from validator.core.config import Config
-from validator.core.models import NodeAggregationResult, PeriodScore, Submission, TaskNode
 from fiber.networking.models import NodeWithFernet as Node
-from validator.core.models import Task, TaskResults
+from scipy.stats import gmean
+
+import validator.core.constants as cts
+from core.models.payload_models import EvaluationResult
+from core.models.utility_models import CustomDatasetType
+from core.models.utility_models import FileFormat
+from core.models.utility_models import TaskStatus
+from core.utils import download_s3_file
+from validator.core.config import Config
 from validator.core.models import MinerResults
-from validator.db.sql.submissions_and_scoring import add_submission, get_aggregate_scores_since, set_task_node_quality_score
+from validator.core.models import NodeAggregationResult
+from validator.core.models import PeriodScore
+from validator.core.models import Submission
+from validator.core.models import Task
+from validator.core.models import TaskNode
+from validator.core.models import TaskResults
+from validator.db.sql.submissions_and_scoring import add_submission
+from validator.db.sql.submissions_and_scoring import get_aggregate_scores_since
+from validator.db.sql.submissions_and_scoring import set_task_node_quality_score
 from validator.db.sql.tasks import get_nodes_assigned_to_task
 from validator.evaluation.docker_evaluation import run_evaluation_docker
-from validator.utils.call_endpoint import process_non_stream_fiber, process_non_stream_fiber_get, process_non_stream_get
-import re
+from validator.utils.call_endpoint import process_non_stream_fiber_get
+from validator.utils.call_endpoint import process_non_stream_get
+
 
 logger = get_logger(__name__)
 
@@ -31,8 +42,7 @@ def get_task_work_score(task: Task) -> float:
     model_size = re.search(r'(\d+)(?=[bB])', model)
     model_size_value = int(model_size.group(1)) if model_size else 1
 
-    logger.info(f"Task_id {task.task_id} start_time: {task.started_timestamp} model: {model} size {model_size_value} hours: {hours} data: {task.ds_id}")
-    return np.log(float(hours * model_size_value))
+    return max(1, np.log(float(hours * model_size_value)))
 
 def calculate_adjusted_task_score(quality_score: float, task_work_score: float) -> float:
     """Calculate adjusted task score based on quality score and work score."""
