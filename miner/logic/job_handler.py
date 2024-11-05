@@ -15,6 +15,7 @@ from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import Job
 
+from huggingface_hub import HfApi
 
 logger = get_logger(__name__)
 
@@ -109,5 +110,16 @@ def start_tuning_container(job: Job):
         raise
 
     finally:
+        repo = config.get('hub_model_id', None)
+        if repo:
+                hf_api = HfApi(token=cst.HUGGINGFACE_TOKEN)
+                hf_api.update_repo_visibility(
+                    repo_id=repo,
+                    private=False,
+                    token=cst.HUGGINGFACE_TOKEN
+                )
+                logger.info(f"Successfully made repository {repo} public")            # set the repo id to be public
+
+
         if "container" in locals():
             container.remove(force=True)
