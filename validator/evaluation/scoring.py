@@ -21,6 +21,7 @@ from validator.core.models import Submission
 from validator.core.models import Task
 from validator.core.models import TaskNode
 from validator.core.models import TaskResults
+from validator.core.refresh_nodes import perform_handshakes
 from validator.db.sql.submissions_and_scoring import add_submission
 from validator.db.sql.submissions_and_scoring import get_aggregate_scores_since
 from validator.db.sql.submissions_and_scoring import set_task_node_quality_score
@@ -451,6 +452,7 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     assert task.test_data is not None, "Test data must be present"
 
     miner_pool = await get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
+    miner_pool = await perform_handshakes(miner_pool, config)
     dataset_type = _get_dataset_type(task)
 
     logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
