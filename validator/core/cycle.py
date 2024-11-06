@@ -112,8 +112,10 @@ async def _let_miners_know_to_start_training(task: Task, nodes: list[Node], conf
         response = await process_non_stream_fiber(cst.START_TRAINING_ENDPOINT, config, node, task_request_body.model_dump())
         logger.info(f"The response we got from {node.node_id} was {response}")
 
-async def assign_miners(task: Task, nodes: list[Node], config: Config):
+async def assign_miners(task: Task, config: Config):
     try:
+        nodes = await nodes_sql.get_all_nodes(config.psql_db)
+        nodes = await perform_handshakes(nodes, config)
         task = await _select_miner_pool_and_add_to_task(task, nodes, config)
         await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
@@ -122,9 +124,9 @@ async def assign_miners(task: Task, nodes: list[Node], config: Config):
         await tasks_sql.update_task(task, config.psql_db)
 
 
-async def _find_miners_for_task(config: Config, nodes: list[Node]):
+async def _find_miners_for_task(config: Config):
     pending_tasks = await tasks_sql.get_tasks_with_status(status=TaskStatus.DATA_READY, psql_db=config.psql_db)
-    await asyncio.gather(*[assign_miners(task, nodes, config) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
+    await asyncio.gather(*[assign_miners(task, config) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
 
 
 async def prep_task(task: Task, config: Config):
@@ -191,10 +193,8 @@ async def process_completed_tasks(config: Config) -> None:
 async def process_pending_tasks(config: Config) -> None:
     while True:
         try:
-            nodes = await nodes_sql.get_all_nodes(config.psql_db)
-            nodes = await perform_handshakes(nodes, config)
             await _process_selected_tasks(config)
-            await _find_miners_for_task(config, nodes)
+            await _find_miners_for_task(config)
             await _process_ready_to_train_tasks(config)
         except Exception as e:
             logger.info(f"There was a problem in processing: {e}")
