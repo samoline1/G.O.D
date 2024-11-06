@@ -188,9 +188,11 @@ async def process_completed_tasks(config: Config) -> None:
             await asyncio.sleep(30)
 
 
-async def process_pending_tasks(config: Config, nodes: list[Node]) -> None:
+async def process_pending_tasks(config: Config) -> None:
     while True:
         try:
+            nodes = await nodes_sql.get_all_nodes(config.psql_db)
+            nodes = await perform_handshakes(nodes, config)
             await _process_selected_tasks(config)
             await _find_miners_for_task(config, nodes)
             await _process_ready_to_train_tasks(config)
@@ -199,11 +201,11 @@ async def process_pending_tasks(config: Config, nodes: list[Node]) -> None:
             await asyncio.sleep(30)
 
 
-async def validator_cycle(config: Config, nodes: list[Node]) -> None:
+async def validator_cycle(config: Config) -> None:
        try:
            await asyncio.gather(
                process_completed_tasks(config),
-               process_pending_tasks(config, nodes),
+               process_pending_tasks(config),
            )
        except Exception as e:
            logger.error(f"Error in validator_cycle: {e}", exc_info=True)
@@ -239,10 +241,7 @@ async def run_validator_cycles(config: Config) -> None:
 async def _run_main_validator_loop(config: Config) -> None:
     while True:
         try:
-            node_list = await nodes_sql.get_all_nodes(config.psql_db)
-            node_list = await perform_handshakes(node_list, config)
-            logger.info(f"Current active nodes: {len(node_list)}")
-            await validator_cycle(config, node_list)
+            await validator_cycle(config)
             # Add small sleep to prevent tight loop
             await asyncio.sleep(30)
         except Exception as e:
