@@ -2,7 +2,6 @@ import asyncio
 import json
 from typing import List
 
-from numpy import log
 import yaml
 from datasets import load_dataset
 from fiber.logging_utils import get_logger
@@ -17,6 +16,7 @@ from validator.core.constants import PROMPT_PATH
 from validator.core.constants import SYNTH_GEN_BATCH_SIZE
 from validator.core.constants import SYNTH_MODEL
 from validator.core.constants import SYNTH_MODEL_TEMPERATURE
+from validator.evaluation.utils import get_default_dataset_config
 from validator.utils.call_endpoint import process_stream
 
 
@@ -31,10 +31,11 @@ def load_prompts() -> Prompts:
 
 def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> List[dict]:
     try:
-        dataset = load_dataset(dataset_name)
+        config_name = get_default_dataset_config(dataset_name)
+        dataset = load_dataset(dataset_name, config_name)
     except Exception as e:
-        logger.info('We needed to select the dataset config - assuming main')
-        dataset = load_dataset(dataset_name, 'main')
+        logger.exception(f'Failed to load dataset {dataset_name}: {e}')
+        raise e
 
     logger.info(f"Dataset: {dataset}")
     train_dataset = dataset["train"]
@@ -80,7 +81,7 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
             if check_the_synthetic_data(json_synthetic_data_point, row.keys()):
                 return json_synthetic_data_point
         except json.JSONDecodeError as e:
-            logger.info(f'Json Eror was {e}')
+            logger.info(f'Json Error was {e}')
             pass
         except Exception as e:
             logger.info(f'Erorr was {e}')
