@@ -148,7 +148,7 @@ def calculate_scaled_score(weighted_loss: float, scale_factor: float) -> float:
     """Calculate score using exponential decay."""
     assert not np.isnan(weighted_loss), "Weighted loss cannot be NaN"
     if scale_factor <= 0:
-        scale_factor = 1
+        scale_factor = 1.0
     return float(np.exp(-weighted_loss * scale_factor))
 
 def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
