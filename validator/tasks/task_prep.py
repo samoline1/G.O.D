@@ -10,6 +10,7 @@ from datasets import load_dataset
 from fiber.logging_utils import get_logger
 
 import validator.core.constants as cst
+from validator.evaluation.utils import get_default_dataset_config
 from validator.synth.synth import generate_synthetic_dataset
 from validator.utils.minio import async_minio_client
 
@@ -34,10 +35,11 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
         test_size = cst.TRAIN_TEST_SPLIT_PERCENTAGE
     logger.info(f"Loading dataset '{dataset_name}'")
     try:
-        dataset = load_dataset(dataset_name)
-    except:
-        logger.info('Assuming main name on a failure')
-        dataset = load_dataset(dataset_name, 'main')
+        config_name = get_default_dataset_config(dataset_name)
+        dataset = load_dataset(dataset_name, config_name)
+    except Exception as e:
+        logger.exception(f'Failed to load dataset {dataset_name}: {e}')
+        raise e
 
     if isinstance(dataset, DatasetDict):
         combined_dataset = concatenate_datasets([split for split in dataset.values()])
