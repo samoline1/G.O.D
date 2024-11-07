@@ -43,7 +43,7 @@ def get_task_work_score(task: Task) -> float:
     model_size = re.search(r'(\d+)(?=[bB])', model)
     model_size_value = int(model_size.group(1)) if model_size else 1
 
-    return max(1, np.log(float(hours * model_size_value)))
+    return max(1, 2*np.log(float(hours * model_size_value)))
 
 def calculate_adjusted_task_score(quality_score: float, task_work_score: float) -> float:
     """Calculate adjusted task score based on quality score and work score."""
