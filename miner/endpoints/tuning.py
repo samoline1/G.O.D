@@ -24,15 +24,21 @@ from fiber.miner.security.encryption import decrypt_general_payload
 from fiber.miner.dependencies import blacklist_low_stake, get_config, verify_request
 from fiber.logging_utils import get_logger
 from fiber.miner.core.configuration import Config
+from datetime import datetime, timedelta
 
 logger = get_logger(__name__)
+
+finish_time = None
 
 
 async def tune_model(
     decrypted_payload: TrainRequest = Depends(partial(decrypt_general_payload, TrainRequest)),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
+    global finish_time
     logger.info("Starting model tuning.")
+
+    finish_time = datetime.now() + timedelta(hours=decrypted_payload.hours_to_complete)
     logger.info(f"Job received is {decrypted_payload}")
 
     if not decrypted_payload.dataset or not decrypted_payload.model:
@@ -83,11 +89,19 @@ async def task_offer(
     worker_config: WorkerConfig = Depends(get_worker_config),
 ) -> MinerTaskResponse:
     try:
+        global finish_time
+        current_time = datetime.now()
 
-        if decrypted_payload.hours_to_complete < 100:
-            return MinerTaskResponse(message="Yes", accepted=True)
+        if finish_time is None or current_time + timedelta(hours=1) > finish_time:
+            if decrypted_payload.hours_to_complete < 100:
+                return MinerTaskResponse(message="Yes", accepted=True)
+            else:
+                return MinerTaskResponse(message="I only accept small jobs", accepted=False)
         else:
-            return MinerTaskResponse(message="I only accept small jobs", accepted=False)
+            return MinerTaskResponse(
+                message=f"Currently busy with another job until {finish_time.isoformat()}",
+                accepted=False
+            )
 
     except ValidationError as e:
         logger.error(f"Validation error: {str(e)}")
