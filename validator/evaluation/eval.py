@@ -76,6 +76,9 @@ def _create_evaluation_dataloader(eval_dataset: Dataset, evaluation_config: Dict
 
 
 def _collate_evaluation_batch(batch: list[dict[str, list[int]]], tokenizer: AutoTokenizer) -> dict[str, torch.Tensor]:
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
     input_ids = [torch.tensor(item["input_ids"]) for item in batch]
     attention_mask = [torch.tensor(item["attention_mask"]) for item in batch]
     labels = [torch.tensor(item["labels"]) for item in batch]
