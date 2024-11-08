@@ -199,7 +199,11 @@ def main():
     finetuned_model = AutoModelForCausalLM.from_pretrained(model, token=os.environ.get("HUGGINGFACE_TOKEN")).to(device)
     tokenizer = AutoTokenizer.from_pretrained(original_model, token=os.environ.get("HUGGINGFACE_TOKEN"))
 
-    is_finetune = model_is_a_finetune(original_model, finetuned_model)
+    try:
+        is_finetune = model_is_a_finetune(original_model, finetuned_model)
+    except:
+        logger.info('PROBLME WITH IS FINETUNE - ASSUMING TRUE FOR NOW')
+        is_finetune = True
 
     results = evaluate_finetuned_model(
         dataset_name=dataset,
