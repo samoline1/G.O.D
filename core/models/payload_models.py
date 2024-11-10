@@ -92,7 +92,6 @@ class NewTaskRequest(BaseModel):
     ds_repo: str
     input_col: str
     hours_to_complete: int
-    fingerprint: str
     system_col: Optional[str] = None
     output_col: Optional[str] = None
     instruction_col: Optional[str] = None
@@ -110,7 +109,16 @@ class TaskStatusResponse(BaseModel):
     task_id: UUID
     status: TaskStatus
     miners: Optional[List]
-    model_id: str
-    dataset: str
+    model_repo: str
+    ds_repo: Optional[str]
+    input_col: Optional[str]
+    system_col: Optional[str]
+    output_col: Optional[str]
+    instruction_col: Optional[str]
     created: str
     hours_to_complete: int
+
+class TaskListResponse(BaseModel):
+    success: bool
+    task_id: UUID
+    status: TaskStatus
