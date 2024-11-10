@@ -2,7 +2,6 @@ from datetime import datetime
 from datetime import timedelta
 from typing import List
 from uuid import UUID
-from loguru import logger
 
 from fastapi import APIRouter
 from fastapi import Depends
@@ -92,7 +91,6 @@ async def get_task_status(
     api_key: str = Depends(get_api_key),
 ) -> TaskStatusResponse:
     task = await task_sql.get_task(task_id, config.psql_db)
-    logger.info(task)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
