@@ -84,7 +84,6 @@ async def create_task(
         status=TaskStatus.PENDING,
         end_timestamp=end_timestamp,
         hours_to_complete=request.hours_to_complete,
-        user_id=request.fingerprint,
     )
 
     logger.info(f"The Task is {task}")
