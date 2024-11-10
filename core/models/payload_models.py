@@ -111,6 +111,6 @@ class TaskStatusResponse(BaseModel):
     status: TaskStatus
     miners: Optional[List]
     model_id: str
-    dataset: str
+    dataset: Optional[str]
     created: str
     hours_to_complete: int

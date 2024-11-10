@@ -41,7 +41,6 @@ async def delete_task(
 
 
 async def get_tasks(
-    request: NewTaskRequest,
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
 ) -> List[TaskStatusResponse]:
