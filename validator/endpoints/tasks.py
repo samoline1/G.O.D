@@ -2,6 +2,7 @@ from datetime import datetime
 from datetime import timedelta
 from typing import List
 from uuid import UUID
+from loguru import logger
 
 from fastapi import APIRouter
 from fastapi import Depends
@@ -12,6 +13,7 @@ from fiber.logging_utils import get_logger
 from core.models.payload_models import NewTaskRequest
 from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import TaskStatusResponse
+from core.models.payload_models import TaskListResponse
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_api_key
@@ -43,23 +45,13 @@ async def delete_task(
 async def get_tasks(
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
-) -> List[TaskStatusResponse]:
-    tasks_with_miners = await task_sql.get_tasks_with_miners_by_user(request.fingerprint, config.psql_db)
-
-    logger.info(tasks_with_miners)
-
+) -> List[TaskListResponse]:
+    tasks_with_miners = await task_sql.get_tasks_with_miners(config.psql_db)
     return [
-        TaskStatusResponse(
+        TaskListResponse(
             success=True,
             task_id=task["task_id"],
-            status=task["status"],
-            miners=task["miners"],
-            model_id=task["model_id"],
-            dataset=task["hf_training_repo"],
-            created=task["created_timestamp"].strftime("%Y-%m-%dT%H:%M:%S")
-            if isinstance(task["created_timestamp"], datetime)
-            else task["created_timestamp"],
-            hours_to_complete=task["hours_to_complete"],
+            status=task["status"]
         )
         for task in tasks_with_miners
     ]
@@ -100,6 +92,7 @@ async def get_task_status(
     api_key: str = Depends(get_api_key),
 ) -> TaskStatusResponse:
     task = await task_sql.get_task(task_id, config.psql_db)
+    logger.info(task)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
@@ -107,9 +100,14 @@ async def get_task_status(
         success=True,
         task_id=task_id,
         status=task.status,
-        model_id=task.model_id,
+        model_repo=task.model_id,
+        ds_repo=task.ds_id,
+        input_col=task.input,
+        system_col=task.system,
+        instruction_col=task.instruction,
+        output_col=task.output,
         miners=None,
-        dataset=task.hf_training_repo,
+        dataset=task.ds_id,
         created=str(task.created_timestamp),
         hours_to_complete=task.hours_to_complete,
     )
@@ -143,9 +141,9 @@ def factory_router() -> APIRouter:
     )
 
     router.add_api_route(
-        "/v1/tasks/",
+        "/v1/tasks",
         get_tasks,
-        response_model=List[TaskStatusResponse],
+        response_model=List[TaskListResponse],
         tags=["Training"],
         methods=["GET"],
     )

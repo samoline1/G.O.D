@@ -82,7 +82,7 @@ async def get_tasks_with_status(status: str, psql_db: PSQLDB) -> List[Task]:
         return [Task(**dict(row)) for row in rows]
 
 
-async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[Dict]:
+async def get_tasks_with_miners(psql_db: PSQLDB) -> List[Dict]:
     """Get all tasks for a user with their assigned miners"""
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -94,13 +94,12 @@ async def get_tasks_with_miners_by_user(user_id: str, psql_db: PSQLDB) -> List[D
             )) AS miners
             FROM {cst.TASKS_TABLE}
             LEFT JOIN {cst.TASK_NODES_TABLE} ON {cst.TASKS_TABLE}.{cst.TASK_ID} = {cst.TASK_NODES_TABLE}.{cst.TASK_ID}
-            LEFT JOIN {NODES_TABLE} ON
+            LEFT JOIN {cst.NODES_TABLE} ON
                 {cst.TASK_NODES_TABLE}.{cst.HOTKEY} = {cst.NODES_TABLE}.{cst.HOTKEY} AND
-                {cst.NODES_TABLE}.{cst.NETUID} = $2
-            WHERE {cst.TASKS_TABLE}.{cst.USER_ID} = $1
+                {cst.NODES_TABLE}.{cst.NETUID} = $1
             GROUP BY {cst.TASKS_TABLE}.{cst.TASK_ID}
         """
-        rows = await connection.fetch(query, user_id, NETUID)
+        rows = await connection.fetch(query, NETUID)
         return [
             {**dict(row), "miners": json.loads(row["miners"]) if isinstance(row["miners"], str) else row["miners"]}
             for row in rows

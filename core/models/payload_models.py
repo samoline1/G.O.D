@@ -109,7 +109,16 @@ class TaskStatusResponse(BaseModel):
     task_id: UUID
     status: TaskStatus
     miners: Optional[List]
-    model_id: str
-    dataset: Optional[str]
+    model_repo: str
+    ds_repo: Optional[str]
+    input_col: Optional[str]
+    system_col: Optional[str]
+    output_col: Optional[str]
+    instruction_col: Optional[str]
     created: str
     hours_to_complete: int
+
+class TaskListResponse(BaseModel):
+    success: bool
+    task_id: UUID
+    status: TaskStatus
