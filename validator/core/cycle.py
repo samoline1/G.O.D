@@ -3,7 +3,6 @@ import datetime
 import random
 from datasets import get_dataset_infos
 from fiber.logging_utils import get_logger
-from fsspec.spec import conf
 
 import validator.core.constants as cst
 from core.models.payload_models import MinerTaskRequst
