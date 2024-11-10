@@ -90,9 +90,24 @@ async def get_task_status(
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
 ) -> TaskStatusResponse:
+    # Retrieve task information
     task = await task_sql.get_task(task_id, config.psql_db)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
+
+    # Retrieve assigned miners for the task
+    miners = await task_sql.get_miners_for_task(task_id, config.psql_db)
+
+    # Retrieve the winning submission, if available
+    winning_submission_data = await task_sql.get_winning_submissions_for_task(task_id, config.psql_db)
+    winning_submission = None
+    if winning_submission_data:
+        winning_submission_data = winning_submission_data[0]  # Get the top winning submission
+        winning_submission = WinningSubmission(
+            hotkey=winning_submission_data["hotkey"],
+            score=winning_submission_data["score"],  # assuming 'score' is in the returned data
+            model_repo=winning_submission_data["repo"]
+        )
 
     return TaskStatusResponse(
         success=True,
@@ -104,12 +119,12 @@ async def get_task_status(
         system_col=task.system,
         instruction_col=task.instruction,
         output_col=task.output,
-        miners=None,
+        miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
         dataset=task.ds_id,
         created=str(task.created_timestamp),
         hours_to_complete=task.hours_to_complete,
+        winning_submission=winning_submission
     )
-
 
 def factory_router() -> APIRouter:
     router = APIRouter()

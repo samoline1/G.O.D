@@ -249,3 +249,28 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
                 """,
                 task_id
             )
+async def get_miners_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Node]:
+    """Retrieve all miners assigned to a specific task."""
+    async with await psql_db.connection() as connection:
+        query = f"""
+            SELECT nodes.* FROM {cst.NODES_TABLE} nodes
+            JOIN {cst.TASK_NODES_TABLE} task_nodes
+            ON nodes.hotkey = task_nodes.hotkey AND nodes.netuid = task_nodes.netuid
+            WHERE task_nodes.task_id = $1
+        """
+        rows = await connection.fetch(query, task_id)
+        return [Node(**dict(row)) for row in rows]
+
+async def get_winning_submissions_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Dict]:
+    """Retrieve winning submissions for a task based on miner scores."""
+    async with await psql_db.connection() as connection:
+        query = f"""
+            SELECT s.*, t.miner_scores
+            FROM {cst.SUBMISSIONS_TABLE} s
+            JOIN {cst.TASKS_TABLE} t ON s.task_id = t.task_id
+            WHERE s.task_id = $1
+            ORDER BY t.miner_scores DESC
+            LIMIT 1
+        """
+        rows = await connection.fetch(query, task_id)
+        return [dict(row) for row in rows]
