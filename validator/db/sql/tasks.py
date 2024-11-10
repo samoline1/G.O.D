@@ -1,17 +1,17 @@
 # tasks.py
 import json
-import os
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 from uuid import UUID
 
 from asyncpg.connection import Connection
 from fiber.networking.models import NodeWithFernet as Node
 
-from validator.core.models import Task
 import validator.db.constants as cst
-from validator.db.database import PSQLDB
-
 from core.constants import NETUID
+from validator.core.models import Task
+from validator.db.database import PSQLDB
 
 
 async def add_task(task: Task, psql_db: PSQLDB) -> Task:
@@ -262,14 +262,17 @@ async def get_miners_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Node]:
         return [Node(**dict(row)) for row in rows]
 
 async def get_winning_submissions_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Dict]:
-    """Retrieve winning submissions for a task based on miner scores."""
+    """Retrieve the winning submission for a task based on the highest quality score in task_nodes."""
     async with await psql_db.connection() as connection:
         query = f"""
-            SELECT s.*, t.miner_scores
+            SELECT s.*, tn.quality_score
             FROM {cst.SUBMISSIONS_TABLE} s
-            JOIN {cst.TASKS_TABLE} t ON s.task_id = t.task_id
+            JOIN {cst.TASK_NODES_TABLE} tn
+            ON s.task_id = tn.task_id
+            AND s.hotkey = tn.hotkey
+            AND s.netuid = tn.netuid
             WHERE s.task_id = $1
-            ORDER BY t.miner_scores DESC
+            ORDER BY tn.quality_score DESC
             LIMIT 1
         """
         rows = await connection.fetch(query, task_id)

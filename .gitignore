@@ -8,6 +8,7 @@ sam_vit_l_0b3195.pth
 # C extensions
 *.so
 *.gguf
+nohup.out
 
 axolotl/*
 axolotl
