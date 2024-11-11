@@ -49,25 +49,21 @@ async def get_tasks(
     task_status_responses = []
 
     for task in tasks_with_miners:
-        # Retrieve assigned miners for the task
         miners = await task_sql.get_miners_for_task(task["task_id"], config.psql_db)
-
-        # Retrieve the winning submission, if available
         winning_submission_data = await task_sql.get_winning_submissions_for_task(task["task_id"], config.psql_db)
         winning_submission = None
         if winning_submission_data:
-            winning_submission_data = winning_submission_data[0]  # Get the top winning submission
+            winning_submission_data = winning_submission_data[0]
             winning_submission = WinningSubmission(
                 hotkey=winning_submission_data["hotkey"],
-                score=winning_submission_data["quality_score"],  # Using 'quality_score' from task_nodes as the score
+                score=winning_submission_data["quality_score"],
                 model_repo=winning_submission_data["repo"]
             )
 
-        # Construct TaskStatusResponse for each task
         task_status_responses.append(
             TaskStatusResponse(
                 success=True,
-                task_id=task["task_id"],
+                id=task["task_id"],
                 status=task["status"],
                 model_repo=task.get("model_id"),
                 ds_repo=task.get("ds_id"),
@@ -120,29 +116,27 @@ async def get_task_status(
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
 ) -> TaskStatusResponse:
-    # Retrieve task information
     task = await task_sql.get_task(task_id, config.psql_db)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
-    # Retrieve assigned miners for the task
     miners = await task_sql.get_miners_for_task(task_id, config.psql_db)
+    logger.info(miners)
 
-    # Retrieve the winning submission, if available
+
     winning_submission_data = await task_sql.get_winning_submissions_for_task(task_id, config.psql_db)
     winning_submission = None
     if winning_submission_data:
-        logger.info(winning_submission_data)
-        winning_submission_data = winning_submission_data[0]  # Get the top winning submission
+        winning_submission_data = winning_submission_data[0]
         winning_submission = WinningSubmission(
             hotkey=winning_submission_data["hotkey"],
-            score=winning_submission_data["quality_score"],  # Using 'quality_score' from task_nodes as the score
+            score=winning_submission_data["quality_score"],
             model_repo=winning_submission_data["repo"]
         )
 
     return TaskStatusResponse(
         success=True,
-        task_id=task_id,
+        id=task_id,
         status=task.status,
         model_repo=task.model_id,
         ds_repo=task.ds_id,

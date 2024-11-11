@@ -1,7 +1,7 @@
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
-from typing import Dict
 from uuid import UUID
 
 from fiber.logging_utils import get_logger
@@ -113,7 +113,7 @@ class WinningSubmission(BaseModel):
 
 class TaskStatusResponse(BaseModel):
     success: bool
-    task_id: UUID
+    id: UUID
     status: TaskStatus
     miners: Optional[List[Dict]]
     model_repo: str
