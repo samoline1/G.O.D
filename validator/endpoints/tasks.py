@@ -105,7 +105,6 @@ async def get_task_status(
         instruction_col=task.instruction,
         output_col=task.output,
         miners=None,
-        dataset=task.ds_id,
         started=str(task.started_timestamp),
         end=str(task.end_timestamp),
         created=str(task.created_timestamp),
