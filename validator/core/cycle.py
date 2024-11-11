@@ -57,7 +57,7 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
     selected_miners: list[str] = []
     ds_size = _get_total_dataset_size(task.ds_id)
     task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete, task_id= str(task.task_id))
-    miners_already_assigned = tasks_sql.get_miners_for_task(task.task_id, config.psql_db)
+    miners_already_assigned = await tasks_sql.get_miners_for_task(task.task_id, config.psql_db)
     already_assigned_hotkeys = [miner.hotkey for miner in miners_already_assigned]
     logger.info(f"Here are the hotkeys that have already been assigned {already_assigned_hotkeys}")
 
