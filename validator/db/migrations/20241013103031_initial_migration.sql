@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     end_timestamp TIMESTAMPTZ,
     user_id TEXT,
     created_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    delay_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     started_timestamp TIMESTAMPTZ,
     completed_timestamp TIMESTAMPTZ
