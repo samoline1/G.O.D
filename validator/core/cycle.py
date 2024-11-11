@@ -119,7 +119,7 @@ async def assign_miners(task: Task, config: Config):
         await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
-        assert task.created_timestamp  is not None and task.delay_timestamp is not None "We wanted to check delay vs created timestamps but they are missing"
+        assert task.created_timestamp  is not None and task.delay_timestamp is not None, "We wanted to check delay vs created timestamps but they are missing"
             # we've already delayed this once
         if task.created_timestamp < task.delay_timestamp:
             task.status = TaskStatus.FAILURE
