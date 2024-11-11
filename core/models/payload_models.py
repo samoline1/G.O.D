@@ -1,5 +1,7 @@
+from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Union
 from uuid import UUID
 
 from fiber.logging_utils import get_logger
@@ -104,11 +106,16 @@ class NewTaskResponse(BaseModel):
     task_id: UUID
 
 
+class WinningSubmission(BaseModel):
+    hotkey: str
+    score: float
+    model_repo: str
+
 class TaskStatusResponse(BaseModel):
     success: bool
-    task_id: UUID
+    id: UUID
     status: TaskStatus
-    miners: Optional[List]
+    miners: Optional[List[Dict]]
     model_repo: str
     ds_repo: Optional[str]
     input_col: Optional[str]
@@ -119,6 +126,7 @@ class TaskStatusResponse(BaseModel):
     end: str
     created: str
     hours_to_complete: int
+    winning_submission: Optional[Union[WinningSubmission, None]] = None
 
 class TaskListResponse(BaseModel):
     success: bool

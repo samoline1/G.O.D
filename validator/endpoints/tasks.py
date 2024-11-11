@@ -12,7 +12,7 @@ from fiber.logging_utils import get_logger
 from core.models.payload_models import NewTaskRequest
 from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import TaskStatusResponse
-from core.models.payload_models import TaskListResponse
+from core.models.payload_models import WinningSubmission
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_api_key
@@ -44,16 +44,42 @@ async def delete_task(
 async def get_tasks(
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
-) -> List[TaskListResponse]:
+) -> List[TaskStatusResponse]:
     tasks_with_miners = await task_sql.get_tasks_with_miners(config.psql_db)
-    return [
-        TaskListResponse(
-            success=True,
-            task_id=task["task_id"],
-            status=task["status"]
+    task_status_responses = []
+
+    for task in tasks_with_miners:
+        miners = await task_sql.get_miners_for_task(task["task_id"], config.psql_db)
+        winning_submission_data = await task_sql.get_winning_submissions_for_task(task["task_id"], config.psql_db)
+        winning_submission = None
+        if winning_submission_data:
+            winning_submission_data = winning_submission_data[0]
+            winning_submission = WinningSubmission(
+                hotkey=winning_submission_data["hotkey"],
+                score=winning_submission_data["quality_score"],
+                model_repo=winning_submission_data["repo"]
+            )
+
+        task_status_responses.append(
+            TaskStatusResponse(
+                success=True,
+                id=task["task_id"],
+                status=task["status"],
+                model_repo=task.get("model_id"),
+                ds_repo=task.get("ds_id"),
+                input_col=task.get("input"),
+                system_col=task.get("system"),
+                instruction_col=task.get("instruction"),
+                output_col=task.get("output"),
+                miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
+                dataset=task.get("ds_id"),
+                created=str(task["created_timestamp"]),
+                hours_to_complete=task.get("hours_to_complete"),
+                winning_submission=winning_submission
+            )
         )
-        for task in tasks_with_miners
-    ]
+
+    return task_status_responses
 
 
 async def create_task(
@@ -94,9 +120,23 @@ async def get_task_status(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
+    miners = await task_sql.get_miners_for_task(task_id, config.psql_db)
+    logger.info(miners)
+
+
+    winning_submission_data = await task_sql.get_winning_submissions_for_task(task_id, config.psql_db)
+    winning_submission = None
+    if winning_submission_data:
+        winning_submission_data = winning_submission_data[0]
+        winning_submission = WinningSubmission(
+            hotkey=winning_submission_data["hotkey"],
+            score=winning_submission_data["quality_score"],
+            model_repo=winning_submission_data["repo"]
+        )
+
     return TaskStatusResponse(
         success=True,
-        task_id=task_id,
+        id=task_id,
         status=task.status,
         model_repo=task.model_id,
         ds_repo=task.ds_id,
@@ -106,11 +146,12 @@ async def get_task_status(
         output_col=task.output,
         miners=None,
         started=str(task.started_timestamp),
+        miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
         end=str(task.end_timestamp),
         created=str(task.created_timestamp),
         hours_to_complete=task.hours_to_complete,
+        winning_submission=winning_submission
     )
-
 
 def factory_router() -> APIRouter:
     router = APIRouter()
@@ -142,7 +183,7 @@ def factory_router() -> APIRouter:
     router.add_api_route(
         "/v1/tasks",
         get_tasks,
-        response_model=List[TaskListResponse],
+        response_model=List[TaskStatusResponse],
         tags=["Training"],
         methods=["GET"],
     )
