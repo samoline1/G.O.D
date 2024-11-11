@@ -57,15 +57,17 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
     selected_miners: list[str] = []
     ds_size = _get_total_dataset_size(task.ds_id)
     task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete, task_id= str(task.task_id))
+    miners_already_assigned = tasks_sql.get_miners_for_task(task.task_id, config.psql_db)
+    already_assigned_hotkeys = [miner.hotkey for miner in miners_already_assigned]
+    logger.info(f"Here are the hotkeys that have already been assigned {already_assigned_hotkeys}")
 
-    # Create a copy of the nodes list to avoid mutating the original - better than popping? Not sure
-    available_nodes = nodes.copy()
+    # Filter out nodes that are already assigned to this task - this will occur if we had to restart a task due to all miners failing
+    available_nodes = [node for node in nodes if node.hotkey not in already_assigned_hotkeys]
 
     num_of_miners_to_try_for = random.randint(cst.MIN_IDEAL_NUM_MINERS_IN_POOL,cst.MAX_IDEAL_NUM_MINERS_IN_POOL)
     while len(selected_miners) < num_of_miners_to_try_for and available_nodes:
         node = random.choice(available_nodes)
         available_nodes.remove(node)
-
         try:
             offer_response = await _make_offer(node, task_request, config)
             logger.info(f"Node {node.node_id}'s response to the offer was {offer_response}")
