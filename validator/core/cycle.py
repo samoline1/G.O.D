@@ -51,7 +51,7 @@ async def _make_offer(node: Node, request: MinerTaskRequst, config: Config) -> M
 async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], config: Config) -> Task:
     if len(nodes) < cst.MINIMUM_MINER_POOL:
         logger.warning(f"Not enough nodes available. Need at least {cst.MINIMUM_MINER_POOL}, but only have {len(nodes)}.")
-        task.status = TaskStatus.FAILURE
+        task = attempt_delay_task(task)
         return task
 
     selected_miners: list[str] = []
@@ -117,17 +117,21 @@ async def assign_miners(task: Task, config: Config):
         nodes = await perform_handshakes(nodes, config)
         task = await _select_miner_pool_and_add_to_task(task, nodes, config)
         await tasks_sql.update_task(task, config.psql_db)
+
     except Exception as e:
         logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
+        task = attempt_delay_task(task)
+        await tasks_sql.update_task(task, config.psql_db)
+
+def attempt_delay_task(task: Task):
+        logger.info("ATTEMPTING TO DELAY THE TASK")
         assert task.created_timestamp  is not None and task.delay_timestamp is not None, "We wanted to check delay vs created timestamps but they are missing"
-            # we've already delayed this once
         if task.created_timestamp < task.delay_timestamp:
             task.status = TaskStatus.FAILURE
         else:
             logger.info("Adding in a delay of 1 hour for now since no miners accepted the task")
             task.delay_timestamp = task.delay_timestamp + datetime.timedelta(hours=1)
-
-        await tasks_sql.update_task(task, config.psql_db)
+        return task
 
 
 async def _find_miners_for_task(config: Config):
