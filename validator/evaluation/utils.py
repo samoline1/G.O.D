@@ -25,8 +25,6 @@ def model_is_a_finetune(original_repo: str, finetuned_model: AutoModelForCausalL
     else:
         logger.info(f"Adapter config not found at {adapter_config}")
         has_lora_modules = False
-    logger.info(f"Original config: {original_config}")
-    logger.info(f"Finetuned config: {finetuned_config}")
     attrs_to_compare = [
         "architectures",
         "hidden_size",
