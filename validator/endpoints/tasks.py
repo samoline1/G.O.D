@@ -146,6 +146,8 @@ async def get_task_status(
         output_col=task.output,
         miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
         dataset=task.ds_id,
+        start=str(task.started_timestamp),
+        end=str(task.end_timestamp),
         created=str(task.created_timestamp),
         hours_to_complete=task.hours_to_complete,
         winning_submission=winning_submission

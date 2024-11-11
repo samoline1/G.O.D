@@ -122,6 +122,8 @@ class TaskStatusResponse(BaseModel):
     system_col: Optional[str]
     output_col: Optional[str]
     instruction_col: Optional[str]
+    started: str
+    end: str
     created: str
     hours_to_complete: int
     winning_submission: Optional[Union[WinningSubmission, None]] = None

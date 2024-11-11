@@ -76,9 +76,6 @@ def _create_evaluation_dataloader(eval_dataset: Dataset, evaluation_config: Dict
 
 
 def _collate_evaluation_batch(batch: list[dict[str, list[int]]], tokenizer: AutoTokenizer) -> dict[str, torch.Tensor]:
-    if tokenizer.pad_token_id is None:
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.pad_token_id = tokenizer.eos_token_id
     input_ids = [torch.tensor(item["input_ids"]) for item in batch]
     attention_mask = [torch.tensor(item["attention_mask"]) for item in batch]
     labels = [torch.tensor(item["labels"]) for item in batch]
@@ -201,7 +198,9 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     finetuned_model = AutoModelForCausalLM.from_pretrained(model, token=os.environ.get("HUGGINGFACE_TOKEN")).to(device)
     tokenizer = AutoTokenizer.from_pretrained(original_model, token=os.environ.get("HUGGINGFACE_TOKEN"))
-
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
     try:
         is_finetune = model_is_a_finetune(original_model, finetuned_model)
     except:

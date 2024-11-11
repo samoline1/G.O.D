@@ -115,7 +115,7 @@ async def scoring_aggregation_from_date(psql_db: str) -> list[PeriodScore]:
     """Aggregate and normalise scores across all nodes."""
     try:
 
-        date = datetime.now() - timedelta(hours=24)
+        date = datetime.now() - timedelta(days=2)
         task_results: list[TaskResults] = await get_aggregate_scores_since(date, psql_db)
         logger.info(f"Gto task results {task_results}")
         if not task_results:
@@ -202,14 +202,14 @@ def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerR
 
     if np.isnan(geometric_mean) or np.isinf(geometric_mean) or geometric_mean <= 0:
         logger.warning(f"Invalid geometric mean: {geometric_mean}. Scores unchanged.")
-        return miner_results
+        geometric_mean = 1.0
 
     logger.info(f"Geometric mean: {geometric_mean:.4f}")
 
     for res in miner_results:
         if res.is_finetune and res.score is not None and not np.isnan(res.score):
             original_score = res.score
-            res.score = float(res.score / geometric_mean)
+            res.score = max(float(res.score / geometric_mean), cts.MAX_TASK_SCORE)
             logger.info(f"Miner {res.hotkey}: {original_score:.4f} -> {res.score:.4f}")
         else:
             res.score = 0.0
