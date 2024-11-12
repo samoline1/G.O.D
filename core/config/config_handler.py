@@ -66,6 +66,7 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
     config["wandb_runid"] = job_id
     config["wandb_name"] = job_id
     config['hub_model_id'] = f"{config.get('hub_repo', 'test')}/{job_id}"
+    return config
 
 def save_config(config: dict, config_path: str):
     with open(config_path, "w") as file:

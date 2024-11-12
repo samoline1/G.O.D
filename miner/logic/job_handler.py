@@ -46,8 +46,10 @@ def create_job(job_id: str, dataset: str, model: str, dataset_type: DatasetType|
 
 
 def start_tuning_container(job: Job):
+    logger.info('STARTING THE TUNING CONTAINER')
     config_filename = f"{job.job_id}.yml"
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
+
 
     config = _load_and_modify_config(job.dataset, job.model, job.dataset_type, job.file_format, job.job_id)
     save_config(config, config_path)
