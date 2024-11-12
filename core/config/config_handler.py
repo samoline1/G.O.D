@@ -5,6 +5,7 @@ import yaml
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
+from transformers import AutoTokenizer
 
 
 def create_dataset_entry(
@@ -46,13 +47,17 @@ def create_dataset_entry(
 
     return dataset_entry
 
-
 def update_model_info(config: dict, model: str, job_id: str = ""):
+
+    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+    # we need to make sure the pad token is defined
+    if tokenizer.pad_token is None and tokenizer.eos_token is not None:
+        config["special_tokens"] = {"pad_token": tokenizer.eos_token}
+
     config["base_model"] = model
     config["wandb_runid"] = job_id
     config["wandb_name"] = job_id
     config['hub_model_id'] = f"{config.get('hub_repo', 'test')}/{job_id}"
-
 
 def save_config(config: dict, config_path: str):
     with open(config_path, "w") as file:
