@@ -5,6 +5,12 @@ import yaml
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
+from transformers import AutoTokenizer
+
+from fiber.logging_utils import get_logger
+
+logger = get_logger(__name__)
+
 
 
 def create_dataset_entry(
@@ -36,6 +42,7 @@ def create_dataset_entry(
         dataset_entry["type"] = dataset_type.value
     elif isinstance(dataset_type, CustomDatasetType):
         custom_type_dict = {key: value for key, value in dataset_type.model_dump().items() if value is not None}
+        dataset_entry["format"]= "custom"
         dataset_entry["type"] = custom_type_dict
     else:
         raise ValueError("Invalid dataset_type provided.")
@@ -46,13 +53,20 @@ def create_dataset_entry(
 
     return dataset_entry
 
-
 def update_model_info(config: dict, model: str, job_id: str = ""):
+    logger.info('WE ARE UPDATING THE MODEL INFO')
+
+    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+    # we need to make sure the pad token is defined
+    logger.info(f"HERE ARE THE CURRENT PAD TOKENS STUFF {tokenizer.pad_token} {tokenizer.eos_token}")
+    if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
+        config["special_tokens"] = {"pad_token": tokenizer.eos_token}
+
     config["base_model"] = model
     config["wandb_runid"] = job_id
     config["wandb_name"] = job_id
     config['hub_model_id'] = f"{config.get('hub_repo', 'test')}/{job_id}"
-
+    return config
 
 def save_config(config: dict, config_path: str):
     with open(config_path, "w") as file:
