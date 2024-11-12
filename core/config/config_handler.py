@@ -7,6 +7,11 @@ from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 from transformers import AutoTokenizer
 
+from fiber.logging_utils import get_logger
+
+logger = get_logger(__name__)
+
+
 
 def create_dataset_entry(
     dataset: str,
@@ -51,7 +56,8 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
 
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
     # we need to make sure the pad token is defined
-    if tokenizer.pad_token is None and tokenizer.eos_token is not None:
+    logger.info(f"HERE ARE THE CURRENT PAD TOKENS STUFF {tokenizer.pad_token} {tokenizer.eos_token}")
+    if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
         config["special_tokens"] = {"pad_token": tokenizer.eos_token}
 
     config["base_model"] = model
