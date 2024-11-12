@@ -42,6 +42,7 @@ def create_dataset_entry(
         dataset_entry["type"] = dataset_type.value
     elif isinstance(dataset_type, CustomDatasetType):
         custom_type_dict = {key: value for key, value in dataset_type.model_dump().items() if value is not None}
+        dataset_entry["format"]= "custom"
         dataset_entry["type"] = custom_type_dict
     else:
         raise ValueError("Invalid dataset_type provided.")
