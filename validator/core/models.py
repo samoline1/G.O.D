@@ -25,6 +25,7 @@ class Task(BaseModel):
     assigned_miners: Optional[List[int]] = None
     miner_scores: Optional[List[float]] = None
     created_timestamp: Optional[datetime] = None
+    delay_timestamp: Optional[datetime] = None
     updated_timestamp: Optional[datetime] = None
     started_timestamp: Optional[datetime] = None
     end_timestamp: Optional[datetime] = None
