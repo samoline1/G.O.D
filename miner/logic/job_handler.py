@@ -26,6 +26,7 @@ def _load_and_modify_config(
     """
     Loads the config template and modifies it to create a new job config.
     """
+    logger.info('I AM LOADING THE CONFIG')
     with open(cst.CONFIG_TEMPLATE_PATH, "r") as file:
         config = yaml.safe_load(file)
 
@@ -34,7 +35,7 @@ def _load_and_modify_config(
     dataset_entry = create_dataset_entry(dataset, dataset_type, file_format)
     config["datasets"].append(dataset_entry)
 
-    update_model_info(config, model, task_id)
+    config = update_model_info(config, model, task_id)
     config["mlflow_experiment_name"] = dataset
 
     return config

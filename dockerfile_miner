@@ -1,4 +1,4 @@
-FROM winglian/axolotl-cloud:main-latest
+FROM winglian/axolotl-cloud:main-20241112
 
 RUN pip install mlflow huggingface_hub wandb
 
