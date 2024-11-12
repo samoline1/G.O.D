@@ -70,17 +70,17 @@ async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
             return Task(**dict(row))
         return None
 
-
 async def get_tasks_with_status(status: str, psql_db: PSQLDB) -> List[Task]:
-    """Get all tasks with a specific status"""
+    """Get all tasks with a specific status and delay_timestamp before current time"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            SELECT * FROM {cst.TASKS_TABLE} WHERE {cst.STATUS} = $1
+            SELECT * FROM {cst.TASKS_TABLE}
+            WHERE {cst.STATUS} = $1
+            AND ({cst.DELAY_TIMESTAMP} IS NULL OR {cst.DELAY_TIMESTAMP} <= NOW())
         """
         rows = await connection.fetch(query, status)
         return [Task(**dict(row)) for row in rows]
-
 
 async def get_tasks_with_miners(psql_db: PSQLDB) -> List[Dict]:
     """Get all tasks for a user with their assigned miners"""

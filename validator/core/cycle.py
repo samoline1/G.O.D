@@ -51,21 +51,23 @@ async def _make_offer(node: Node, request: MinerTaskRequst, config: Config) -> M
 async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], config: Config) -> Task:
     if len(nodes) < cst.MINIMUM_MINER_POOL:
         logger.warning(f"Not enough nodes available. Need at least {cst.MINIMUM_MINER_POOL}, but only have {len(nodes)}.")
-        task.status = TaskStatus.FAILURE
+        task = attempt_delay_task(task)
         return task
 
     selected_miners: list[str] = []
     ds_size = _get_total_dataset_size(task.ds_id)
     task_request = MinerTaskRequst(ds_size=ds_size, model=task.model_id, hours_to_complete=task.hours_to_complete, task_id= str(task.task_id))
+    miners_already_assigned = await tasks_sql.get_miners_for_task(task.task_id, config.psql_db)
+    already_assigned_hotkeys = [miner.hotkey for miner in miners_already_assigned]
+    logger.info(f"Here are the hotkeys that have already been assigned {already_assigned_hotkeys}")
 
-    # Create a copy of the nodes list to avoid mutating the original - better than popping? Not sure
-    available_nodes = nodes.copy()
+    # Filter out nodes that are already assigned to this task - this will occur if we had to restart a task due to all miners failing
+    available_nodes = [node for node in nodes if node.hotkey not in already_assigned_hotkeys]
 
     num_of_miners_to_try_for = random.randint(cst.MIN_IDEAL_NUM_MINERS_IN_POOL,cst.MAX_IDEAL_NUM_MINERS_IN_POOL)
     while len(selected_miners) < num_of_miners_to_try_for and available_nodes:
         node = random.choice(available_nodes)
         available_nodes.remove(node)
-
         try:
             offer_response = await _make_offer(node, task_request, config)
             logger.info(f"Node {node.node_id}'s response to the offer was {offer_response}")
@@ -117,10 +119,21 @@ async def assign_miners(task: Task, config: Config):
         nodes = await perform_handshakes(nodes, config)
         task = await _select_miner_pool_and_add_to_task(task, nodes, config)
         await tasks_sql.update_task(task, config.psql_db)
+
     except Exception as e:
         logger.error(f"Error assigning miners to task {task.task_id}: {e}", exc_info=True)
-        task.status = TaskStatus.FAILURE
+        task = attempt_delay_task(task)
         await tasks_sql.update_task(task, config.psql_db)
+
+def attempt_delay_task(task: Task):
+        logger.info("ATTEMPTING TO DELAY THE TASK")
+        assert task.created_timestamp  is not None and task.delay_timestamp is not None, "We wanted to check delay vs created timestamps but they are missing"
+        if task.created_timestamp < task.delay_timestamp:
+            task.status = TaskStatus.FAILURE
+        else:
+            logger.info("Adding in a delay of 1 hour for now since no miners accepted the task")
+            task.delay_timestamp = task.delay_timestamp + datetime.timedelta(hours=1)
+        return task
 
 
 async def _find_miners_for_task(config: Config):

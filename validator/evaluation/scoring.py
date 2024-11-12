@@ -468,7 +468,12 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     logger.info("Calculating final scores...")
     task_results = add_raw_scores_to_miner_results(task_results)
     task_results = adjust_miner_scores_to_be_relative_to_other_comps(task_results)
-
     await _update_scores(task, task_results, config.psql_db)
-    task.status = TaskStatus.SUCCESS
+    all_scores_zero = all(result.score == 0.0 for result in task_results)
+    if all_scores_zero:
+        task.status = TaskStatus.DATA_READY
+        logger.info(f"All scores are zero for task {task.task_id}, setting status to DATA_READY to find new miner since we are going to try again.")
+    else:
+        task.status = TaskStatus.SUCCESS
+        logger.info(f"Task {task.task_id} completed successfully with non-zero scores")
     return task
