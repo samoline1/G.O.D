@@ -53,6 +53,7 @@ def create_dataset_entry(
     return dataset_entry
 
 def update_model_info(config: dict, model: str, job_id: str = ""):
+    logger.info('WE ARE UPDATING THE MODEL INFO')
 
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
     # we need to make sure the pad token is defined
