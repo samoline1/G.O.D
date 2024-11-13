@@ -17,15 +17,23 @@ from core.models.utility_models import TaskStatus
 
 logger = get_logger(__name__)
 
+
 class MinerTaskRequst(BaseModel):
     ds_size: int
     model: str
     hours_to_complete: int
     task_id: str
 
+
 class TrainRequest(BaseModel):
-    dataset: str = Field(..., description="Path to the dataset file or Hugging Face dataset name")
-    model: str = Field(..., description="Name or path of the model to be trained")
+    dataset: str = Field(
+        ...,
+        description="Path to the dataset file or Hugging Face dataset name",
+        min_length=1,
+    )
+    model: str = Field(
+        ..., description="Name or path of the model to be trained", min_length=1
+    )
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
     task_id: str
@@ -98,8 +106,10 @@ class NewTaskRequest(BaseModel):
     output_col: Optional[str] = None
     instruction_col: Optional[str] = None
 
+
 class GetTasksRequest(BaseModel):
     fingerprint: str
+
 
 class NewTaskResponse(BaseModel):
     success: bool
@@ -110,6 +120,7 @@ class WinningSubmission(BaseModel):
     hotkey: str
     score: float
     model_repo: str
+
 
 class TaskStatusResponse(BaseModel):
     success: bool
@@ -127,6 +138,7 @@ class TaskStatusResponse(BaseModel):
     created: str
     hours_to_complete: int
     winning_submission: Optional[Union[WinningSubmission, None]] = None
+
 
 class TaskListResponse(BaseModel):
     success: bool

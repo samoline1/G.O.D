@@ -1,9 +1,11 @@
 import os
+from dataclasses import dataclass
 
 import docker
 import yaml
 from docker.errors import DockerException
 from fiber.logging_utils import get_logger
+from huggingface_hub import HfApi
 
 from core import constants as cst
 from core.config.config_handler import create_dataset_entry
@@ -15,18 +17,39 @@ from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import Job
 
-from huggingface_hub import HfApi
 
 logger = get_logger(__name__)
 
 
+@dataclass
+class DockerEnvironment:
+    huggingface_token: str
+    wandb_token: str
+    job_id: str
+    dataset_type: str
+    dataset_filename: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "HUGGINGFACE_TOKEN": self.huggingface_token,
+            "WANDB_TOKEN": self.wandb_token,
+            "JOB_ID": self.job_id,
+            "DATASET_TYPE": self.dataset_type,
+            "DATASET_FILENAME": self.dataset_filename,
+        }
+
+
 def _load_and_modify_config(
-    dataset: str, model: str, dataset_type: DatasetType | CustomDatasetType, file_format: FileFormat, task_id: str
+    dataset: str,
+    model: str,
+    dataset_type: DatasetType | CustomDatasetType,
+    file_format: FileFormat,
+    task_id: str,
 ) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
     """
-    logger.info('I AM LOADING THE CONFIG')
+    logger.info("Loading config template")
     with open(cst.CONFIG_TEMPLATE_PATH, "r") as file:
         config = yaml.safe_load(file)
 
@@ -41,31 +64,52 @@ def _load_and_modify_config(
     return config
 
 
-def create_job(job_id: str, dataset: str, model: str, dataset_type: DatasetType|CustomDatasetType, file_format: FileFormat) -> Job:
-    return Job(job_id=job_id, dataset=dataset, model=model, dataset_type=dataset_type, file_format=file_format)
+def create_job(
+    job_id: str,
+    dataset: str,
+    model: str,
+    dataset_type: DatasetType | CustomDatasetType,
+    file_format: FileFormat,
+) -> Job:
+    return Job(
+        job_id=job_id,
+        dataset=dataset,
+        model=model,
+        dataset_type=dataset_type,
+        file_format=file_format,
+    )
 
 
 def start_tuning_container(job: Job):
-    logger.info('STARTING THE TUNING CONTAINER')
+    logger.info("=" * 80)
+    logger.info("STARTING THE TUNING CONTAINER")
+    logger.info("=" * 80)
+
     config_filename = f"{job.job_id}.yml"
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
 
-
-    config = _load_and_modify_config(job.dataset, job.model, job.dataset_type, job.file_format, job.job_id)
+    config = _load_and_modify_config(
+        job.dataset, job.model, job.dataset_type, job.file_format, job.job_id
+    )
     save_config(config, config_path)
 
     logger.info(config)
 
-    logger.info(os.path.basename(job.dataset) if job.file_format != FileFormat.HF else "")
+    logger.info(
+        os.path.basename(job.dataset) if job.file_format != FileFormat.HF else ""
+    )
 
-    # Dataclass instead - or at least use constats here (NO MAGIC STRINGS :P)
-    docker_env = {
-        "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
-        "WANDB_TOKEN": cst.WANDB_TOKEN,
-        "JOB_ID": job.job_id,
-        "DATASET_TYPE": job.dataset_type.value if isinstance(job.dataset_type, DatasetType) else "custom",
-        "DATASET_FILENAME": os.path.basename(job.dataset) if job.file_format != FileFormat.HF else "",
-    }
+    docker_env = DockerEnvironment(
+        huggingface_token=cst.HUGGINGFACE_TOKEN,
+        wandb_token=cst.WANDB_TOKEN,
+        job_id=job.job_id,
+        dataset_type=job.dataset_type.value
+        if isinstance(job.dataset_type, DatasetType)
+        else cst.CUSTOM_DATASET_TYPE,
+        dataset_filename=os.path.basename(job.dataset)
+        if job.file_format != FileFormat.HF
+        else "",
+    ).to_dict()
     logger.info(f"Docker environment: {docker_env}")
 
     try:
@@ -95,7 +139,9 @@ def start_tuning_container(job: Job):
             environment=docker_env,
             volumes=volume_bindings,
             runtime="nvidia",
-            device_requests=[docker.types.DeviceRequest(count=1, capabilities=[["gpu"]])],
+            device_requests=[
+                docker.types.DeviceRequest(count=1, capabilities=[["gpu"]])
+            ],
             detach=True,
             tty=True,
         )
@@ -106,23 +152,22 @@ def start_tuning_container(job: Job):
         result = container.wait()
 
         if result["StatusCode"] != 0:
-            raise DockerException(f"Container exited with non-zero status code: {result['StatusCode']}")
+            raise DockerException(
+                f"Container exited with non-zero status code: {result['StatusCode']}"
+            )
 
     except Exception as e:
         logger.error(f"Error processing job: {str(e)}")
         raise
 
     finally:
-        repo = config.get('hub_model_id', None)
+        repo = config.get("hub_model_id", None)
         if repo:
-                hf_api = HfApi(token=cst.HUGGINGFACE_TOKEN)
-                hf_api.update_repo_visibility(
-                    repo_id=repo,
-                    private=False,
-                    token=cst.HUGGINGFACE_TOKEN
-                )
-                logger.info(f"Successfully made repository {repo} public")            # set the repo id to be public
-
+            hf_api = HfApi(token=cst.HUGGINGFACE_TOKEN)
+            hf_api.update_repo_visibility(
+                repo_id=repo, private=False, token=cst.HUGGINGFACE_TOKEN
+            )
+            logger.info(f"Successfully made repository {repo} public")
 
         if "container" in locals():
             container.remove(force=True)

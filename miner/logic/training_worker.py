@@ -15,7 +15,10 @@ logger = get_logger(__name__)
 
 class TrainingWorker:
     def __init__(self):
+        logger.info("=" * 80)
         logger.info("STARTING A TRAINING WORKER")
+        logger.info("=" * 80)
+
         self.job_queue: queue.Queue[Job] = queue.Queue()
         self.job_store: dict[str, Job] = {}
         self.thread = threading.Thread(target=self._worker, daemon=True)
@@ -43,10 +46,9 @@ class TrainingWorker:
 
     def get_status(self, job_id: UUID) -> JobStatus:
         job = self.job_store.get(str(job_id))
-        # this doesn't match the typehint
-        return job.status if job else "Not Found"
+
+        return job.status if job else JobStatus.NOT_FOUND
 
     def shutdown(self):
-#        self.job_queue.put(None)
         self.thread.join()
         self.docker_client.close()
