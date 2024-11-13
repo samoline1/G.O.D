@@ -209,7 +209,7 @@ def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerR
     for res in miner_results:
         if res.is_finetune and res.score is not None and not np.isnan(res.score):
             original_score = res.score
-            res.score = max(float(res.score / geometric_mean), cts.MAX_TASK_SCORE)
+            res.score = min(float(res.score / geometric_mean), cts.MAX_TASK_SCORE)
             logger.info(f"Miner {res.hotkey}: {original_score:.4f} -> {res.score:.4f}")
         else:
             res.score = 0.0
