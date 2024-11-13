@@ -469,7 +469,8 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     task_results = add_raw_scores_to_miner_results(task_results)
     task_results = adjust_miner_scores_to_be_relative_to_other_comps(task_results)
     await _update_scores(task, task_results, config.psql_db)
-    all_scores_zero = all(result.score == 0.0 for result in task_results)
+    #all_scores_zero = all(result.score == 0.0 for result in task_results)
+    all_scores_zero = False  #for now we just let them fail, need to come back to decide whether we wanna restart the job
     if all_scores_zero:
         task.status = TaskStatus.DATA_READY
         logger.info(f"All scores are zero for task {task.task_id}, setting status to DATA_READY to find new miner since we are going to try again.")
