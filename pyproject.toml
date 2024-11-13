@@ -21,7 +21,6 @@ dependencies = [
     "loguru==0.7.2",
     "python-dotenv==1.0.1",
     "redis==5.0.8",
-    "scipy==1.10.1",
     "bittensor==8.2.0",
     "scipy",
     "numpy",
