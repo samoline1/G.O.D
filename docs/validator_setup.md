@@ -24,10 +24,10 @@ pre-commit install
 
 2. Create and set up the `.vali.env` file:
 
-You'll need to setup a MINIO account and add in your access key, endpoint and security key below and also a huggingface token in order to access gated models (such as Llama3.2)
+You'll need to setup a [min.io](https://min.io/) account (s3 bucket to store the data for miners) and add in your access key, endpoint and security key below.
 
-To generate the synthetic data you'll also need to either setup your own LLM server following the instructions (TBA later) or use CorcelAPI and add
-your corcel token below:
+To generate the synthetic data you'll also need to either setup your own LLM server and give this to the create_config as the gpu_ip or you can leave this blank and instead use chutes-api, you can grab a token from use and add
+your token when prompted for 'api_token' when running the next step:
 
 ```bash
 python3 -m core.create_config
@@ -36,7 +36,7 @@ python3 -m core.create_config
 Link to fiber
 
 ```base
-fiber-post-ip --netuid 176 --subtensor.network test --external_port 9001 --wallet.name default --wallet.hotkey default --external_ip [YOUR-IP]
+fiber-post-ip --netuid [NET_ID] --subtensor.network test --external_port 9001 --wallet.name default --wallet.hotkey default --external_ip [YOUR-IP]
 ```
 3. Run service dependencies for local development:
 
