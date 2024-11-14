@@ -35,7 +35,7 @@ async def _run_task_prep(task: Task) -> Task:
     columns_to_sample = [i for i in [task.system, task.instruction, task.input, task.output] if i is not None]
     test_data, synth_data, train_data = await prepare_task(dataset_name=task.ds_id, columns_to_sample=columns_to_sample)
     task.hf_training_repo = train_data
-    task.status = TaskStatus.DATA_READY
+    task.status = TaskStatus.LOOKING_FOR_NODES
     task.synthetic_data = synth_data
     task.test_data = test_data
     logger.info('Data creation is complete - now time to find some miners')
@@ -85,7 +85,8 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
             f"Not enough miners accepted the task. We only have {len(selected_miners)} but we "
             f"need at least {cst.MINIMUM_MINER_POOL}"
         )
-        task.status = TaskStatus.FAILURE
+        task = attempt_delay_task(task)
+        await tasks_sql.update_task(task, config.psql_db)
         return task
 
     task.assigned_miners = selected_miners
@@ -126,18 +127,17 @@ async def assign_miners(task: Task, config: Config):
         await tasks_sql.update_task(task, config.psql_db)
 
 def attempt_delay_task(task: Task):
-        logger.info("ATTEMPTING TO DELAY THE TASK")
-        assert task.created_timestamp  is not None and task.delay_timestamp is not None, "We wanted to check delay vs created timestamps but they are missing"
-        if task.created_timestamp < task.delay_timestamp:
-            task.status = TaskStatus.FAILURE
-        else:
-            logger.info("Adding in a delay of 1 hour for now since no miners accepted the task")
-            task.delay_timestamp = task.delay_timestamp + datetime.timedelta(hours=1)
-        return task
+         assert task.created_timestamp  is not None and task.delay_timestamp is not None, "We wanted to check delay vs created timestamps but they are missing"
+         if task.created_timestamp + datetime.timedelta(hours=cst.MAX_TIME_DELAY_TO_FIND_MINERS) < task.delay_timestamp:
+            task.status = TaskStatus.FAILURE_FINDING_NODES
+         else:
+            logger.info("Adding in a delay of 15 minutes for now since no miners accepted the task")
+            task.delay_timestamp = task.delay_timestamp + datetime.timedelta(minutes=15)
+         return task
 
 
 async def _find_miners_for_task(config: Config):
-    pending_tasks = await tasks_sql.get_tasks_with_status(status=TaskStatus.DATA_READY, psql_db=config.psql_db)
+    pending_tasks = await tasks_sql.get_tasks_with_status(status=TaskStatus.LOOKING_FOR_NODES, psql_db=config.psql_db)
     await asyncio.gather(*[assign_miners(task, config) for task in pending_tasks[: cst.MAX_CONCURRENT_MINER_ASSIGNMENTS]])
 
 
@@ -148,7 +148,7 @@ async def prep_task(task: Task, config: Config):
         await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(f"Error prepping task {task.task_id}: {e}", exc_info=True)
-        task.status = TaskStatus.FAILURE
+        task.status = TaskStatus.PREP_TASK_FAILURE
         await tasks_sql.update_task(task, config.psql_db)
 
 async def _process_selected_tasks(config: Config):
@@ -156,7 +156,6 @@ async def _process_selected_tasks(config: Config):
     await asyncio.gather(*[prep_task(task, config) for task in miner_selected_tasks[: cst.MAX_CONCURRENT_TASK_PREPS]])
 
 async def _start_training_task(task: Task, config: Config) -> None:
-    try:
         task.started_timestamp = datetime.datetime.now()
         task.end_timestamp = task.started_timestamp + datetime.timedelta(hours=task.hours_to_complete)
         assigned_miners = await tasks_sql.get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
@@ -165,10 +164,6 @@ async def _start_training_task(task: Task, config: Config) -> None:
         task.status = TaskStatus.TRAINING
         await tasks_sql.update_task(task, config.psql_db)
         logger.info('SUCCESS IN STARTING TRAINING')
-    except Exception as e:
-        logger.error(f"Error starting training for task {task.task_id}: {e}", exc_info=True)
-        task.status = TaskStatus.FAILURE
-        await tasks_sql.update_task(task, config.psql_db)
 
 
 async def _process_ready_to_train_tasks(config: Config):
