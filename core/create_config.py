@@ -1,15 +1,16 @@
 import argparse
-from typing import Any, Dict
+from typing import Any
+from typing import Dict
 
-from core.models.config_models import MinerConfig, ValidatorConfig
-from core.validators import InputValidators, validate_input
+from core.models.config_models import MinerConfig
+from core.models.config_models import ValidatorConfig
+from core.validators import InputValidators
+from core.validators import validate_input
 
 
 def parse_bool_input(prompt: str, default: bool = False) -> bool:
     result = validate_input(
-        f"{prompt} (y/n): (default: {'y' if default else 'n'}) ",
-        InputValidators.yes_no,
-        default="y" if default else "n"
+        f"{prompt} (y/n): (default: {'y' if default else 'n'}) ", InputValidators.yes_no, default="y" if default else "n"
     )
     return result.lower().startswith("y")
 
@@ -32,16 +33,18 @@ def generate_miner_config(dev: bool = False) -> Dict[str, Any]:
         hotkey_name=input("🔑 Enter hotkey name (default: default): ") or "default",
         wandb_token=input("📊 Enter wandb token (default: default): ") or "default",
         huggingface_token=input("🤗 Enter huggingface token (default: default): ") or "default",
+        huggingface_username=input("🤗 Enter huggingface username or organization name:"),
         subtensor_network=network,
         subtensor_address=address,
         refresh_nodes=True,
         netuid=176 if network == "test" else 19,
         env="dev" if dev else "prod",
         min_stake_threshold=input(f"Enter MIN_STAKE_THRESHOLD (default: {'0' if network == 'test' else '1000'}): ")
-            or ("0" if network == "test" else "1000")
+        or ("0" if network == "test" else "1000"),
     )
 
     return vars(config)
+
 
 def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
     print("\n🎯 Let's set up your Validator! 🚀\n")
@@ -71,14 +74,14 @@ def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
         open_ai_key=input("Enter OpenAI key if you would rather use this for synth: ") or None,
         api_key=input("Enter Parachutes API if you want to use that for synth generation: ") or None,
         set_metagraph_weights=parse_bool_input(
-            "Set metagraph weights when updated gets really high to not dereg?",
-            default=False
+            "Set metagraph weights when updated gets really high to not dereg?", default=False
         ),
         refresh_nodes=parse_bool_input("Refresh nodes?", default=True) if dev else True,
-        localhost=parse_bool_input("Use localhost?", default=True) if dev else False
+        localhost=parse_bool_input("Use localhost?", default=True) if dev else False,
     )
 
     return vars(config)
+
 
 def generate_config(dev: bool = False, miner: bool = False) -> dict[str, Any]:
     if miner:
@@ -94,9 +97,10 @@ def write_config_to_file(config: dict[str, Any], env: str) -> None:
             if value is not None:
                 f.write(f"{key.upper()}={value}\n")
 
+
 if __name__ == "__main__":
     args = parse_args()
-    print("\n✨ Welcome to the Config Enviroment Generator! ✨\n")
+    print("\n✨ Welcome to the Config Environment Generator! ✨\n")
 
     if args.miner:
         config = generate_config(miner=True)
