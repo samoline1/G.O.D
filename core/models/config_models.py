@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+
 @dataclass
 class BaseConfig:
     wallet_name: str
@@ -11,12 +12,14 @@ class BaseConfig:
     env: str
     refresh_nodes: bool
 
+
 @dataclass
 class MinerConfig(BaseConfig):
     wandb_token: str
     huggingface_token: str
     min_stake_threshold: str
     is_validator: bool = False
+
 
 @dataclass
 class ValidatorConfig(BaseConfig):

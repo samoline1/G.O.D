@@ -9,9 +9,7 @@ description = "Validatoer and Miner for tuning"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-authors = [
-    { name = "namoray", email = "namoray@rayonlabs.ai" },
-]
+authors = [{ name = "namoray", email = "namoray@rayonlabs.ai" }]
 dependencies = [
     "fastapi>=0.110.3,<0.113.0",
     "uvicorn>=0.30.5,<0.32.0",
@@ -21,22 +19,22 @@ dependencies = [
     "loguru==0.7.2",
     "python-dotenv==1.0.1",
     "redis==5.0.8",
-    "bittensor,
-    "scipy",
-    "numpy",
-    "datasets",
-    "docker",
-    "tenacity",
-    "pandas",
-    "minio",
-    "sqlalchemy",
-    "transformers"
+    "bittensor==8.3.0",
+    "scipy>=1.10.0",
+    "numpy>=2.0.0",
+    "datasets==2.14.4",
+    "docker==7.1.0",
+    "tenacity==9.0.0",
+    "pandas==2.0.3",
+    "minio==7.2.10",
+    "sqlalchemy==2.0.36",
+    "transformers==4.46.2",
 ]
 
 [project.optional-dependencies]
 dev = [
     "asgi-lifespan==2.1.0",
-    "bittensor==8.2.0",
+    "bittensor==8.3.0",
     "freezegun>=1.5.1",
     "ipython==8.28.0",
     "pre-commit==4.0.1",
@@ -51,14 +49,10 @@ dev = [
 packages = ["src"]
 
 [tool.hatch.build]
-include = [
-    "src/**/*.py",
-]
+include = ["src/**/*.py"]
 
 [tool.hatch.build.targets.sdist]
-include = [
-    "fiber",
-]
+include = ["fiber"]
 
 [tool.ruff]
 line-length = 130
@@ -69,7 +63,7 @@ ignore = ["E402"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2
-force-single-line   = true
+force-single-line = true
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -87,7 +81,7 @@ extend-ignore-identifiers-re = [
 ]
 
 [tool.pytest.ini_options]
-addopts      = "--random-order --cov=src --cov-report=term-missing --cov-report=xml"
+addopts = "--random-order --cov=src --cov-report=term-missing --cov-report=xml"
 asyncio_mode = "auto"
 
 

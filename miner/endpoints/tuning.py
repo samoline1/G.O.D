@@ -1,11 +1,19 @@
 import os
-from urllib.parse import urlparse
-import aiohttp
+from datetime import datetime
+from datetime import timedelta
+from functools import partial
+
 import yaml
 from fastapi import Depends
-from fastapi import Request
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
+from fiber.logging_utils import get_logger
+from fiber.miner.core.configuration import Config
+from fiber.miner.dependencies import blacklist_low_stake
+from fiber.miner.dependencies import get_config
+from fiber.miner.dependencies import verify_request
+from fiber.miner.security.encryption import decrypt_general_payload
+from pydantic import ValidationError
 
 import core.constants as cst
 from core.models.payload_models import MinerTaskRequst
@@ -18,13 +26,6 @@ from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
 from miner.logic.job_handler import create_job
 
-from fastapi import Depends, APIRouter
-from functools import partial
-from fiber.miner.security.encryption import decrypt_general_payload
-from fiber.miner.dependencies import blacklist_low_stake, get_config, verify_request
-from fiber.logging_utils import get_logger
-from fiber.miner.core.configuration import Config
-from datetime import datetime, timedelta
 
 logger = get_logger(__name__)
 
@@ -40,9 +41,6 @@ async def tune_model(
 
     finish_time = datetime.now() + timedelta(hours=decrypted_payload.hours_to_complete)
     logger.info(f"Job received is {decrypted_payload}")
-
-    if not decrypted_payload.dataset or not decrypted_payload.model:
-        raise HTTPException(status_code=400, detail="Dataset and model are required.")
 
     try:
         logger.info(decrypted_payload.file_format)
@@ -68,7 +66,8 @@ async def tune_model(
     return {"message": "Training job enqueued.", "task_id": job.job_id}
 
 
-# I think we need to be v careful that it's validators that are asking for this, is there a way to ensure we only reply to validators?
+# I think we need to be v careful that it's validators that are asking for this,
+# is there a way to ensure we only reply to validators?
 async def get_latest_model_submission(
     task_id: str,
 ) -> str:
@@ -79,9 +78,16 @@ async def get_latest_model_submission(
             config_data = yaml.safe_load(file)
             return config_data.get("hub_model_id", None)
 
+    except FileNotFoundError as e:
+        logger.error(f"No submission found for task {task_id}: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"No model submission found for task {task_id}")
     except Exception as e:
         logger.error(f"Error retrieving latest model submission for task {task_id}: {str(e)}")
-        raise HTTPException(status_code=404, detail=f"No model submission found for task {task_id}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving latest model submission: {str(e)}",
+        )
+
 
 async def task_offer(
     decrypted_payload: MinerTaskRequst = Depends(partial(decrypt_general_payload, MinerTaskRequst)),
@@ -100,7 +106,7 @@ async def task_offer(
         else:
             return MinerTaskResponse(
                 message=f"Currently busy with another job until {finish_time.isoformat()}",
-                accepted=False
+                accepted=False,
             )
 
     except ValidationError as e:
@@ -111,13 +117,17 @@ async def task_offer(
         logger.error(f"Error type: {type(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing task offer: {str(e)}")
 
+
 def factory_router() -> APIRouter:
     router = APIRouter()
-    router.add_api_route("/task_offer/",
-                         task_offer,
-                         tags=["Subnet"], methods=["POST"],
-                         response_model=MinerTaskResponse,
-                         dependencies=[Depends(blacklist_low_stake), Depends(verify_request)])
+    router.add_api_route(
+        "/task_offer/",
+        task_offer,
+        tags=["Subnet"],
+        methods=["POST"],
+        response_model=MinerTaskResponse,
+        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
+    )
     router.add_api_route(
         "/get_latest_model_submission/{task_id}",
         get_latest_model_submission,
@@ -126,7 +136,7 @@ def factory_router() -> APIRouter:
         response_model=str,
         summary="Get Latest Model Submission",
         description="Retrieve the latest model submission for a given task ID",
-        dependencies=[Depends(blacklist_low_stake)]
+        dependencies=[Depends(blacklist_low_stake)],
     )
     router.add_api_route(
         "/start_training/",
@@ -134,6 +144,6 @@ def factory_router() -> APIRouter:
         tags=["Subnet"],
         methods=["POST"],
         response_model=TrainResponse,
-        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)]
+        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
     )
     return router
