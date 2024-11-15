@@ -62,14 +62,14 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
     if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
         config["special_tokens"] = {"pad_token": tokenizer.eos_token}
 
-    config["huggingface_username"] = config.get("HUGGINGFACE_USERNAME")
-    if not config["huggingface_username"]:
-        raise ValueError("Environment variable HUGGINGFACE_USERNAME is not set. Make sure to run create_config.py.")
+    if not config.get("hub_repo"):
+        raise ValueError("hub_repo is not set in the config.")
+
 
     config["base_model"] = model
     config["wandb_runid"] = job_id
     config["wandb_name"] = job_id
-    config["hub_model_id"] = f"{config['huggingface_username']}/{job_id}"
+    config["hub_model_id"] = f"{config.get('hub_repo')}/{job_id}"
     return config
 
 

@@ -33,7 +33,6 @@ def generate_miner_config(dev: bool = False) -> Dict[str, Any]:
         hotkey_name=input("🔑 Enter hotkey name (default: default): ") or "default",
         wandb_token=input("📊 Enter wandb token (default: default): ") or "default",
         huggingface_token=input("🤗 Enter huggingface token (default: default): ") or "default",
-        huggingface_username=input("🤗 Enter huggingface username or organization name:"),
         subtensor_network=network,
         subtensor_address=address,
         refresh_nodes=True,

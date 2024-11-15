@@ -48,12 +48,13 @@ flash_attention: false
 s2_attention:
 
 wandb_project: Public_TuningSN
-wandb_entity: rayonlabs-rayon-labs
+wandb_entity:
 wandb_mode: online
 wandb_run: miner_id_24
 wandb_runid: default
 
 hub_model_id:
+hub_repo:
 hub_strategy: checkpoint
 hub_token:
 

@@ -17,7 +17,6 @@ class BaseConfig:
 class MinerConfig(BaseConfig):
     wandb_token: str
     huggingface_token: str
-    huggingface_username: str
     min_stake_threshold: str
     is_validator: bool = False
 
