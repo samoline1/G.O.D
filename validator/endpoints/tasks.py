@@ -198,7 +198,7 @@ def factory_router() -> APIRouter:
 
     router.add_api_route(
         "/v1/tasks/results/{task_id}",
-        get_tasks,
+        get_task_results,
         response_model=TaskResultResponse,
         tags=["Training"],
         methods=["GET"],
