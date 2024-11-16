@@ -26,7 +26,7 @@ This guide will walk you through the process of setting up and running a miner f
 
 2. Set up your wallet:
 
-Make sure you have bittensor installed to the lastest version then: 
+Make sure you have bittensor installed to the latest version then:
 
 ```bash
 btcli wallet new-coldkey
@@ -60,7 +60,7 @@ python3 -m core.create_config --miner
 ```
 
 5. Update the configuration:
-    - Update your `entity_id` in the wandb section of the config to be your wandb username+org_name [here](core/config/base.yml)
+    - Update your `wandb_entity` in the wandb section of the config to be your wandb username+org_name [here](../core/config/base.yml)
     - In the same config, change the `hub_repo' to be your huggingface repo that you want the saves (under job id) to be autosaved to
 
 6. Start the miner service:
