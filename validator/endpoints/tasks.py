@@ -123,7 +123,8 @@ async def get_task_results(
         try:
             logger.info('COMING IN ')
             scores = await submissions_and_scoring_sql.get_all_quality_scores_for_task(task_id, config.psql_db)
-            miner_results = [MinerTaskResponse(**res)  for res in scores]
+            logger.info(scores)
+            miner_results = [MinerTaskResponse(**dict(res))  for res in scores]
         except Exception as e:
             logger.info(e)
             raise HTTPException(status_code=404, detail="Task not found.")
