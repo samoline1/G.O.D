@@ -18,9 +18,10 @@ from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_api_key
 from validator.core.dependencies import get_config
-from validator.core.models import MinerResults, Task
+from validator.core.models import LeaderboardRow, MinerResults, Task
 from validator.db.sql import submissions_and_scoring, tasks as task_sql
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
+from validator.db.sql.nodes import get_all_nodes
 
 
 logger = get_logger(__name__)
@@ -143,9 +144,6 @@ async def get_node_results(
 
 
 
-
-
-
 async def get_task_status(
     task_id: UUID,
     config: Config = Depends(get_config),
@@ -186,6 +184,32 @@ async def get_task_status(
         hours_to_complete=task.hours_to_complete,
         winning_submission=winning_submission
     )
+
+async def get_leaderboard(
+    config: Config = Depends(get_config),
+    api_key: str = Depends(get_api_key),
+) -> List[LeaderboardRow]:
+    nodes = await get_all_nodes(config.psql_db)
+    leaderboard_rows = []
+
+    for node in nodes:
+        try:
+            scores = await submissions_and_scoring_sql.get_all_scores_for_hotkey(node.hotkey, config.psql_db)
+            if scores:
+                quality_scores = [score['quality_score'] for score in scores]
+                leaderboard_rows.append(
+                    LeaderboardRow(
+                        hotkey=node.hotkey,
+                        average_quality_score=mean(quality_scores),
+                        sum_quality_score=sum(quality_scores),
+                        num_games_entered=len(quality_scores)
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Error processing scores for hotkey {node.hotkey}: {e}")
+            continue
+    leaderboard_rows.sort(key=lambda x: x.average_quality_score, reverse=True)
+    return leaderboard_rows
 
 def factory_router() -> APIRouter:
     router = APIRouter()
@@ -236,6 +260,12 @@ def factory_router() -> APIRouter:
         tags=["Training"],
         methods=["GET"],
     )
-
+    router.add_api_route(
+        "/v1/tasks/leaderboard",
+        get_leaderboard,
+        response_model=list[LeaderboardRow],
+        tags=["Training"],
+        methods=["GET"],
+    )
     return router
 

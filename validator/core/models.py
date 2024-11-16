@@ -51,7 +51,6 @@ class TaskResults(BaseModel):
     task: Task
     node_scores: list[TaskNode]
 
-
 class NodeAggregationResult(BaseModel):
     task_work_scores: List[float] = Field(default_factory=list)
     average_raw_score: Optional[float] = Field(default=0.0)
@@ -81,4 +80,8 @@ class MinerResults(BaseModel):
     score: Optional[float] = 0.0
     submission: Optional[Submission] = None
 
-
+class LeaderboardRow(BaseModel):
+    hotkey: str
+    average_quality_score: float
+    sum_quality_score: float
+    num_games_entered: int
