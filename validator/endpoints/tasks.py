@@ -3,6 +3,7 @@ from datetime import timedelta
 from logging import log
 from typing import List
 from uuid import UUID
+from statistics import mean
 
 from fastapi import APIRouter
 from fastapi import Depends
