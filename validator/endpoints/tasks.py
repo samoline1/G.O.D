@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from fastapi import Response
 from fiber.logging_utils import get_logger
 
-from core.models.payload_models import NewTaskRequest
+from core.models.payload_models import MinerTaskResponse, NewTaskRequest, TaskResultResponse
 from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import TaskStatusResponse
 from core.models.payload_models import WinningSubmission
@@ -19,6 +19,7 @@ from validator.core.dependencies import get_api_key
 from validator.core.dependencies import get_config
 from validator.core.models import Task
 from validator.db.sql import tasks as task_sql
+from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
 
 
 logger = get_logger(__name__)
@@ -111,6 +112,19 @@ async def create_task(
 
     logger.info(task.task_id)
     return NewTaskResponse(success=True, task_id=task.task_id)
+
+
+async def get_task_results(
+        task_id: UUID,
+        config: Config = Depends(get_config),
+        api_key: str = Depends(get_api_key),
+        ) -> TaskResultResponse:
+        try:
+            scores = await submissions_and_scoring_sql.get_all_quality_scores_for_task(task_id, config.psql_db)
+            miner_results = [MinerTaskResponse(**res)  for res in scores]
+        except:
+            raise HTTPException(status_code=404, detail="Task not found.")
+        return TaskResultResponse(success=True, id=task_id, miner_results=miner_results)
 
 
 async def get_task_status(

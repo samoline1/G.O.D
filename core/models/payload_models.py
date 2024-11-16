@@ -105,11 +105,22 @@ class NewTaskResponse(BaseModel):
     success: bool
     task_id: UUID
 
-
 class WinningSubmission(BaseModel):
     hotkey: str
     score: float
     model_repo: str
+
+
+class MinerTaskResponse(BaseModel):
+    hotkey: str
+    quality_score: float
+
+class TaskResultResponse(BaseModel):
+    success: bool
+    id: UUID
+    miner_results: Optional[list[MinerTaskResponse]]
+
+
 
 class TaskStatusResponse(BaseModel):
     success: bool
