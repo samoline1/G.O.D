@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from fastapi import Response
 from fiber.logging_utils import get_logger
 
-from core.models.payload_models import MinerTaskResponse, NewTaskRequest, TaskResultResponse
+from core.models.payload_models import AllOfNodeResults, MinerTaskResult, NewTaskRequest, TaskMinerResult, TaskResultResponse
 from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import TaskStatusResponse
 from core.models.payload_models import WinningSubmission
@@ -18,8 +18,8 @@ from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_api_key
 from validator.core.dependencies import get_config
-from validator.core.models import Task
-from validator.db.sql import tasks as task_sql
+from validator.core.models import MinerResults, Task
+from validator.db.sql import submissions_and_scoring, tasks as task_sql
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
 
 
@@ -122,11 +122,27 @@ async def get_task_results(
         ) -> TaskResultResponse:
         try:
             scores = await submissions_and_scoring_sql.get_all_quality_scores_for_task(task_id, config.psql_db)
-            miner_results = [MinerTaskResponse(hotkey=hotkey, quality_score=scores[hotkey])  for hotkey in scores]
+            miner_results = [MinerTaskResult(hotkey=hotkey, quality_score=scores[hotkey])  for hotkey in scores]
         except Exception as e:
             logger.info(e)
             raise HTTPException(status_code=404, detail="Task not found.")
         return TaskResultResponse(success=True, id=task_id, miner_results=miner_results)
+
+
+async def get_node_results(
+        hotkey: str,
+        config: Config = Depends(get_config),
+        api_key: str = Depends(get_api_key),
+        ) -> AllOfNodeResults:
+        try:
+            miner_results = [TaskMinerResult(**result) for result in submissions_and_scoring_sql.get_all_scores_for_hotkey(hotkey, config.psql_db)]
+        except:
+            raise HTTPException(status_code=404, detail="Hotkey not found")
+        return AllOfNodeResults(success=True, hotkey=hotkey, task_results=miner_results)
+
+
+
+
 
 
 async def get_task_status(
@@ -205,6 +221,13 @@ def factory_router() -> APIRouter:
         methods=["GET"],
     )
 
+    router.add_api_route(
+        "/v1/tasks/node_results/{hotkey}",
+        get_node_results,
+        response_model=AllOfNodeResults,
+        tags=["Training"], ## ? why do we have these tags everywhere TT?
+        methods=["GET"],
+    )
     router.add_api_route(
         "/v1/tasks",
         get_tasks,

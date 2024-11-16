@@ -159,6 +159,24 @@ async def set_multiple_task_node_quality_scores(
             )
 
 
+async def get_all_scores_for_hotkey(hotkey: str, psql_db: PSQLDB) -> List[Dict]:
+    """
+    Get all quality scores for a specific hotkey across all tasks.
+    """
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT
+                {cst.TASK_ID},
+                {cst.TASK_NODE_QUALITY_SCORE} as quality_score,
+            FROM {cst.TASK_NODES_TABLE}
+            WHERE {cst.HOTKEY} = $1
+            AND {cst.NETUID} = $2
+        """
+        rows = await connection.fetch(query, hotkey, NETUID)
+        return [dict(row) for row in rows]
+
+
 async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> List[TaskResults]:
     """
     Get aggregate scores for all completed tasks since the given start time.

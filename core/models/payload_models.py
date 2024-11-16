@@ -64,7 +64,7 @@ class EvaluationResult(BaseModel):
     perplexity: float
 
 
-class MinerTaskResponse(BaseModel):
+class MinerTaskResult(BaseModel):
     message: str
     accepted: bool
 
@@ -121,14 +121,25 @@ class WinningSubmission(BaseModel):
     model_repo: str
 
 
-class MinerTaskResponse(BaseModel):
+class MinerTaskResult(BaseModel):
     hotkey: str
     quality_score: float
+
+
+class TaskMinerResult(BaseModel):
+    task_id: UUID
+    quality_score: float
+
+class AllMinerResult(BaseModel):
+    success: bool
+    hotkey: str
+    task_results: Optional[list[TaskMinerResult]]
+
 
 class TaskResultResponse(BaseModel):
     success: bool
     id: UUID
-    miner_results: Optional[list[MinerTaskResponse]]
+    miner_results: Optional[list[MinerTaskResult]]
 
 
 
