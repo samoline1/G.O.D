@@ -135,7 +135,7 @@ async def get_node_results(
         api_key: str = Depends(get_api_key),
         ) -> AllOfNodeResults:
         try:
-            miner_results = [TaskMinerResult(**result) for result in submissions_and_scoring_sql.get_all_scores_for_hotkey(hotkey, config.psql_db)]
+            miner_results = [TaskMinerResult(**result) for result in await submissions_and_scoring_sql.get_all_scores_for_hotkey(hotkey, config.psql_db)]
         except:
             raise HTTPException(status_code=404, detail="Hotkey not found")
         return AllOfNodeResults(success=True, hotkey=hotkey, task_results=miner_results)
@@ -237,3 +237,4 @@ def factory_router() -> APIRouter:
     )
 
     return router
+
