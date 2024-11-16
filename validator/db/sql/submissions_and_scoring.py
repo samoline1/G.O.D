@@ -168,7 +168,7 @@ async def get_all_scores_for_hotkey(hotkey: str, psql_db: PSQLDB) -> List[Dict]:
         query = f"""
             SELECT
                 {cst.TASK_ID},
-                {cst.TASK_NODE_QUALITY_SCORE} as quality_score,
+                {cst.TASK_NODE_QUALITY_SCORE} as quality_score
             FROM {cst.TASK_NODES_TABLE}
             WHERE {cst.HOTKEY} = $1
             AND {cst.NETUID} = $2
