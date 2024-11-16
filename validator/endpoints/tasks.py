@@ -193,6 +193,7 @@ async def get_leaderboard(
     leaderboard_rows = []
 
     for node in nodes:
+        logger.info(f'Trying node {node}')
         try:
             scores = await submissions_and_scoring_sql.get_all_scores_for_hotkey(node.hotkey, config.psql_db)
             if scores:
