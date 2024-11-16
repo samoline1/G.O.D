@@ -262,7 +262,7 @@ def factory_router() -> APIRouter:
         methods=["GET"],
     )
     router.add_api_route(
-        "/v1/tasks/leaderboard",
+        "/v1/leaderboard",
         get_leaderboard,
         response_model=list[LeaderboardRow],
         tags=["Training"],
