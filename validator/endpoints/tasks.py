@@ -121,10 +121,8 @@ async def get_task_results(
         api_key: str = Depends(get_api_key),
         ) -> TaskResultResponse:
         try:
-            logger.info('COMING IN ')
             scores = await submissions_and_scoring_sql.get_all_quality_scores_for_task(task_id, config.psql_db)
-            logger.info(scores)
-            miner_results = [MinerTaskResponse(**dict(res))  for res in scores]
+            miner_results = [MinerTaskResponse(hotkey=hotkey, quality_score=scores[hotkey])  for hotkey in scores]
         except Exception as e:
             logger.info(e)
             raise HTTPException(status_code=404, detail="Task not found.")
