@@ -136,7 +136,8 @@ async def get_node_results(
         ) -> AllOfNodeResults:
         try:
             miner_results = [TaskMinerResult(**result) for result in await submissions_and_scoring_sql.get_all_scores_for_hotkey(hotkey, config.psql_db)]
-        except:
+        except Exception as e:
+            logger.info(e)
             raise HTTPException(status_code=404, detail="Hotkey not found")
         return AllOfNodeResults(success=True, hotkey=hotkey, task_results=miner_results)
 
