@@ -120,6 +120,7 @@ async def get_task_results(
         api_key: str = Depends(get_api_key),
         ) -> TaskResultResponse:
         try:
+            logger.info('COMING IN ')
             scores = await submissions_and_scoring_sql.get_all_quality_scores_for_task(task_id, config.psql_db)
             miner_results = [MinerTaskResponse(**res)  for res in scores]
         except:
@@ -193,6 +194,14 @@ def factory_router() -> APIRouter:
         response_model=NewTaskResponse,
         tags=["Training"],
         methods=["DELETE"],
+    )
+
+    router.add_api_route(
+        "/v1/tasks/results/{task_id}",
+        get_tasks,
+        response_model=TaskResultResponse,
+        tags=["Training"],
+        methods=["GET"],
     )
 
     router.add_api_route(
