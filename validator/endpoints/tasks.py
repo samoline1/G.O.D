@@ -189,7 +189,7 @@ async def get_task_status(
 async def get_leaderboard(
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
-) -> List[NodeStats]:
+) -> List[LeaderboardRow]:
     nodes = await get_all_nodes(config.psql_db)
     leaderboard_rows = []
 
@@ -197,7 +197,7 @@ async def get_leaderboard(
         logger.info(f'Trying node {node}')
         try:
             node_stats = await submissions_and_scoring_sql.get_all_node_stats(node.hotkey, config.psql_db)
-            leaderboard_rows.append(node_stats)
+            leaderboard_rows.append(LeaderboardRow(hotkey=node.hotkey, stats=node_stats))
         except Exception as e:
             logger.error(f"Error processing scores for hotkey {node.hotkey}: {e}")
             continue
