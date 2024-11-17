@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import asyncio
 from typing import List
 
 from datasets import Dataset
@@ -66,9 +67,14 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
     return synthetic_data
 
 
-def change_to_json_format(dataset: Dataset, columns: List[str]):
-    logger.info(f"HERE  ARE THE COLUMNS {columns}")
-    return [{col: row[col] for col in columns} for row in dataset]
+async def change_to_json_format_async(dataset: Dataset, columns: List[str], batch_size: int = 1000):
+    result = []
+    for i in range(0, len(dataset), batch_size):
+        batch = dataset[i:i + batch_size]
+        batch_json = [{col: row[col] for col in columns} for row in batch]
+        result.extend(batch_json)
+        await asyncio.sleep(0)  
+    return result
 
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
@@ -93,9 +99,9 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple
         logger.info("Skipping synthetic data generation")
 
     # this looks ugly
-    train_data_json = change_to_json_format(train_dataset, columns_to_sample)
-    test_data_json = change_to_json_format(test_dataset, columns_to_sample)
-    synthetic_data_json = change_to_json_format(synthetic_data, columns_to_sample) if synthetic_data else []
+    train_data_json = await change_to_json_format_async(train_dataset, columns_to_sample)
+    test_data_json = await change_to_json_format_async(test_dataset, columns_to_sample)
+    synthetic_data_json = await change_to_json_format_async(synthetic_data, columns_to_sample) if synthetic_data else []
 
     train_json_path = await save_json_to_temp_file(train_data_json, prefix="train_data_")
     test_json_path = await save_json_to_temp_file(test_data_json, prefix="test_data_")
