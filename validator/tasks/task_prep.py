@@ -69,8 +69,6 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: list[st
 
 async def process_batch_dict(batch: list, columns: list[str], batch_num: int) -> list[dict]:
     logger.info(f"Processing batch {batch_num}, batch type: {type(batch)}")
-    if batch:
-        logger.info(f"First item in batch type: {type(batch[0])}")
 
     batch_json = []
     for idx, row in enumerate(batch):
@@ -82,7 +80,6 @@ async def process_batch_dict(batch: list, columns: list[str], batch_num: int) ->
                 row_dict = {col: '' for col in columns}
             batch_json.append(row_dict)
 
-            # Log first item of each batch
             if idx == 0:
                 logger.info(f"Batch {batch_num} first item: {row_dict}")
 
@@ -147,8 +144,7 @@ async def change_to_json_format_async(dataset: Dataset | list, columns: list[str
     return result
 
 
-
-async def ensure_dataset(data: Union[Dataset, list, None], columns_to_sample: list[str]) -> Dataset:
+async def ensure_dataset(data: Union[Dataset, list, None]) -> Dataset:
     if data is None:
         return Dataset.from_list([])
     if isinstance(data, list):
@@ -213,7 +209,7 @@ async def prepare_task(dataset_name: str, columns_to_sample: list[str]) -> tuple
     if cst.GET_SYNTH_DATA:
         logger.info("Generating additional synthetic data")
         synthetic_data = await get_additional_synth_data(test_dataset, columns_to_sample)
-        synthetic_dataset = await ensure_dataset(synthetic_data, columns_to_sample)
+        synthetic_dataset = await ensure_dataset(synthetic_data)
 
         logger.info("First 2 examples from original test dataset:")
         for i, example in enumerate(test_dataset.select(range(2))):
@@ -224,7 +220,7 @@ async def prepare_task(dataset_name: str, columns_to_sample: list[str]) -> tuple
             logger.info(f"Example {i + 1}: {example}")
     else:
         logger.info("Skipping synthetic data generation")
-        synthetic_dataset = await ensure_dataset(None, columns_to_sample)
+        synthetic_dataset = await ensure_dataset(None)
 
     dataset_jsons = await create_dataset_jsons(
         train_dataset,
