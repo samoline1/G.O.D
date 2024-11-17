@@ -290,6 +290,7 @@ async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB)
             JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
             LEFT JOIN param_extract pe ON t.{cst.TASK_ID} = pe.{cst.TASK_ID}
             WHERE tn.{cst.HOTKEY} = $1
+            AND tn.{cst.QUALITY_SCORE} IS NOT NULL
             AND tn.{cst.NETUID} = $2
             AND t.created_timestamp >= CASE
                 WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
