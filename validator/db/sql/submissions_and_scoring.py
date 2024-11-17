@@ -259,7 +259,45 @@ async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) 
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return QualityMetrics.model_validate(dict(row) if row else {})
 
+async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> ModelMetrics:
+    """Get model and dataset metrics for a node over the specified interval"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            WITH model_counts AS (
+                SELECT
+                    t.{cst.MODEL_ID},
+                    COUNT(*) as model_count
+                FROM {cst.TASK_NODES_TABLE} tn
+                JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
+                WHERE tn.{cst.HOTKEY} = $1
+                AND tn.{cst.NETUID} = $2
+                AND t.created_timestamp >= CASE
+                    WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+                    ELSE NOW() - $3::INTERVAL
+                END
+                GROUP BY t.{cst.MODEL_ID}
+                ORDER BY model_count DESC
+                LIMIT 1
+            )
+            SELECT
+                COALESCE((SELECT {cst.MODEL_ID} FROM model_counts LIMIT 1), 'none') as modal_model,
+                COUNT(DISTINCT t.{cst.MODEL_ID}) as unique_models,
+                COUNT(DISTINCT t.{cst.DS_ID}) as unique_datasets
+            FROM {cst.TASK_NODES_TABLE} tn
+            JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
+            WHERE tn.{cst.HOTKEY} = $1
+            AND tn.{cst.NETUID} = $2
+            AND t.created_timestamp >= CASE
+                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+                ELSE NOW() - $3::INTERVAL
+            END
+        """
+        row = await connection.fetchrow(query, hotkey, NETUID, interval)
+        return ModelMetrics.model_validate(dict(row) if row else {})
+
 async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> WorkloadMetrics:
+    """Get workload metrics for a node over the specified interval"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -270,20 +308,21 @@ async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB)
                         WHEN LOWER(t.{cst.MODEL_ID}) ~ '[0-9]+\.?[0-9]*[mb]' THEN
                             CASE
                                 WHEN LOWER(t.{cst.MODEL_ID}) ~ 'b' THEN
-                                    CAST(REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g') AS FLOAT)
+                                    NULLIF(REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g'), '')::FLOAT
                                 WHEN LOWER(t.{cst.MODEL_ID}) ~ 'm' THEN
-                                    CAST(REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g') AS FLOAT) / 1000.0
+                                    NULLIF(REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g'), '')::FLOAT / 1000.0
                             END
                         ELSE 1.0
                     END as params_billions
                 FROM {cst.TASKS_TABLE} t
+                WHERE REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g') ~ '^[0-9]+\.?[0-9]*$'
             )
             SELECT
                 COALESCE(SUM(t.{cst.HOURS_TO_COMPLETE}), 0)::INTEGER as competition_hours,
                 COALESCE(SUM(pe.params_billions), 0) as total_params_billions
             FROM {cst.TASK_NODES_TABLE} tn
             JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
-            JOIN param_extract pe ON t.{cst.TASK_ID} = pe.{cst.TASK_ID}
+            LEFT JOIN param_extract pe ON t.{cst.TASK_ID} = pe.{cst.TASK_ID}
             WHERE tn.{cst.HOTKEY} = $1
             AND tn.{cst.NETUID} = $2
             AND t.created_timestamp >= CASE
@@ -293,31 +332,6 @@ async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB)
         """
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return WorkloadMetrics.model_validate(dict(row) if row else {})
-
-async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> ModelMetrics:
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        query = f"""
-            SELECT
-                COALESCE(
-                    FIRST_VALUE(t.{cst.MODEL_ID}) OVER (ORDER BY COUNT(*) DESC),
-                    'none'
-                ) as modal_model,
-                COUNT(DISTINCT t.{cst.MODEL_ID})::INTEGER as unique_models,
-                COUNT(DISTINCT t.{cst.DS_ID})::INTEGER as unique_datasets
-            FROM {cst.TASK_NODES_TABLE} tn
-            JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
-            WHERE tn.{cst.HOTKEY} = $1
-            AND tn.{cst.NETUID} = $2
-            AND t.created_timestamp >= CASE
-                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
-                ELSE NOW() - $3::INTERVAL
-            END
-            GROUP BY tn.{cst.HOTKEY}
-        """
-        row = await connection.fetchrow(query, hotkey, NETUID, interval)
-        return ModelMetrics.model_validate(dict(row) if row else {})
-
 
 async def get_node_stats(hotkey: str, interval: str, psql_db: PSQLDB) -> NodeStats:
     quality, workload, models = await asyncio.gather(
