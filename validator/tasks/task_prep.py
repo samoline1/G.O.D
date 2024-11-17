@@ -144,44 +144,64 @@ async def change_to_json_format_async(dataset: Dataset | list, columns: List[str
         logger.info(f"Sample from final result: {result[0]}")
 
     return result
+async def ensure_dataset(data: Union[Dataset, list, None], columns_to_sample: List[str]) -> Dataset:
+    """Normalize input to Dataset type with consistent columns"""
+    if data is None:
+        return Dataset.from_list([])
+    if isinstance(data, list):
+        return Dataset.from_list(data)
+    return data
+
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
     logger.info(f"Preparing {dataset_name}")
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict["train"]
     test_dataset = dataset_dict["test"]
-
     synthetic_data = []
+
     if cst.GET_SYNTH_DATA:
         logger.info("Generating additional synthetic data")
         synthetic_data = await get_additional_synth_data(test_dataset, columns_to_sample)
-        synthetic_dataset = Dataset.from_list(synthetic_data)
+        synthetic_dataset = await ensure_dataset(synthetic_data, columns_to_sample)
+
         logger.info("First 2 examples from original test dataset:")
         for i, example in enumerate(test_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
-
         logger.info("First 2 examples from synthetic dataset:")
         for i, example in enumerate(synthetic_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
     else:
         logger.info("Skipping synthetic data generation")
+        synthetic_dataset = await ensure_dataset(None, columns_to_sample)
 
-    # this looks ugly
+    # Now all data is normalized to Dataset type
     train_data_json = await change_to_json_format_async(train_dataset, columns_to_sample)
     test_data_json = await change_to_json_format_async(test_dataset, columns_to_sample)
-    synthetic_data_json = await change_to_json_format_async(synthetic_data, columns_to_sample) if synthetic_data else []
+    synthetic_data_json = await change_to_json_format_async(synthetic_dataset, columns_to_sample)
 
-    train_json_path = await save_json_to_temp_file(train_data_json, prefix="train_data_")
-    test_json_path = await save_json_to_temp_file(test_data_json, prefix="test_data_")
-    synth_json_path = await save_json_to_temp_file(synthetic_data_json, prefix="synth_data_") if synthetic_data else None
+    # Save and upload process
+    files_to_upload = [
+        ('train_data_', train_data_json),
+        ('test_data_', test_data_json),
+        ('synth_data_', synthetic_data_json) if len(synthetic_data_json) > 0 else None
+    ]
 
-    train_json_url = await upload_json_to_minio(train_json_path, "tuning", f"{os.urandom(8).hex()}_train_data.json")
-    test_json_url = await upload_json_to_minio(test_json_path, "tuning", f"{os.urandom(8).hex()}_test_data.json")
-    synth_json_url = (
-        await upload_json_to_minio(synth_json_path, "tuning", f"{os.urandom(8).hex()}_synth_data.json") if synthetic_data else None
-    )
+    urls = []
+    temp_files = []
 
-    os.remove(test_json_path)
-    if synth_json_path:
-        os.remove(synth_json_path)
+    for file_info in filter(None, files_to_upload):
+        prefix, data = file_info
+        temp_path = await save_json_to_temp_file(data, prefix=prefix)
+        temp_files.append(temp_path)
+        url = await upload_json_to_minio(temp_path, "tuning", f"{os.urandom(8).hex()}_{prefix.strip('_')}.json")
+        urls.append(url.strip('"'))
 
-    return test_json_url.strip('"'), synth_json_url.strip('"'), train_json_url.strip('"')
+    # Cleanup temp files
+    for temp_file in temp_files:
+        os.remove(temp_file)
+
+    # Return in expected order: test, synth, train
+    if len(urls) == 2:  # No synthetic data
+        return urls[1], None, urls[0]
+    return urls[1], urls[2], urls[0]
+
