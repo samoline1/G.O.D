@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any
 from typing import Optional
+import json
 from uuid import UUID
 from uuid import uuid4
 from cryptography.fernet import Fernet
@@ -125,6 +126,12 @@ class DatasetFiles(BaseModel):
 class DatasetJsons(BaseModel):
     train_data: list[Any]
     test_data: list[Any]
-    synthetic_data: Optional[list[Any]] = None
+    synthetic_data: List[Any] = Field(default_factory=list)
 
+    def to_json_strings(self) -> dict[str, str]:
+        return {
+            'train_data': json.dumps(self.train_data),
+            'test_data': json.dumps(self.test_data),
+            'synthetic_data': json.dumps(self.synthetic_data) if self.synthetic_data else ""
+        }
 
