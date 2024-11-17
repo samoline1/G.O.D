@@ -259,8 +259,8 @@ async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) 
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return QualityMetrics.model_validate(dict(row) if row else {})
 
+# llm wrote this - someone that's more experienced should read through - tests work ok but still
 async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> WorkloadMetrics:
-    """Get workload metrics for a node over the specified interval"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -298,8 +298,8 @@ async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB)
         """
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return WorkloadMetrics.model_validate(dict(row) if row else {})
+
 async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> ModelMetrics:
-    """Get model and dataset metrics for a node over the specified interval"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -320,16 +320,21 @@ async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) ->
                 LIMIT 1
             )
             SELECT
-                COALESCE((SELECT {cst.MODEL_ID} FROM model_counts LIMIT 1), 'none') as modal_model,
-                COUNT(DISTINCT t.{cst.MODEL_ID}) as unique_models,
-                COUNT(DISTINCT t.{cst.DS_ID}) as unique_datasets
+               COALESCE((
+                        SELECT {cst.MODEL_ID}
+                        FROM model_counts
+                        ORDER BY count DESC
+                        LIMIT 1
+                    ), 'none') as modal_model,
+               COUNT(DISTINCT t.{cst.MODEL_ID}) as unique_models,
+               COUNT(DISTINCT t.{cst.DS_ID}) as unique_datasets
             FROM {cst.TASK_NODES_TABLE} tn
             JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
             WHERE tn.{cst.HOTKEY} = $1
             AND tn.{cst.NETUID} = $2
             AND t.created_timestamp >= CASE
-                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
-                ELSE NOW() - $3::INTERVAL
+               WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+               ELSE NOW() - $3::INTERVAL
             END
         """
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
