@@ -71,14 +71,48 @@ async def change_to_json_format_async(dataset: Dataset, columns: List[str], batc
     if isinstance(dataset, list):
         dataset = Dataset.from_list(dataset)
 
+    # First, let's look at what we're dealing with
+    if len(dataset) > 0:
+        first_row = dataset[0]
+        print(f"First row type: {type(first_row)}")
+        print(f"First row content: {first_row}")
+        print(f"Columns requested: {columns}")
+
+        # Check if the dataset has the right features
+        print(f"Dataset features: {dataset.features}")
+
     result = []
     for i in range(0, len(dataset), batch_size):
         batch = dataset[i:i + batch_size]
-        batch_json = [dict(zip(columns, [row[i] for i in range(len(columns))])) if isinstance(row, str) else {col: row[col] for col in columns} for row in batch]
+        batch_json = []
+
+        for row in batch:
+            try:
+                if isinstance(row, (dict, Dataset)):
+                    # If it's already a dict-like object, use it directly
+                    row_dict = {col: row[col] for col in columns if col in row}
+                else:
+                    # Convert row to string and try to parse if needed
+                    row_str = str(row)
+                    # Create a single-column dict if that's what we need
+                    if len(columns) == 1:
+                        row_dict = {columns[0]: row_str}
+                    else:
+                        # If we need multiple columns, try splitting the string
+                        # (adjust the split character based on your data)
+                        values = row_str.split('\t')  # or another delimiter
+                        row_dict = dict(zip(columns, values)) if len(values) >= len(columns) else {col: '' for col in columns}
+
+                batch_json.append(row_dict)
+            except Exception as e:
+                print(f"Error processing row: {row}, Error: {e}")
+                # Add empty dict or skip based on your needs
+                batch_json.append({col: '' for col in columns})
+
         result.extend(batch_json)
         await asyncio.sleep(0)
-    return result
 
+    return result
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
     logger.info(f"Preparing {dataset_name}")
