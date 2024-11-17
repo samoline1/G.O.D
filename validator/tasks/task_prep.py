@@ -68,7 +68,10 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
 
 
 async def process_batch(batch, columns: List[str]):
-    return [{col: row.get(col, '') for col in columns} for row in batch]
+    try:
+        return [{col: row.get(col, '') for col in columns} for row in batch]
+    except:
+        logger.info(f'ERRROR WITH {batch}')
 
 async def change_to_json_format_async(dataset: Dataset, columns: List[str], batch_size: int = 1000):
     if isinstance(dataset, list):
@@ -82,6 +85,7 @@ async def change_to_json_format_async(dataset: Dataset, columns: List[str], batc
     for batch in batches:
         result.extend(batch)
     return result
+
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
     logger.info(f"Preparing {dataset_name}")
     dataset_dict = train_test_split(dataset_name)
