@@ -49,4 +49,3 @@ task dev_setup
 ```bash
 task validator
 ```
-
