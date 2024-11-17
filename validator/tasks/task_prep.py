@@ -2,7 +2,7 @@ import json
 import os
 import tempfile
 import asyncio
-from typing import List
+from typing import List, Union
 
 from datasets import Dataset
 from datasets import DatasetDict
@@ -144,7 +144,7 @@ async def change_to_json_format_async(dataset: Dataset | list, columns: List[str
         logger.info(f"Sample from final result: {result[0]}")
 
     return result
-async def ensure_dataset(data: Union[Dataset, list, None], columns_to_sample: List[str]) -> Dataset:
+async def ensure_dataset(data: Union[Dataset, list, None], columns_to_sample: list[str]) -> Dataset:
     """Normalize input to Dataset type with consistent columns"""
     if data is None:
         return Dataset.from_list([])
