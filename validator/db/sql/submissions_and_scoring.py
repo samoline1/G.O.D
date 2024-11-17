@@ -315,6 +315,8 @@ async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) ->
                 WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
                 ELSE NOW() - $3::INTERVAL
             END
+            AND tn.{cst.QUALITY_SCORE} IS NOT NULL
+            END
             GROUP BY t.{cst.MODEL_ID}
             ORDER BY model_count DESC
             LIMIT 1
