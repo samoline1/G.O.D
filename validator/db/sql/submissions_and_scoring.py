@@ -8,7 +8,7 @@ from uuid import UUID
 
 from asyncpg.connection import Connection
 
-from validator.core.models import Submission, Task, TaskNode, TaskResults
+from validator.core.models import AllNodeStats, ModelMetrics, NodeStats, QualityMetrics, Submission, Task, TaskNode, TaskResults, WorkloadMetrics
 import validator.db.constants as cst
 from validator.db.database import PSQLDB
 
@@ -240,13 +240,7 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
 
         return results
 
-async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> Dict:
-    """Get quality metrics for a node over the specified interval
-    Args:
-        hotkey: Node's hotkey
-        interval: PostgreSQL interval string (e.g. '30 days', '24 hours')
-        psql_db: Database connection
-    """
+async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> QualityMetrics:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -263,9 +257,10 @@ async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) 
                 ELSE NOW() - $3::INTERVAL
             END
         """
-        return dict(await connection.fetchrow(query, hotkey, NETUID, interval))
+        row = await connection.fetchrow(query, hotkey, NETUID, interval)
+        return QualityMetrics.model_validate(dict(row) if row else {})
 
-async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> Dict:
+async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> WorkloadMetrics:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -297,10 +292,10 @@ async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB)
                 ELSE NOW() - $3::INTERVAL
             END
         """
-        return dict(await connection.fetchrow(query, hotkey, NETUID, interval))
+        row = await connection.fetchrow(query, hotkey, NETUID, interval)
+        return WorkloadMetrics.model_validate(dict(row) if row else {})
 
-async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> Dict:
-    """Get model and dataset metrics for a node over the specified interval"""
+async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> ModelMetrics:
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
@@ -321,20 +316,36 @@ async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) ->
             END
             GROUP BY tn.{cst.HOTKEY}
         """
-        return dict(await connection.fetchrow(query, hotkey, NETUID, interval))
+        row = await connection.fetchrow(query, hotkey, NETUID, interval)
+        return ModelMetrics.model_validate(dict(row) if row else {})
 
-async def get_all_node_stats(hotkey: str, psql_db: PSQLDB) -> Dict:
-    intervals = ['24 hours', '3 days', '7 days', '30 days', 'all']
-    stats = {}
-    for interval in intervals:
-        quality, workload, models = await asyncio.gather(
-            get_node_quality_metrics(hotkey, interval, psql_db),
-            get_node_workload_metrics(hotkey, interval, psql_db),
-            get_node_model_metrics(hotkey, interval, psql_db)
-        )
-        stats[interval] = {
-            **quality,
-            **workload,
-            **models
-        }
-    return stats
+
+async def get_node_stats(hotkey: str, interval: str, psql_db: PSQLDB) -> NodeStats:
+    quality, workload, models = await asyncio.gather(
+        get_node_quality_metrics(hotkey, interval, psql_db),
+        get_node_workload_metrics(hotkey, interval, psql_db),
+        get_node_model_metrics(hotkey, interval, psql_db)
+    )
+
+    return NodeStats(
+        quality_metrics=quality,
+        workload_metrics=workload,
+        model_metrics=models
+    )
+
+async def get_all_node_stats(hotkey: str, psql_db: PSQLDB) -> AllNodeStats:
+    daily, three_day, weekly, monthly, all_time = await asyncio.gather(
+        get_node_stats(hotkey, '24 hours', psql_db),
+        get_node_stats(hotkey, '3 days', psql_db),
+        get_node_stats(hotkey, '7 days', psql_db),
+        get_node_stats(hotkey, '30 days', psql_db),
+        get_node_stats(hotkey, 'all', psql_db)
+    )
+
+    return AllNodeStats(
+        daily=daily,
+        three_day=three_day,
+        weekly=weekly,
+        monthly=monthly,
+        all_time=all_time
+    )

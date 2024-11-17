@@ -196,17 +196,8 @@ async def get_leaderboard(
     for node in nodes:
         logger.info(f'Trying node {node}')
         try:
-            scores = await submissions_and_scoring_sql.get_all_scores_for_hotkey(node.hotkey, config.psql_db)
-            if scores:
-                quality_scores = [score['quality_score'] for score in scores]
-                leaderboard_rows.append(
-                    LeaderboardRow(
-                        hotkey=node.hotkey,
-                        average_quality_score=mean(quality_scores),
-                        sum_quality_score=sum(quality_scores),
-                        num_games_entered=len(quality_scores)
-                    )
-                )
+            stats = await submissions_and_scoring_sql.get_all_node_stats(node.hotkey, config.psql_db)
+            logger.info(stats)
         except Exception as e:
             logger.error(f"Error processing scores for hotkey {node.hotkey}: {e}")
             continue
