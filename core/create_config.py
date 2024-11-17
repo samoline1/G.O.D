@@ -10,7 +10,9 @@ from core.validators import validate_input
 
 def parse_bool_input(prompt: str, default: bool = False) -> bool:
     result = validate_input(
-        f"{prompt} (y/n): (default: {'y' if default else 'n'}) ", InputValidators.yes_no, default="y" if default else "n"
+        f"{prompt} (y/n): (default: {'y' if default else 'n'}) ",
+        InputValidators.yes_no,
+        default="y" if default else "n",
     )
     return result.lower().startswith("y")
 

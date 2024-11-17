@@ -31,9 +31,7 @@ class TrainRequest(BaseModel):
         description="Path to the dataset file or Hugging Face dataset name",
         min_length=1,
     )
-    model: str = Field(
-        ..., description="Name or path of the model to be trained", min_length=1
-    )
+    model: str = Field(..., description="Name or path of the model to be trained", min_length=1)
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
     task_id: str
@@ -115,6 +113,7 @@ class NewTaskResponse(BaseModel):
     success: bool
     task_id: UUID
 
+
 class WinningSubmission(BaseModel):
     hotkey: str
     score: float
@@ -130,6 +129,7 @@ class TaskMinerResult(BaseModel):
     task_id: UUID
     quality_score: float
 
+
 class AllOfNodeResults(BaseModel):
     success: bool
     hotkey: str
@@ -140,7 +140,6 @@ class TaskResultResponse(BaseModel):
     success: bool
     id: UUID
     miner_results: Optional[list[MinerTaskResult]]
-
 
 
 class TaskStatusResponse(BaseModel):

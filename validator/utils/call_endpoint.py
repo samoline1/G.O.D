@@ -1,14 +1,17 @@
 import json
 from collections.abc import AsyncGenerator
 from typing import Any
-from typing import List, Optional
-
-from fiber.networking.models import NodeWithFernet as Node
-from fiber.validator import client
+from typing import List
+from typing import Optional
 
 import httpx
 from fiber.logging_utils import get_logger
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from fiber.networking.models import NodeWithFernet as Node
+from fiber.validator import client
+from tenacity import retry
+from tenacity import retry_if_exception_type
+from tenacity import stop_after_attempt
+from tenacity import wait_exponential
 
 from validator.core.config import Config
 
@@ -20,8 +23,9 @@ retry_with_backoff = retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=10),
     retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.RequestError)),
-    reraise=True
+    reraise=True,
 )
+
 
 async def process_non_stream_fiber_get(endpoint: str, config: Config, node: Node) -> dict[str, Any] | None:
     server_address = client.construct_server_address(
@@ -42,7 +46,7 @@ async def process_non_stream_fiber_get(endpoint: str, config: Config, node: Node
             timeout=10,
         )
     except Exception as e:
-        logger.error(f"Failed to comunication with node {node.node_id}: {e}")
+        logger.error(f"Failed to communicate with node {node.node_id}: {e}")
         return None
 
     if response.status_code != 200:
@@ -73,7 +77,7 @@ async def process_non_stream_fiber(endpoint: str, config: Config, node: Node, pa
             timeout=10,
         )
     except Exception as e:
-        logger.error(f"Failed to comunication with node {node.node_id}: {e}")
+        logger.error(f"Failed to communicate with node {node.node_id}: {e}")
         return None
 
     if response.status_code != 200:
@@ -81,6 +85,7 @@ async def process_non_stream_fiber(endpoint: str, config: Config, node: Node, pa
         return None
 
     return response.json()
+
 
 @retry_with_backoff
 async def process_stream(base_url: str, token: str, payload: dict[str, Any]) -> str:

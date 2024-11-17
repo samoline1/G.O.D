@@ -2,8 +2,9 @@
 Calculates and schedules weights every SCORING_PERIOD
 """
 
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
 
 from validator.core.config import Config
 from validator.core.models import PeriodScore
@@ -15,21 +16,25 @@ load_dotenv(os.getenv("ENV_FILE", ".vali.env"))
 
 import asyncio
 
-from fiber.chain import weights
-from fiber.logging_utils import get_logger
-from core import constants as ccst
-from validator.db.sql.nodes import get_node_by_hotkey, get_node_id_by_hotkey, get_vali_node_id
 from fiber.chain import fetch_nodes
-from fiber.networking.models import NodeWithFernet as Node
+from fiber.chain import weights
 from fiber.chain.interface import get_substrate
+from fiber.logging_utils import get_logger
+from fiber.networking.models import NodeWithFernet as Node
+
+from core import constants as ccst
+from validator.db.sql.nodes import get_node_id_by_hotkey
+from validator.db.sql.nodes import get_vali_node_id
+
 
 logger = get_logger(__name__)
 
 
-TIME_PER_BLOCK :int = 500
+TIME_PER_BLOCK: int = 500
 
-async def _get_weights_to_set(config: Config) -> list[PeriodScore]| None:
-     return await scoring_aggregation_from_date(config.psql_db)
+
+async def _get_weights_to_set(config: Config) -> list[PeriodScore] | None:
+    return await scoring_aggregation_from_date(config.psql_db)
 
 
 async def _get_and_set_weights(config: Config) -> bool:
@@ -58,7 +63,10 @@ async def _get_and_set_weights(config: Config) -> bool:
     logger.info(f"Node ids: {all_node_ids}")
     logger.info(f"Node weights: {all_node_weights}")
     logger.info(f"Number of non zero node weights: {sum(1 for weight in all_node_weights if weight != 0)}")
-    logger.info(f"Everything going in is {weights.set_node_weights} {config.substrate} {config.keypair} {all_node_ids} {all_node_weights} {config.netuid} {ccst.VERSION_KEY} {validator_node_id}")
+    logger.info(
+        f"Everything going in is {weights.set_node_weights} {config.substrate} {config.keypair}"
+        f" {all_node_ids} {all_node_weights} {config.netuid} {ccst.VERSION_KEY} {validator_node_id}"
+    )
 
     try:
         success = await asyncio.to_thread(
@@ -114,7 +122,7 @@ async def _set_metagraph_weights(config: Config) -> None:
 
 # To improve: use activity cutoff & The epoch length to set weights at the perfect times
 async def set_weights_periodically(config: Config, just_once: bool = False) -> None:
-    logger.info('Attempting to set weights')
+    logger.info("Attempting to set weights")
     substrate = get_substrate(subtensor_address=config.substrate.url)
     substrate, uid = query_substrate(
         substrate, "SubtensorModule", "Uids", [config.netuid, config.keypair.ss58_address], return_value=True
@@ -132,7 +140,6 @@ async def set_weights_periodically(config: Config, just_once: bool = False) -> N
             logger.info(f"Last updated: {updated} - sleeping for a bit as we set recently...")
             await asyncio.sleep(12 * 25)  # sleep for 25 blocks
             continue
-
 
         if os.getenv("ENV", "prod").lower() == "dev":
             success = await _get_and_set_weights(config)
@@ -179,4 +186,3 @@ async def set_weights_periodically(config: Config, just_once: bool = False) -> N
             if success:
                 consecutive_failures = 0
                 continue
-

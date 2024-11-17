@@ -38,7 +38,7 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
         config_name = get_default_dataset_config(dataset_name)
         dataset = load_dataset(dataset_name, config_name)
     except Exception as e:
-        logger.exception(f'Failed to load dataset {dataset_name}: {e}')
+        logger.exception(f"Failed to load dataset {dataset_name}: {e}")
         raise e
 
     if isinstance(dataset, DatasetDict):
@@ -104,7 +104,9 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple
     train_json_url = await upload_json_to_minio(train_json_path, "tuning", f"{os.urandom(8).hex()}_train_data.json")
     test_json_url = await upload_json_to_minio(test_json_path, "tuning", f"{os.urandom(8).hex()}_test_data.json")
     synth_json_url = (
-        await upload_json_to_minio(synth_json_path, "tuning", f"{os.urandom(8).hex()}_synth_data.json") if synthetic_data else None
+        await upload_json_to_minio(synth_json_path, "tuning", f"{os.urandom(8).hex()}_synth_data.json")
+        if synthetic_data
+        else None
     )
 
     os.remove(test_json_path)

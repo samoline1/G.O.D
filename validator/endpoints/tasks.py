@@ -1,9 +1,8 @@
 from datetime import datetime
 from datetime import timedelta
-from logging import log
+from statistics import mean
 from typing import List
 from uuid import UUID
-from statistics import mean
 
 from fastapi import APIRouter
 from fastapi import Depends
@@ -11,21 +10,27 @@ from fastapi import HTTPException
 from fastapi import Response
 from fiber.logging_utils import get_logger
 
-from core.models.payload_models import AllOfNodeResults, MinerTaskResult, NewTaskRequest, TaskMinerResult, TaskResultResponse
+from core.models.payload_models import AllOfNodeResults
+from core.models.payload_models import MinerTaskResult
+from core.models.payload_models import NewTaskRequest
 from core.models.payload_models import NewTaskResponse
+from core.models.payload_models import TaskMinerResult
+from core.models.payload_models import TaskResultResponse
 from core.models.payload_models import TaskStatusResponse
 from core.models.payload_models import WinningSubmission
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_api_key
 from validator.core.dependencies import get_config
-from validator.core.models import LeaderboardRow, MinerResults, Task
-from validator.db.sql import submissions_and_scoring, tasks as task_sql
+from validator.core.models import LeaderboardRow
+from validator.core.models import Task
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
+from validator.db.sql import tasks as task_sql
 from validator.db.sql.nodes import get_all_nodes
 
 
 logger = get_logger(__name__)
+
 
 async def delete_task(
     task_id: UUID,
@@ -61,7 +66,7 @@ async def get_tasks(
             winning_submission = WinningSubmission(
                 hotkey=winning_submission_data["hotkey"],
                 score=winning_submission_data["quality_score"],
-                model_repo=winning_submission_data["repo"]
+                model_repo=winning_submission_data["repo"],
             )
 
         task_status_responses.append(
@@ -77,11 +82,11 @@ async def get_tasks(
                 output_col=task.get("output"),
                 miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
                 dataset=task.get("ds_id"),
-                started=str(task['started_timestamp']),
-                end=str(task['end_timestamp']),
+                started=str(task["started_timestamp"]),
+                end=str(task["end_timestamp"]),
                 created=str(task["created_timestamp"]),
                 hours_to_complete=task.get("hours_to_complete"),
-                winning_submission=winning_submission
+                winning_submission=winning_submission,
             )
         )
 
@@ -118,31 +123,33 @@ async def create_task(
 
 
 async def get_task_results(
-        task_id: UUID,
-        config: Config = Depends(get_config),
-        api_key: str = Depends(get_api_key),
-        ) -> TaskResultResponse:
-        try:
-            scores = await submissions_and_scoring_sql.get_all_quality_scores_for_task(task_id, config.psql_db)
-            miner_results = [MinerTaskResult(hotkey=hotkey, quality_score=scores[hotkey])  for hotkey in scores]
-        except Exception as e:
-            logger.info(e)
-            raise HTTPException(status_code=404, detail="Task not found.")
-        return TaskResultResponse(success=True, id=task_id, miner_results=miner_results)
+    task_id: UUID,
+    config: Config = Depends(get_config),
+    api_key: str = Depends(get_api_key),
+) -> TaskResultResponse:
+    try:
+        scores = await submissions_and_scoring_sql.get_all_quality_scores_for_task(task_id, config.psql_db)
+        miner_results = [MinerTaskResult(hotkey=hotkey, quality_score=scores[hotkey]) for hotkey in scores]
+    except Exception as e:
+        logger.info(e)
+        raise HTTPException(status_code=404, detail="Task not found.")
+    return TaskResultResponse(success=True, id=task_id, miner_results=miner_results)
 
 
 async def get_node_results(
-        hotkey: str,
-        config: Config = Depends(get_config),
-        api_key: str = Depends(get_api_key),
-        ) -> AllOfNodeResults:
-        try:
-            miner_results = [TaskMinerResult(**result) for result in await submissions_and_scoring_sql.get_all_scores_for_hotkey(hotkey, config.psql_db)]
-        except Exception as e:
-            logger.info(e)
-            raise HTTPException(status_code=404, detail="Hotkey not found")
-        return AllOfNodeResults(success=True, hotkey=hotkey, task_results=miner_results)
-
+    hotkey: str,
+    config: Config = Depends(get_config),
+    api_key: str = Depends(get_api_key),
+) -> AllOfNodeResults:
+    try:
+        miner_results = [
+            TaskMinerResult(**result)
+            for result in await submissions_and_scoring_sql.get_all_scores_for_hotkey(hotkey, config.psql_db)
+        ]
+    except Exception as e:
+        logger.info(e)
+        raise HTTPException(status_code=404, detail="Hotkey not found")
+    return AllOfNodeResults(success=True, hotkey=hotkey, task_results=miner_results)
 
 
 async def get_task_status(
@@ -157,7 +164,6 @@ async def get_task_status(
     miners = await task_sql.get_miners_for_task(task_id, config.psql_db)
     logger.info(miners)
 
-
     winning_submission_data = await task_sql.get_winning_submissions_for_task(task_id, config.psql_db)
     winning_submission = None
     if winning_submission_data:
@@ -165,7 +171,7 @@ async def get_task_status(
         winning_submission = WinningSubmission(
             hotkey=winning_submission_data["hotkey"],
             score=winning_submission_data["quality_score"],
-            model_repo=winning_submission_data["repo"]
+            model_repo=winning_submission_data["repo"],
         )
 
     return TaskStatusResponse(
@@ -183,8 +189,9 @@ async def get_task_status(
         end=str(task.end_timestamp),
         created=str(task.created_timestamp),
         hours_to_complete=task.hours_to_complete,
-        winning_submission=winning_submission
+        winning_submission=winning_submission,
     )
+
 
 async def get_leaderboard(
     config: Config = Depends(get_config),
@@ -194,17 +201,17 @@ async def get_leaderboard(
     leaderboard_rows = []
 
     for node in nodes:
-        logger.info(f'Trying node {node}')
+        logger.info(f"Trying node {node}")
         try:
             scores = await submissions_and_scoring_sql.get_all_scores_for_hotkey(node.hotkey, config.psql_db)
             if scores:
-                quality_scores = [score['quality_score'] for score in scores]
+                quality_scores = [score["quality_score"] for score in scores]
                 leaderboard_rows.append(
                     LeaderboardRow(
                         hotkey=node.hotkey,
                         average_quality_score=mean(quality_scores),
                         sum_quality_score=sum(quality_scores),
-                        num_games_entered=len(quality_scores)
+                        num_games_entered=len(quality_scores),
                     )
                 )
         except Exception as e:
@@ -212,6 +219,7 @@ async def get_leaderboard(
             continue
     leaderboard_rows.sort(key=lambda x: x.average_quality_score, reverse=True)
     return leaderboard_rows
+
 
 def factory_router() -> APIRouter:
     router = APIRouter()
@@ -252,7 +260,7 @@ def factory_router() -> APIRouter:
         "/v1/tasks/node_results/{hotkey}",
         get_node_results,
         response_model=AllOfNodeResults,
-        tags=["Training"], ## ? why do we have these tags everywhere TT?
+        tags=["Training"],  ## ? why do we have these tags everywhere TT?
         methods=["GET"],
     )
     router.add_api_route(
@@ -270,4 +278,3 @@ def factory_router() -> APIRouter:
         methods=["GET"],
     )
     return router
-

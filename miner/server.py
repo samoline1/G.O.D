@@ -1,8 +1,5 @@
-import os
-
 from fiber.logging_utils import get_logger
 from fiber.miner import server
-from fiber.miner.middleware import configure_extra_logging_middleware
 
 from miner.endpoints.tuning import factory_router as tuning_factory_router
 
@@ -17,7 +14,7 @@ tuning_router = tuning_factory_router()
 
 app.include_router(tuning_router)
 
-#if os.getenv("ENV", "prod").lower() == "dev":
+# if os.getenv("ENV", "prod").lower() == "dev":
 #    configure_extra_logging_middleware(app)
 
 

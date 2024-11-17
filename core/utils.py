@@ -1,15 +1,14 @@
 import json
+import os
+from urllib.parse import urlparse
 
+import aiohttp
 import pandas as pd
 from loguru import logger
 
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 
-import os
-
-from urllib.parse import urlparse
-import aiohttp
 
 async def validate_dataset(dataset_path: str, dataset_type: DatasetType, file_format: FileFormat) -> bool:
     try:
@@ -32,6 +31,7 @@ async def validate_dataset(dataset_path: str, dataset_type: DatasetType, file_fo
     except Exception as e:
         raise ValueError(f"Error validating dataset: {str(e)}")
 
+
 async def download_s3_file(file_url: str) -> str:
     parsed_url = urlparse(file_url)
     file_name = os.path.basename(parsed_url.path)
@@ -46,5 +46,3 @@ async def download_s3_file(file_url: str) -> str:
                 raise Exception(f"Failed to download file: {response.status}")
 
     return local_file_path
-
-

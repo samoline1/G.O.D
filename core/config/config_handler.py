@@ -65,7 +65,6 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
     if not config.get("hub_repo"):
         raise ValueError("hub_repo is not set in the config.")
 
-
     config["base_model"] = model
     config["wandb_runid"] = job_id
     config["wandb_name"] = job_id

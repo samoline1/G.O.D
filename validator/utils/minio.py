@@ -3,12 +3,12 @@ import datetime
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-from minio import Minio
-
 from fiber.logging_utils import get_logger
+from minio import Minio
 
 
 logger = get_logger(__name__)
+
 
 # NOTE: wen type hints
 # NOTE: POINTS:
@@ -20,14 +20,20 @@ logger = get_logger(__name__)
 class AsyncMinioClient:
     def __init__(self, endpoint, access_key, secret_key, secure=True, region="us-east-1"):
         self.endpoint = endpoint
-        self.client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure, region=region)
+        self.client = Minio(
+            endpoint,
+            access_key=access_key,
+            secret_key=secret_key,
+            secure=secure,
+            region=region,
+        )
         self.loop = asyncio.get_event_loop()
         self.executor = ThreadPoolExecutor()
 
     async def upload_file(self, bucket_name, object_name, file_path):
         func = self.client.fput_object
         args = (bucket_name, object_name, file_path)
-        logger.info('Attempting to upload')
+        logger.info("Attempting to upload")
         try:
             result = await self.loop.run_in_executor(self.executor, func, *args)
             logger.info(f"The bucket_name is {bucket_name} and the result was {result}")
@@ -38,7 +44,7 @@ class AsyncMinioClient:
     async def download_file(self, bucket_name, object_name, file_path):
         func = self.client.fget_object
         args = (bucket_name, object_name, file_path)
-        logger.info('Attempting to download')
+        logger.info("Attempting to download")
         return await self.loop.run_in_executor(self.executor, func, *args)
 
     async def delete_file(self, bucket_name, object_name):
@@ -49,7 +55,7 @@ class AsyncMinioClient:
     async def list_objects(self, bucket_name, prefix=None, recursive=True):
         func = self.client.list_objects
         args = (bucket_name, prefix, recursive)
-        logger.info('Listing objects')
+        logger.info("Listing objects")
         return await self.loop.run_in_executor(self.executor, func, *args)
 
     async def ensure_bucket_exists(self, bucket_name):

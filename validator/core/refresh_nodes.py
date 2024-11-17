@@ -5,29 +5,36 @@ migrating the old nodes to history in the process
 
 import asyncio
 import traceback
+from datetime import datetime
+from datetime import timedelta
 
 import httpx
-
-from fiber.networking.models import NodeWithFernet as Node
-from sqlalchemy import except_
-from validator.db.sql.nodes import get_all_nodes, add_node, get_last_updated_time_for_nodes, insert_symmetric_keys_for_nodes, migrate_nodes_to_history
-from fiber.logging_utils import get_logger
-from fiber.chain import fetch_nodes
-from validator.core.config import Config
-from fiber.validator import handshake, client
-from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
+from fiber.chain import fetch_nodes
+from fiber.logging_utils import get_logger
+from fiber.networking.models import NodeWithFernet as Node
+from fiber.validator import client
+from fiber.validator import handshake
+
+from validator.core.config import Config
+from validator.db.sql.nodes import add_node
+from validator.db.sql.nodes import get_all_nodes
+from validator.db.sql.nodes import get_last_updated_time_for_nodes
+from validator.db.sql.nodes import insert_symmetric_keys_for_nodes
+from validator.db.sql.nodes import migrate_nodes_to_history
+
 
 logger = get_logger(__name__)
 
+
 def _format_exception(e: Exception) -> str:
     """Format an exception with its traceback for logging."""
-    return f"Exception Type: {type(e).__name__}\nException Message: {str(e)}\nTraceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
+    return f"Exception Type: {type(e).__name__}\n Message: {str(e)}\nTraceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
 
 
 async def get_and_store_nodes(config: Config) -> list[Node]:
-    if await(is_recent_update(config)):
-        nodes =  await get_all_nodes(config.psql_db)
+    if await is_recent_update(config):
+        nodes = await get_all_nodes(config.psql_db)
         return await perform_handshakes(nodes, config)
 
     raw_nodes = await fetch_nodes_from_substrate(config)
@@ -36,9 +43,9 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
     logger.info(f"Here are the nodes we have shaked hands with {nodes}")
     for node in nodes:
         print(f"I should be storing {node.node_id}")
-    logger.info('DOING MIGRATION')
+    logger.info("DOING MIGRATION")
     await migrate_nodes_to_history(config.psql_db)
-    logger.info('STORING')
+    logger.info("STORING")
     await store_nodes(config, nodes)
 
     logger.info(f"Stored {len(nodes)} nodes.")
@@ -57,19 +64,16 @@ async def is_recent_update(config: Config) -> bool:
 
 
 async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
-    # NOTE: Will this cause issues if this method closes the conenction
+    # NOTE: Will this cause issues if this method closes the connection
     # on substrate interface, but we use the same substrate interface object elsewhere?
     return await asyncio.to_thread(fetch_nodes.get_nodes_for_netuid, config.substrate, config.netuid)
 
-async def store_nodes(config: Config, nodes: list[Node]):
-    for i in range(0, len(nodes), 5): # I found that when I make it more it froze - not sure why @tt know?
-        logger.info(f'Batch {i} stored')
-        batch = nodes[i:i + 5]
-        await asyncio.gather(*(add_node(node, config.psql_db) for node in batch))
 
-async def update_our_validator_node(config: Config):
-    async with await config.psql_db.connection() as connection:
-        await update_our_vali_node_in_db(connection, config.keypair.ss58_address, config.netuid)
+async def store_nodes(config: Config, nodes: list[Node]):
+    for i in range(0, len(nodes), 5):  # I found that when I make it more it froze - not sure why @tt know?
+        logger.info(f"Batch {i} stored")
+        batch = nodes[i : i + 5]
+        await asyncio.gather(*(add_node(node, config.psql_db) for node in batch))
 
 
 async def _handshake(config: Config, node: Node, async_client: httpx.AsyncClient) -> Node:
@@ -89,7 +93,7 @@ async def _handshake(config: Config, node: Node, async_client: httpx.AsyncClient
 
         if isinstance(e, (httpx.HTTPStatusError, httpx.RequestError, httpx.ConnectError)):
             if hasattr(e, "response"):
-                logger.debug(f"Response content: {e.response.text}")
+                logger.debug(f"Response content: {e.response.text}.\n Error details: {error_details}")
 
         return node_copy
 
@@ -106,9 +110,9 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
         logger.info(f"We found a node lets say hi {node.node_id}")
         if node.fernet is None or node.symmetric_key_uuid is None:
             try:
-                    tasks.append(_handshake(config, node, config.httpx_client))
+                tasks.append(_handshake(config, node, config.httpx_client))
             except Exception:
-                logger.info('Could not shake with {node.node_id}')
+                logger.info("Could not shake with {node.node_id}")
                 continue
         if len(tasks) > 50:
             shaked_nodes.extend(await asyncio.gather(*tasks))
@@ -127,6 +131,6 @@ async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
 
     async with await config.psql_db.connection() as connection:
         await insert_symmetric_keys_for_nodes(connection, nodes_where_handshake_worked)
-    logger.info('We have successfully inserted symmetric keys for nodes')
+    logger.info("We have successfully inserted symmetric keys for nodes")
 
     return shaked_nodes
