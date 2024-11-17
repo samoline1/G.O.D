@@ -303,39 +303,39 @@ async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) ->
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            WITH model_counts AS (
-                SELECT
-                    t.{cst.MODEL_ID},
-                    COUNT(*) as model_count
-                FROM {cst.TASK_NODES_TABLE} tn
-                JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
-                WHERE tn.{cst.HOTKEY} = $1
-                AND tn.{cst.NETUID} = $2
-                AND t.created_timestamp >= CASE
-                    WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
-                    ELSE NOW() - $3::INTERVAL
-                END
-                GROUP BY t.{cst.MODEL_ID}
-                ORDER BY model_count DESC
-                LIMIT 1
-            )
+        WITH model_counts AS (
             SELECT
-               COALESCE((
-                        SELECT {cst.MODEL_ID}
-                        FROM model_counts
-                        ORDER BY count DESC
-                        LIMIT 1
-                    ), 'none') as modal_model,
-               COUNT(DISTINCT t.{cst.MODEL_ID}) as unique_models,
-               COUNT(DISTINCT t.{cst.DS_ID}) as unique_datasets
+                t.{cst.MODEL_ID},
+                COUNT(*) as model_count
             FROM {cst.TASK_NODES_TABLE} tn
             JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
             WHERE tn.{cst.HOTKEY} = $1
             AND tn.{cst.NETUID} = $2
             AND t.created_timestamp >= CASE
-               WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
-               ELSE NOW() - $3::INTERVAL
+                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+                ELSE NOW() - $3::INTERVAL
             END
+            GROUP BY t.{cst.MODEL_ID}
+            ORDER BY model_count DESC
+            LIMIT 1
+        )
+        SELECT
+            COALESCE((
+                SELECT {cst.MODEL_ID}
+                FROM model_counts
+                ORDER BY model_count DESC
+                LIMIT 1
+            ), 'none') as modal_model,
+            COUNT(DISTINCT t.{cst.MODEL_ID}) as unique_models,
+            COUNT(DISTINCT t.{cst.DS_ID}) as unique_datasets
+        FROM {cst.TASK_NODES_TABLE} tn
+        JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
+        WHERE tn.{cst.HOTKEY} = $1
+        AND tn.{cst.NETUID} = $2
+        AND t.created_timestamp >= CASE
+            WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+            ELSE NOW() - $3::INTERVAL
+        END
         """
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return ModelMetrics.model_validate(dict(row) if row else {})
