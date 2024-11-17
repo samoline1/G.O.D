@@ -259,6 +259,45 @@ async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) 
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return QualityMetrics.model_validate(dict(row) if row else {})
 
+async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> WorkloadMetrics:
+    """Get workload metrics for a node over the specified interval"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            WITH param_extract AS (
+                SELECT
+                    t.{cst.TASK_ID},
+                    CASE
+                        -- Match patterns like: number followed by B/b or M/m
+                        -- Will match: 0.5B, 7B, 1.5b, 70M, etc. anywhere in the string
+                        WHEN LOWER(t.{cst.MODEL_ID}) ~ '.*?([0-9]+\.?[0-9]*)[mb]' THEN
+                            CASE
+                                WHEN LOWER(t.{cst.MODEL_ID}) ~ '.*?([0-9]+\.?[0-9]*)b' THEN
+                                    -- Extract just the number before 'b'/'B'
+                                    SUBSTRING(LOWER(t.{cst.MODEL_ID}) FROM '.*?([0-9]+\.?[0-9]*)b')::FLOAT
+                                WHEN LOWER(t.{cst.MODEL_ID}) ~ '.*?([0-9]+\.?[0-9]*)m' THEN
+                                    -- Extract just the number before 'm'/'M' and convert to billions
+                                    SUBSTRING(LOWER(t.{cst.MODEL_ID}) FROM '.*?([0-9]+\.?[0-9]*)m')::FLOAT / 1000.0
+                            END
+                        ELSE 1.0
+                    END as params_billions
+                FROM {cst.TASKS_TABLE} t
+            )
+            SELECT
+                COALESCE(SUM(t.{cst.HOURS_TO_COMPLETE}), 0)::INTEGER as competition_hours,
+                COALESCE(SUM(pe.params_billions), 0) as total_params_billions
+            FROM {cst.TASK_NODES_TABLE} tn
+            JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
+            LEFT JOIN param_extract pe ON t.{cst.TASK_ID} = pe.{cst.TASK_ID}
+            WHERE tn.{cst.HOTKEY} = $1
+            AND tn.{cst.NETUID} = $2
+            AND t.created_timestamp >= CASE
+                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+                ELSE NOW() - $3::INTERVAL
+            END
+        """
+        row = await connection.fetchrow(query, hotkey, NETUID, interval)
+        return WorkloadMetrics.model_validate(dict(row) if row else {})
 async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> ModelMetrics:
     """Get model and dataset metrics for a node over the specified interval"""
     async with await psql_db.connection() as connection:
@@ -295,42 +334,6 @@ async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) ->
         """
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return ModelMetrics.model_validate(dict(row) if row else {})
-
-async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> WorkloadMetrics:
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        query = f"""
-            WITH param_extract AS (
-                SELECT
-                    t.{cst.TASK_ID},
-                    CASE
-                        WHEN LOWER(t.{cst.MODEL_ID}) ~ '[0-9]+\.?[0-9]*[mb]' THEN
-                            CASE
-                                WHEN LOWER(t.{cst.MODEL_ID}) ~ 'b' THEN
-                                    NULLIF(REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g'), '')::FLOAT
-                                WHEN LOWER(t.{cst.MODEL_ID}) ~ 'm' THEN
-                                    NULLIF(REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g'), '')::FLOAT / 1000.0
-                            END
-                        ELSE 1.0
-                    END as params_billions
-                FROM {cst.TASKS_TABLE} t
-                WHERE REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g') ~ '^[0-9]+\.?[0-9]*$'
-            )
-            SELECT
-                COALESCE(SUM(t.{cst.HOURS_TO_COMPLETE}), 0)::INTEGER as competition_hours,
-                COALESCE(SUM(pe.params_billions), 0) as total_params_billions
-            FROM {cst.TASK_NODES_TABLE} tn
-            JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
-            LEFT JOIN param_extract pe ON t.{cst.TASK_ID} = pe.{cst.TASK_ID}
-            WHERE tn.{cst.HOTKEY} = $1
-            AND tn.{cst.NETUID} = $2
-            AND t.created_timestamp >= CASE
-                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
-                ELSE NOW() - $3::INTERVAL
-            END
-        """
-        row = await connection.fetchrow(query, hotkey, NETUID, interval)
-        return WorkloadMetrics.model_validate(dict(row) if row else {})
 
 async def get_node_stats(hotkey: str, interval: str, psql_db: PSQLDB) -> NodeStats:
     quality, workload, models = await asyncio.gather(
