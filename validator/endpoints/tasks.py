@@ -19,7 +19,7 @@ from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_api_key
 from validator.core.dependencies import get_config
-from validator.core.models import LeaderboardRow, MinerResults, Task
+from validator.core.models import LeaderboardRow, MinerResults, NodeStats, Task
 from validator.db.sql import submissions_and_scoring, tasks as task_sql
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
 from validator.db.sql.nodes import get_all_nodes
@@ -196,21 +196,11 @@ async def get_leaderboard(
     for node in nodes:
         logger.info(f'Trying node {node}')
         try:
-            scores = await submissions_and_scoring_sql.get_all_scores_for_hotkey(node.hotkey, config.psql_db)
-            if scores:
-                quality_scores = [score['quality_score'] for score in scores]
-                leaderboard_rows.append(
-                    LeaderboardRow(
-                        hotkey=node.hotkey,
-                        average_quality_score=mean(quality_scores),
-                        sum_quality_score=sum(quality_scores),
-                        num_games_entered=len(quality_scores)
-                    )
-                )
+            node_stats = await submissions_and_scoring_sql.get_all_node_stats(node.hotkey, config.psql_db)
+            leaderboard_rows.append(LeaderboardRow(hotkey=node.hotkey, stats=node_stats))
         except Exception as e:
             logger.error(f"Error processing scores for hotkey {node.hotkey}: {e}")
             continue
-    leaderboard_rows.sort(key=lambda x: x.average_quality_score, reverse=True)
     return leaderboard_rows
 
 def factory_router() -> APIRouter:

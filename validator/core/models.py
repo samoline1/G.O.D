@@ -80,8 +80,35 @@ class MinerResults(BaseModel):
     score: Optional[float] = 0.0
     submission: Optional[Submission] = None
 
+
+class QualityMetrics(BaseModel):
+    avg_quality_score: float = Field(ge=0.0, le=1.0)
+    success_rate: float = Field(ge=0.0, le=1.0)
+    quality_rate: float = Field(ge=0.0, le=1.0)
+
+class WorkloadMetrics(BaseModel):
+    competition_hours: int = Field(ge=0)
+    total_params_billions: float = Field(ge=0.0)
+
+class ModelMetrics(BaseModel):
+    modal_model: str
+    unique_models: int = Field(ge=0)
+    unique_datasets: int = Field(ge=0)
+
+class NodeStats(BaseModel):
+    quality_metrics: QualityMetrics
+    workload_metrics: WorkloadMetrics
+    model_metrics: ModelMetrics
+
+class AllNodeStats(BaseModel):
+    daily: NodeStats
+    three_day: NodeStats
+    weekly: NodeStats
+    monthly: NodeStats
+    all_time: NodeStats
+
 class LeaderboardRow(BaseModel):
     hotkey: str
-    average_quality_score: float
-    sum_quality_score: float
-    num_games_entered: int
+    stats: AllNodeStats
+
+
