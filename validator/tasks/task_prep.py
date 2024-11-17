@@ -167,15 +167,17 @@ async def create_dataset_jsons(
         synthetic_data=await change_to_json_format_async(synthetic_dataset, columns_to_sample)
     )
 
-async def prepare_files_for_upload(dataset_jsons: DatasetJsons) -> List[DatasetFiles]:
+async def prepare_files_for_upload(dataset_jsons: DatasetJsons) -> list[DatasetFiles]:
     json_strings = dataset_jsons.to_json_strings()
+
     files = [
         DatasetFiles(prefix='train_data_', data=json_strings['train_data']),
         DatasetFiles(prefix='test_data_', data=json_strings['test_data']),
     ]
 
-    if dataset_jsons.synthetic_data:
-        files.append(DatasetFiles(prefix='synth_data_', data=dataset_jsons.synthetic_data))
+    if json_strings['synthetic_data']:
+        files.append(DatasetFiles(prefix='synth_data_', data=json_strings['synthetic_data']))
+
     return files
 
 async def save_and_upload_files(files: list[DatasetFiles]) -> DatasetUrls:
