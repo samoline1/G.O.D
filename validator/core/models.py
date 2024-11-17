@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, list
+from typing import Any
 from typing import Optional
 from uuid import UUID
 from uuid import uuid4
