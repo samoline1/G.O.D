@@ -2,7 +2,7 @@ import json
 import os
 import tempfile
 import asyncio
-from typing import List, Union
+from typing import Optional, Union
 
 from datasets import Dataset
 from datasets import DatasetDict
@@ -11,6 +11,7 @@ from datasets import load_dataset
 from fiber.logging_utils import get_logger
 
 import validator.core.constants as cst
+from validator.core.models import DatasetFiles, DatasetJsons, DatasetUrls
 from validator.evaluation.utils import get_default_dataset_config
 from validator.synth.synth import generate_synthetic_dataset
 from validator.utils.minio import async_minio_client
@@ -19,7 +20,7 @@ from validator.utils.minio import async_minio_client
 logger = get_logger(__name__)
 
 
-async def save_json_to_temp_file(data: List[dict], prefix: str) -> str:
+async def save_json_to_temp_file(data: list[dict], prefix: str) -> str:
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json", prefix=prefix)
     with open(temp_file.name, "w") as f:
         json.dump(data, f)
@@ -57,7 +58,7 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     return split_dataset
 
 
-async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[str]) -> List[dict]:
+async def get_additional_synth_data(dataset: Dataset, columns_to_sample: list[str]) -> list[dict]:
     num_samples = min(cst.MAX_SYNTH_DATA_POINTS, int(len(dataset) * cst.ADDITIONAL_SYNTH_DATA_PERCENTAGE))
     logger.info(f"Generating {num_samples} additional synthetic data points")
     sampled_data = dataset.shuffle(seed=42).select(range(num_samples))
@@ -66,7 +67,7 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
     synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
 
-async def process_batch_dict(batch: list, columns: List[str], batch_num: int) -> List[dict]:
+async def process_batch_dict(batch: list, columns: list[str], batch_num: int) -> list[dict]:
     logger.info(f"Processing batch {batch_num}, batch type: {type(batch)}")
     if batch:
         logger.info(f"First item in batch type: {type(batch[0])}")
@@ -93,7 +94,7 @@ async def process_batch_dict(batch: list, columns: List[str], batch_num: int) ->
 
     return batch_json
 
-async def change_to_json_format_async(dataset: Dataset | list, columns: List[str], batch_size: int = 1000):
+async def change_to_json_format_async(dataset: Dataset | list, columns: list[str], batch_size: int = 1000):
     logger.info(f"Input dataset type: {type(dataset)}")
 
     if isinstance(dataset, list):
@@ -144,15 +145,8 @@ async def change_to_json_format_async(dataset: Dataset | list, columns: List[str
         logger.info(f"Sample from final result: {result[0]}")
 
     return result
-from pydantic import BaseModel, Field
-from typing import Optional, List, Tuple
-from datasets import Dataset
-import os
-from pathlib import Path
-import tempfile
 
 
-from core.models import DatasetUrls, DatasetFiles, DatasetJsons
 
 async def ensure_dataset(data: Union[Dataset, list, None], columns_to_sample: list[str]) -> Dataset:
     if data is None:
@@ -165,7 +159,7 @@ async def create_dataset_jsons(
     train_dataset: Dataset,
     test_dataset: Dataset,
     synthetic_dataset: Dataset,
-    columns_to_sample: List[str]
+    columns_to_sample: list[str]
 ) -> DatasetJsons:
     return DatasetJsons(
         train_data=await change_to_json_format_async(train_dataset, columns_to_sample),
@@ -173,7 +167,7 @@ async def create_dataset_jsons(
         synthetic_data=await change_to_json_format_async(synthetic_dataset, columns_to_sample)
     )
 
-async def prepare_files_for_upload(dataset_jsons: DatasetJsons) -> List[DatasetFiles]:
+async def prepare_files_for_upload(dataset_jsons: DatasetJsons) -> list[DatasetFiles]:
     files = [
         DatasetFiles(prefix='train_data_', data=dataset_jsons.train_data),
         DatasetFiles(prefix='test_data_', data=dataset_jsons.test_data),
@@ -184,7 +178,7 @@ async def prepare_files_for_upload(dataset_jsons: DatasetJsons) -> List[DatasetF
 
     return files
 
-async def save_and_upload_files(files: List[DatasetFiles]) -> DatasetUrls:
+async def save_and_upload_files(files: list[DatasetFiles]) -> DatasetUrls:
     urls = []
     temp_files = []
 
@@ -208,7 +202,7 @@ async def save_and_upload_files(files: List[DatasetFiles]) -> DatasetUrls:
         train_url=urls[0]
     )
 
-async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> Tuple[str, Optional[str], str]:
+async def prepare_task(dataset_name: str, columns_to_sample: list[str]) -> tuple[str, Optional[str], str]:
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict["train"]
     test_dataset = dataset_dict["test"]
