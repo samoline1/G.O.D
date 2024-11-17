@@ -65,36 +65,36 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
     sampled_data_list = [sample for sample in sampled_data]
     synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
+async def process_batch_dict(batch: dict, columns: List[str], batch_num: int) -> List[dict]:
+    logger.info(f"Processing batch {batch_num}")
 
-async def process_batch_dict(batch_dict: dict, columns: List[str], batch_num: int) -> List[dict]:
-    batch_size = len(next(iter(batch_dict.values())))
-    logger.info(f"Processing batch {batch_num}, size: {batch_size}")
+    # Create a list of dictionaries for this batch
+    batch_json = []
+    for row in batch:
+        row_dict = {col: row[col] if col in row else '' for col in columns}
+        batch_json.append(row_dict)
 
-    # Log first item of batch for debugging
-    first_item = {col: batch_dict[col][0] if col in batch_dict else '' for col in columns}
-    logger.info(f"Batch {batch_num} first item sample: {first_item}")
+    if batch_json:
+        logger.info(f"Batch {batch_num} first item sample: {batch_json[0]}")
 
-    return [
-        {col: batch_dict[col][idx] if col in batch_dict else '' for col in columns}
-        for idx in range(batch_size)
-    ]
+    return batch_json
 
 async def change_to_json_format_async(dataset: Dataset, columns: List[str], batch_size: int = 1000):
-    if isinstance(dataset, list):
-        dataset = Dataset.from_list(dataset)
-
     total_rows = len(dataset)
-    total_batches = (total_rows + batch_size - 1) // batch_size  # Ceiling division
+    total_batches = (total_rows + batch_size - 1) // batch_size
     logger.info(f"Starting processing of {total_rows} rows in {total_batches} batches")
     logger.info(f"Columns to extract: {columns}")
 
     # Create batch processing tasks
     tasks = []
-    for i in range(0, len(dataset), batch_size):
+    for i in range(0, total_rows, batch_size):
         batch_num = i // batch_size
-        logger.info(f"Creating batch {batch_num} ({i}:{i+batch_size})")
-        batch_dict = dataset[i:i + batch_size].to_dict()
-        tasks.append(process_batch_dict(batch_dict, columns, batch_num))
+        end_idx = min(i + batch_size, total_rows)
+        logger.info(f"Creating batch {batch_num} ({i}:{end_idx})")
+
+        # Convert slice to list of dictionaries directly
+        batch = dataset.select(range(i, end_idx))
+        tasks.append(process_batch_dict(batch, columns, batch_num))
 
     logger.info(f"Created {len(tasks)} batch processing tasks")
 
@@ -108,11 +108,11 @@ async def change_to_json_format_async(dataset: Dataset, columns: List[str], batc
         result.extend(batch)
 
     logger.info(f"Processing complete. Total items in result: {len(result)}")
-    # Log a sample from the results
     if result:
         logger.info(f"Sample from final result: {result[0]}")
 
     return result
+
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
     logger.info(f"Preparing {dataset_name}")
     dataset_dict = train_test_split(dataset_name)
