@@ -70,10 +70,11 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
 async def change_to_json_format_async(dataset: Dataset, columns: List[str], batch_size: int = 1000):
     if isinstance(dataset, list):
         dataset = Dataset.from_list(dataset)
+
     result = []
     for i in range(0, len(dataset), batch_size):
         batch = dataset[i:i + batch_size]
-        batch_json = [{col: row[col] for col in columns} for row in batch]
+        batch_json = [dict(zip(columns, [row[i] for i in range(len(columns))])) if isinstance(row, str) else {col: row[col] for col in columns} for row in batch]
         result.extend(batch_json)
         await asyncio.sleep(0)
     return result
