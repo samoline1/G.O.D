@@ -66,29 +66,53 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
     synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
 
+async def process_batch_dict(batch_dict: dict, columns: List[str], batch_num: int) -> List[dict]:
+    batch_size = len(next(iter(batch_dict.values())))
+    logger.info(f"Processing batch {batch_num}, size: {batch_size}")
 
-async def process_batch(batch, columns: List[str]):
-        for row in batch:
-            for col in columns:
-                try:
-                     row.get(col)
-                except:
-                    logger.info(f"There was an error with {row}")
-        return [{col: row.get(col, '') for col in columns} for row in batch]
+    # Log first item of batch for debugging
+    first_item = {col: batch_dict[col][0] if col in batch_dict else '' for col in columns}
+    logger.info(f"Batch {batch_num} first item sample: {first_item}")
+
+    return [
+        {col: batch_dict[col][idx] if col in batch_dict else '' for col in columns}
+        for idx in range(batch_size)
+    ]
 
 async def change_to_json_format_async(dataset: Dataset, columns: List[str], batch_size: int = 1000):
     if isinstance(dataset, list):
         dataset = Dataset.from_list(dataset)
+
+    total_rows = len(dataset)
+    total_batches = (total_rows + batch_size - 1) // batch_size  # Ceiling division
+    logger.info(f"Starting processing of {total_rows} rows in {total_batches} batches")
+    logger.info(f"Columns to extract: {columns}")
+
+    # Create batch processing tasks
     tasks = []
     for i in range(0, len(dataset), batch_size):
-        batch = dataset[i:i + batch_size]
-        tasks.append(process_batch(batch, columns))
-    batches = await asyncio.gather(*tasks)
-    result = []
-    for batch in batches:
-        result.extend(batch)
-    return result
+        batch_num = i // batch_size
+        logger.info(f"Creating batch {batch_num} ({i}:{i+batch_size})")
+        batch_dict = dataset[i:i + batch_size].to_dict()
+        tasks.append(process_batch_dict(batch_dict, columns, batch_num))
 
+    logger.info(f"Created {len(tasks)} batch processing tasks")
+
+    # Process all batches concurrently
+    processed_batches = await asyncio.gather(*tasks)
+    logger.info("All batches processed, combining results")
+
+    # Flatten results
+    result = []
+    for batch in processed_batches:
+        result.extend(batch)
+
+    logger.info(f"Processing complete. Total items in result: {len(result)}")
+    # Log a sample from the results
+    if result:
+        logger.info(f"Sample from final result: {result[0]}")
+
+    return result
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
     logger.info(f"Preparing {dataset_name}")
     dataset_dict = train_test_split(dataset_name)
