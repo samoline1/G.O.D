@@ -111,4 +111,19 @@ class LeaderboardRow(BaseModel):
     hotkey: str
     stats: AllNodeStats
 
+class DatasetUrls(BaseModel):
+    test_url: str
+    synthetic_url: Optional[str] = None
+    train_url: str
+
+class DatasetFiles(BaseModel):
+    prefix: str
+    data: str
+    temp_path: Optional[Path] = None
+
+class DatasetJsons(BaseModel):
+    train_data: str
+    test_data: str
+    synthetic_data: str = ""
+
 
