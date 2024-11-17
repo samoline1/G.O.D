@@ -1,6 +1,5 @@
 import json
 
-from sqlalchemy.util import asyncio
 import asyncio
 from datetime import datetime
 from typing import Dict, List, Optional
