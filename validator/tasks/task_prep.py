@@ -68,10 +68,13 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
 
 
 async def process_batch(batch, columns: List[str]):
-    try:
+        for row in batch:
+            for col in columns:
+                try:
+                     row.get(col)
+                except:
+                    logger.info(f"There was an error with {row}")
         return [{col: row.get(col, '') for col in columns} for row in batch]
-    except:
-        logger.info(f'ERRROR WITH {batch}')
 
 async def change_to_json_format_async(dataset: Dataset, columns: List[str], batch_size: int = 1000):
     if isinstance(dataset, list):
