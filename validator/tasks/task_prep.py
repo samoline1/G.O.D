@@ -151,21 +151,8 @@ import os
 from pathlib import Path
 import tempfile
 
+
 from core.models import DatasetUrls, DatasetFiles, DatasetJsons
-class DatasetUrls(BaseModel):
-    test_url: str
-    synthetic_url: Optional[str] = None
-    train_url: str
-
-class DatasetFiles(BaseModel):
-    prefix: str
-    data: str
-    temp_path: Optional[Path] = None
-
-class DatasetJsons(BaseModel):
-    train_data: Union[str, List[Any]]
-    test_data: Union[str, List[Any]]
-    synthetic_data: Union[str, List[Any]] = ""
 
 async def ensure_dataset(data: Union[Dataset, list, None], columns_to_sample: list[str]) -> Dataset:
     if data is None:

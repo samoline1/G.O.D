@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import List
+from typing import Any, list
 from typing import Optional
 from uuid import UUID
 from uuid import uuid4
 from cryptography.fernet import Fernet
+from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -22,8 +23,8 @@ class Task(BaseModel):
     test_data: Optional[str] = None
     synthetic_data: Optional[str] = None
     hf_training_repo: Optional[str] = None
-    assigned_miners: Optional[List[int]] = None
-    miner_scores: Optional[List[float]] = None
+    assigned_miners: Optional[list[int]] = None
+    miner_scores: Optional[list[float]] = None
     created_timestamp: Optional[datetime] = None
     delay_timestamp: Optional[datetime] = None
     updated_timestamp: Optional[datetime] = None
@@ -52,12 +53,12 @@ class TaskResults(BaseModel):
     node_scores: list[TaskNode]
 
 class NodeAggregationResult(BaseModel):
-    task_work_scores: List[float] = Field(default_factory=list)
+    task_work_scores: list[float] = Field(default_factory=list)
     average_raw_score: Optional[float] = Field(default=0.0)
     summed_adjusted_task_scores: float = Field(default=0.0)
     quality_score: Optional[float] = Field(default=0.0)
     emission: Optional[float] = Field(default=0.0)
-    task_raw_scores: List[float] = Field(default_factory=list)
+    task_raw_scores: list[float] = Field(default_factory=list)
     hotkey: str
     class Config:
         validate_assignment = True
@@ -122,8 +123,8 @@ class DatasetFiles(BaseModel):
     temp_path: Optional[Path] = None
 
 class DatasetJsons(BaseModel):
-    train_data: str
-    test_data: str
-    synthetic_data: str = ""
+    train_data: list[Any]
+    test_data: list[Any]
+    synthetic_data: Optional[list[Any]] = None
 
 
