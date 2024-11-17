@@ -211,7 +211,6 @@ async def save_and_upload_files(files: List[DatasetFiles]) -> DatasetUrls:
         )
         urls.append(url.strip('"'))
 
-    # Cleanup temp files
     for temp_file in temp_files:
         os.remove(temp_file)
 
@@ -243,7 +242,6 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> Tuple
         logger.info("Skipping synthetic data generation")
         synthetic_dataset = await ensure_dataset(None, columns_to_sample)
 
-    # Convert datasets to JSON format
     dataset_jsons = await create_dataset_jsons(
         train_dataset,
         test_dataset,
@@ -251,7 +249,6 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> Tuple
         columns_to_sample
     )
 
-    # Prepare and upload files
     files = await prepare_files_for_upload(dataset_jsons)
     urls = await save_and_upload_files(files)
 
