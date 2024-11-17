@@ -65,44 +65,76 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
     sampled_data_list = [sample for sample in sampled_data]
     synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
-async def process_batch_dict(batch: dict, columns: List[str], batch_num: int) -> List[dict]:
-    logger.info(f"Processing batch {batch_num}")
 
-    # Create a list of dictionaries for this batch
+async def process_batch_dict(batch: list, columns: List[str], batch_num: int) -> List[dict]:
+    logger.info(f"Processing batch {batch_num}, batch type: {type(batch)}")
+    if batch:
+        logger.info(f"First item in batch type: {type(batch[0])}")
+
     batch_json = []
-    for row in batch:
-        row_dict = {col: row[col] if col in row else '' for col in columns}
-        batch_json.append(row_dict)
+    for idx, row in enumerate(batch):
+        try:
+            if isinstance(row, dict):
+                row_dict = {col: row.get(col, '') for col in columns}
+            else:
+                logger.warning(f"Unexpected row type in batch {batch_num}: {type(row)}")
+                row_dict = {col: '' for col in columns}
+            batch_json.append(row_dict)
 
-    if batch_json:
-        logger.info(f"Batch {batch_num} first item sample: {batch_json[0]}")
+            # Log first item of each batch
+            if idx == 0:
+                logger.info(f"Batch {batch_num} first item: {row_dict}")
+
+        except Exception as e:
+            logger.error(f"Error processing row in batch {batch_num}: {e}")
+            logger.error(f"Problematic row: {row}")
+            row_dict = {col: '' for col in columns}
+            batch_json.append(row_dict)
 
     return batch_json
 
-async def change_to_json_format_async(dataset: Dataset, columns: List[str], batch_size: int = 1000):
-    total_rows = len(dataset)
+async def change_to_json_format_async(dataset: Dataset | list, columns: List[str], batch_size: int = 1000):
+    logger.info(f"Input dataset type: {type(dataset)}")
+
+    if isinstance(dataset, list):
+        logger.info("Converting list to Dataset")
+        try:
+            dataset = Dataset.from_list(dataset)
+        except Exception as e:
+            logger.info(f"Could not convert to Dataset, proceeding with list. Error: {e}")
+            # If we can't convert to Dataset, we'll process the list directly
+            total_rows = len(dataset)
+    else:
+        total_rows = len(dataset)
+
     total_batches = (total_rows + batch_size - 1) // batch_size
     logger.info(f"Starting processing of {total_rows} rows in {total_batches} batches")
     logger.info(f"Columns to extract: {columns}")
 
-    # Create batch processing tasks
     tasks = []
     for i in range(0, total_rows, batch_size):
         batch_num = i // batch_size
         end_idx = min(i + batch_size, total_rows)
         logger.info(f"Creating batch {batch_num} ({i}:{end_idx})")
 
-        # Convert slice to list of dictionaries directly
-        batch = dataset.select(range(i, end_idx))
-        tasks.append(process_batch_dict(batch, columns, batch_num))
+        try:
+            if isinstance(dataset, Dataset):
+                batch = dataset.select(range(i, end_idx))
+            else:
+                # If we're working with a list, slice it directly
+                batch = dataset[i:end_idx]
+
+            tasks.append(process_batch_dict(batch, columns, batch_num))
+
+        except Exception as e:
+            logger.error(f"Error creating batch {batch_num}: {e}")
+            continue
 
     logger.info(f"Created {len(tasks)} batch processing tasks")
 
-    # Process all batches concurrently
     processed_batches = await asyncio.gather(*tasks)
     logger.info("All batches processed, combining results")
 
-    # Flatten results
     result = []
     for batch in processed_batches:
         result.extend(batch)
@@ -112,7 +144,6 @@ async def change_to_json_format_async(dataset: Dataset, columns: List[str], batc
         logger.info(f"Sample from final result: {result[0]}")
 
     return result
-
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
     logger.info(f"Preparing {dataset_name}")
     dataset_dict = train_test_split(dataset_name)
