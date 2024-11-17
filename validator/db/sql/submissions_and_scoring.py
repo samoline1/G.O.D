@@ -1,6 +1,7 @@
-# submissions.py
 import json
-import os
+
+from sqlalchemy.util import asyncio
+import asyncio
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID
@@ -238,3 +239,102 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
             results.append(TaskResults(task=task, node_scores=node_scores))
 
         return results
+
+async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> Dict:
+    """Get quality metrics for a node over the specified interval
+    Args:
+        hotkey: Node's hotkey
+        interval: PostgreSQL interval string (e.g. '30 days', '24 hours')
+        psql_db: Database connection
+    """
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT
+                COALESCE(AVG(tn.{cst.QUALITY_SCORE}), 0) as avg_quality_score,
+                COALESCE(COUNT(CASE WHEN tn.{cst.QUALITY_SCORE} > 0 THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0), 0) as success_rate,
+                COALESCE(COUNT(CASE WHEN tn.{cst.QUALITY_SCORE} > 0.8 THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0), 0) as quality_rate
+            FROM {cst.TASK_NODES_TABLE} tn
+            JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
+            WHERE tn.{cst.HOTKEY} = $1
+            AND tn.{cst.NETUID} = $2
+            AND t.created_timestamp >= CASE
+                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+                ELSE NOW() - $3::INTERVAL
+            END
+        """
+        return dict(await connection.fetchrow(query, hotkey, NETUID, interval))
+
+async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> Dict:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            WITH param_extract AS (
+                SELECT
+                    t.{cst.TASK_ID},
+                    CASE
+                        WHEN LOWER(t.{cst.MODEL_ID}) ~ '[0-9]+\.?[0-9]*[mb]' THEN
+                            CASE
+                                WHEN LOWER(t.{cst.MODEL_ID}) ~ 'b' THEN
+                                    CAST(REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g') AS FLOAT)
+                                WHEN LOWER(t.{cst.MODEL_ID}) ~ 'm' THEN
+                                    CAST(REGEXP_REPLACE(LOWER(t.{cst.MODEL_ID}), '[^0-9.]', '', 'g') AS FLOAT) / 1000.0
+                            END
+                        ELSE 1.0
+                    END as params_billions
+                FROM {cst.TASKS_TABLE} t
+            )
+            SELECT
+                COALESCE(SUM(t.{cst.HOURS_TO_COMPLETE}), 0)::INTEGER as competition_hours,
+                COALESCE(SUM(pe.params_billions), 0) as total_params_billions
+            FROM {cst.TASK_NODES_TABLE} tn
+            JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
+            JOIN param_extract pe ON t.{cst.TASK_ID} = pe.{cst.TASK_ID}
+            WHERE tn.{cst.HOTKEY} = $1
+            AND tn.{cst.NETUID} = $2
+            AND t.created_timestamp >= CASE
+                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+                ELSE NOW() - $3::INTERVAL
+            END
+        """
+        return dict(await connection.fetchrow(query, hotkey, NETUID, interval))
+
+async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> Dict:
+    """Get model and dataset metrics for a node over the specified interval"""
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT
+                COALESCE(
+                    FIRST_VALUE(t.{cst.MODEL_ID}) OVER (ORDER BY COUNT(*) DESC),
+                    'none'
+                ) as modal_model,
+                COUNT(DISTINCT t.{cst.MODEL_ID})::INTEGER as unique_models,
+                COUNT(DISTINCT t.{cst.DS_ID})::INTEGER as unique_datasets
+            FROM {cst.TASK_NODES_TABLE} tn
+            JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
+            WHERE tn.{cst.HOTKEY} = $1
+            AND tn.{cst.NETUID} = $2
+            AND t.created_timestamp >= CASE
+                WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
+                ELSE NOW() - $3::INTERVAL
+            END
+            GROUP BY tn.{cst.HOTKEY}
+        """
+        return dict(await connection.fetchrow(query, hotkey, NETUID, interval))
+
+async def get_all_node_stats(hotkey: str, psql_db: PSQLDB) -> Dict:
+    intervals = ['24 hours', '3 days', '7 days', '30 days', 'all']
+    stats = {}
+    for interval in intervals:
+        quality, workload, models = await asyncio.gather(
+            get_node_quality_metrics(hotkey, interval, psql_db),
+            get_node_workload_metrics(hotkey, interval, psql_db),
+            get_node_model_metrics(hotkey, interval, psql_db)
+        )
+        stats[interval] = {
+            **quality,
+            **workload,
+            **models
+        }
+    return stats
