@@ -297,7 +297,6 @@ async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) ->
         return ModelMetrics.model_validate(dict(row) if row else {})
 
 async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> WorkloadMetrics:
-    """Get workload metrics for a node over the specified interval"""
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
