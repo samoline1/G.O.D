@@ -251,6 +251,7 @@ async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) 
             JOIN {cst.TASKS_TABLE} t ON tn.{cst.TASK_ID} = t.{cst.TASK_ID}
             WHERE tn.{cst.HOTKEY} = $1
             AND tn.{cst.NETUID} = $2
+            AND tn.{cst.QUALITY_SCORE} IS NOT NULL
             AND t.created_timestamp >= CASE
                 WHEN $3 = 'all' THEN '1970-01-01'::TIMESTAMP
                 ELSE NOW() - $3::INTERVAL
