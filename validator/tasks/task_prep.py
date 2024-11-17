@@ -144,16 +144,84 @@ async def change_to_json_format_async(dataset: Dataset | list, columns: List[str
         logger.info(f"Sample from final result: {result[0]}")
 
     return result
+from pydantic import BaseModel, Field
+from typing import Optional, List, Tuple
+from datasets import Dataset
+import os
+from pathlib import Path
+import tempfile
+
+class DatasetUrls(BaseModel):
+    test_url: str
+    synthetic_url: Optional[str] = None
+    train_url: str
+
+class DatasetFiles(BaseModel):
+    prefix: str
+    data: str
+    temp_path: Optional[Path] = None
+
+class DatasetJsons(BaseModel):
+    train_data: str
+    test_data: str
+    synthetic_data: str = ""
+
 async def ensure_dataset(data: Union[Dataset, list, None], columns_to_sample: list[str]) -> Dataset:
-    """Normalize input to Dataset type with consistent columns"""
     if data is None:
         return Dataset.from_list([])
     if isinstance(data, list):
         return Dataset.from_list(data)
     return data
 
-async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
-    logger.info(f"Preparing {dataset_name}")
+async def create_dataset_jsons(
+    train_dataset: Dataset,
+    test_dataset: Dataset,
+    synthetic_dataset: Dataset,
+    columns_to_sample: List[str]
+) -> DatasetJsons:
+    return DatasetJsons(
+        train_data=await change_to_json_format_async(train_dataset, columns_to_sample),
+        test_data=await change_to_json_format_async(test_dataset, columns_to_sample),
+        synthetic_data=await change_to_json_format_async(synthetic_dataset, columns_to_sample)
+    )
+
+async def prepare_files_for_upload(dataset_jsons: DatasetJsons) -> List[DatasetFiles]:
+    files = [
+        DatasetFiles(prefix='train_data_', data=dataset_jsons.train_data),
+        DatasetFiles(prefix='test_data_', data=dataset_jsons.test_data),
+    ]
+
+    if dataset_jsons.synthetic_data:
+        files.append(DatasetFiles(prefix='synth_data_', data=dataset_jsons.synthetic_data))
+
+    return files
+
+async def save_and_upload_files(files: List[DatasetFiles]) -> DatasetUrls:
+    urls = []
+    temp_files = []
+
+    for file in files:
+        file.temp_path = await save_json_to_temp_file(file.data, prefix=file.prefix)
+        temp_files.append(file.temp_path)
+
+        url = await upload_json_to_minio(
+            file.temp_path,
+            "tuning",
+            f"{os.urandom(8).hex()}_{file.prefix.strip('_')}.json"
+        )
+        urls.append(url.strip('"'))
+
+    # Cleanup temp files
+    for temp_file in temp_files:
+        os.remove(temp_file)
+
+    return DatasetUrls(
+        test_url=urls[1],
+        synthetic_url=urls[2] if len(urls) > 2 else None,
+        train_url=urls[0]
+    )
+
+async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> Tuple[str, Optional[str], str]:
     dataset_dict = train_test_split(dataset_name)
     train_dataset = dataset_dict["train"]
     test_dataset = dataset_dict["test"]
@@ -167,6 +235,7 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple
         logger.info("First 2 examples from original test dataset:")
         for i, example in enumerate(test_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
+
         logger.info("First 2 examples from synthetic dataset:")
         for i, example in enumerate(synthetic_dataset.select(range(2))):
             logger.info(f"Example {i + 1}: {example}")
@@ -174,34 +243,17 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple
         logger.info("Skipping synthetic data generation")
         synthetic_dataset = await ensure_dataset(None, columns_to_sample)
 
-    # Now all data is normalized to Dataset type
-    train_data_json = await change_to_json_format_async(train_dataset, columns_to_sample)
-    test_data_json = await change_to_json_format_async(test_dataset, columns_to_sample)
-    synthetic_data_json = await change_to_json_format_async(synthetic_dataset, columns_to_sample)
+    # Convert datasets to JSON format
+    dataset_jsons = await create_dataset_jsons(
+        train_dataset,
+        test_dataset,
+        synthetic_dataset,
+        columns_to_sample
+    )
 
-    # Save and upload process
-    files_to_upload = [
-        ('train_data_', train_data_json),
-        ('test_data_', test_data_json),
-        ('synth_data_', synthetic_data_json) if len(synthetic_data_json) > 0 else None
-    ]
+    # Prepare and upload files
+    files = await prepare_files_for_upload(dataset_jsons)
+    urls = await save_and_upload_files(files)
 
-    urls = []
-    temp_files = []
-
-    for file_info in filter(None, files_to_upload):
-        prefix, data = file_info
-        temp_path = await save_json_to_temp_file(data, prefix=prefix)
-        temp_files.append(temp_path)
-        url = await upload_json_to_minio(temp_path, "tuning", f"{os.urandom(8).hex()}_{prefix.strip('_')}.json")
-        urls.append(url.strip('"'))
-
-    # Cleanup temp files
-    for temp_file in temp_files:
-        os.remove(temp_file)
-
-    # Return in expected order: test, synth, train
-    if len(urls) == 2:  # No synthetic data
-        return urls[1], None, urls[0]
-    return urls[1], urls[2], urls[0]
+    return urls.test_url, urls.synthetic_url, urls.train_url
 
