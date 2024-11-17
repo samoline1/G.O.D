@@ -126,7 +126,7 @@ class DatasetFiles(BaseModel):
 class DatasetJsons(BaseModel):
     train_data: list[Any]
     test_data: list[Any]
-    synthetic_data: List[Any] = Field(default_factory=list)
+    synthetic_data: list[Any] = Field(default_factory=list)
 
     def to_json_strings(self) -> dict[str, str]:
         return {
