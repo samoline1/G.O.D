@@ -100,7 +100,6 @@ async def change_to_json_format_async(dataset: Dataset | list, columns: list[str
             dataset = Dataset.from_list(dataset)
         except Exception as e:
             logger.info(f"Could not convert to Dataset, proceeding with list. Error: {e}")
-            # If we can't convert to Dataset, we'll process the list directly
             total_rows = len(dataset)
     else:
         total_rows = len(dataset)
