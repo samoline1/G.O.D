@@ -23,17 +23,6 @@ async def evaluate_model(request: EvaluationRequest) -> EvaluationResponse:
         raise HTTPException(status_code=400, detail="Dataset, model, original_model, and dataset_type are required.")
 
     try:
-        if request.file_format != FileFormat.HF:
-            is_valid = validate_dataset(request.dataset, request.dataset_type, request.file_format)
-            if not is_valid:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid dataset format for {request.dataset_type} dataset type.",
-                )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    try:
         eval_results = run_evaluation_docker(
             dataset=request.dataset,
             model=request.model,
