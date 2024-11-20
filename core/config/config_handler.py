@@ -41,8 +41,7 @@ def create_dataset_entry(
         dataset_entry["type"] = dataset_type.value
     elif isinstance(dataset_type, CustomDatasetType):
         custom_type_dict = {key: value for key, value in dataset_type.model_dump().items() if value is not None}
-        dataset_entry["format"] = "custom"
-        dataset_entry["type"] = custom_type_dict
+        dataset_entry.update(_process_custom_dataset_fields(custom_type_dict))
     else:
         raise ValueError("Invalid dataset_type provided.")
 
@@ -76,3 +75,39 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
 def save_config(config: dict, config_path: str):
     with open(config_path, "w") as file:
         yaml.dump(config, file)
+
+
+def _process_custom_dataset_fields(custom_type_dict: dict) -> dict:
+    """
+    Process custom dataset fields and set appropriate format configurations.
+
+    Args:
+        custom_type_dict: Dictionary containing the custom dataset field configurations
+
+    Returns:
+        dict: Processed configuration dictionary with proper format settings
+
+    Raises:
+        ValueError: If the field combinations don't meet the requirements
+    """
+    # Completion tasks: only need field_instruction, simplify the structure
+    if not custom_type_dict.get("field_output"):
+        return {
+            "type": "completion",
+            "field": custom_type_dict.get("field_instruction")
+        }
+
+    # Instruction-following tasks: keep existing nested structure
+    processed_dict = custom_type_dict.copy()
+    # Even if dataset has input, some rows might not have it
+    # TODO: Needs setting. Consequently and bcz of special tokens, need to allow in FE?
+    processed_dict.setdefault("no_input_format", "{instruction}")
+    if processed_dict.get("field_input"):
+        processed_dict.setdefault("format", "{instruction} {input}")
+    else:
+        processed_dict.setdefault("format", "{instruction}")
+
+    return {
+        "format": "custom",
+        "type": processed_dict
+    }
