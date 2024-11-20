@@ -36,7 +36,6 @@ async def run_evaluation_docker(
         "ORIGINAL_MODEL": original_model,
         "DATASET_TYPE": dataset_type_str,
         "FILE_FORMAT": file_format.value,
-        "HUGGINGFACE_TOKEN": cst.HUGGINGFACE_TOKEN,
     }
 
     dataset_dir = os.path.dirname(os.path.abspath(dataset))
