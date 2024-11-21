@@ -16,7 +16,7 @@ class Task(BaseModel):
     task_id: Optional[UUID] = None
     model_id: str
     ds_id: str
-    input: str
+    input: Optional[str] = None
     status: str
     system: Optional[str] = None
     instruction: Optional[str] = None
