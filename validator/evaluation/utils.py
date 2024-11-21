@@ -44,7 +44,8 @@ def get_default_dataset_config(dataset_name: str) -> str | None:
         logger.info(dataset_name)
         config_names = get_dataset_config_names(dataset_name)
     except:
-        return None if config_names:
+        return None
+    if config_names:
         logger.info(f'Dataset {dataset_name} has configs: {config_names}. Taking the first config name: {config_names[0]}')
         return config_names[0]
     else:
