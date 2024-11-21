@@ -66,29 +66,20 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: list[st
     sampled_data_list = [sample for sample in sampled_data]
     synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
-
 async def process_batch_dict(batch: list, columns: list[str], batch_num: int) -> list[dict]:
-    logger.info(f"Processing batch {batch_num}, batch type: {type(batch)}")
-
     batch_json = []
     for idx, row in enumerate(batch):
         try:
-            if isinstance(row, dict):
-                row_dict = {col: row.get(col, '') for col in columns}
-            else:
-                logger.warning(f"Unexpected row type in batch {batch_num}: {type(row)}")
-                row_dict = {col: '' for col in columns}
+            row_dict = {}
+            for col in columns:
+                value = row.get(col, '') if isinstance(row, dict) else ''
+                row_dict[col] = str(value) if value is not None else ''
             batch_json.append(row_dict)
-
-            if idx == 0:
-                logger.info(f"Batch {batch_num} first item: {row_dict}")
-
         except Exception as e:
             logger.error(f"Error processing row in batch {batch_num}: {e}")
             logger.error(f"Problematic row: {row}")
             row_dict = {col: '' for col in columns}
             batch_json.append(row_dict)
-
     return batch_json
 
 async def change_to_json_format_async(dataset: Dataset | list, columns: list[str], batch_size: int = 1000):
