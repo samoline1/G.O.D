@@ -66,18 +66,13 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: list[st
     sampled_data_list = [sample for sample in sampled_data]
     synthetic_data = await generate_synthetic_dataset(sampled_data_list)
     return synthetic_data
+
 async def process_batch_dict(batch: list, columns: list[str], batch_num: int) -> list[dict]:
     batch_json = []
     for row in batch:
         row_dict = {}
         for col in columns:
-            value = row.get(col, '') if isinstance(row, dict) else ''
-            if isinstance(value, (dict, list)):
-                value = json.dumps(value, ensure_ascii=False)
-            elif value is None:
-                value = ''
-            else:
-                value = str(value)
+            value = str(row.get(col, ''))
             row_dict[col] = value
         batch_json.append(row_dict)
     return batch_json
