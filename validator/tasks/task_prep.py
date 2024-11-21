@@ -228,6 +228,10 @@ async def prepare_task(dataset_name: str, columns_to_sample: list[str]) -> tuple
         columns_to_sample
     )
 
+    print(train_dataset)
+    print(test_dataset)
+    print(synthetic_dataset)
+
     files = await prepare_files_for_upload(dataset_jsons)
     urls = await save_and_upload_files(files)
 
