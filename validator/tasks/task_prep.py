@@ -164,6 +164,7 @@ async def create_dataset_jsons(
 
 async def prepare_files_for_upload(dataset_jsons: DatasetJsons) -> list[DatasetFiles]:
     json_strings = dataset_jsons.to_json_strings()
+    logger.info(json_strings)
 
     files = [
         DatasetFiles(prefix='train_data_', data=json_strings['train_data']),
@@ -228,9 +229,6 @@ async def prepare_task(dataset_name: str, columns_to_sample: list[str]) -> tuple
         columns_to_sample
     )
 
-    print(train_dataset)
-    print(test_dataset)
-    print(synthetic_dataset)
 
     files = await prepare_files_for_upload(dataset_jsons)
     urls = await save_and_upload_files(files)
