@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     test_data TEXT,
     synthetic_data TEXT,
     hf_training_repo TEXT,
+    format TEXT,
+    no_input_format TEXT,
     miner_scores FLOAT[],
     hours_to_complete INTEGER,
     end_timestamp TIMESTAMPTZ,
