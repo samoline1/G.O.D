@@ -69,7 +69,7 @@ class MinerTaskResponse(BaseModel):
     accepted: bool
 
 
-class TaskRequest(BaseModel):
+class TaskRequest(BaseModel):  # did not add format
     ds_repo: str
     system_col: str
     instruction_col: str
@@ -101,10 +101,12 @@ class NewTaskRequest(BaseModel):
     model_repo: str
     ds_repo: str
     instruction_col: str
-    hours_to_complete: int
     input_col: Optional[str] = None
+    hours_to_complete: int
     system_col: Optional[str] = None
     output_col: Optional[str] = None
+    format_col: Optional[str] = None
+    no_input_format_col: Optional[str] = None
 
 
 class GetTasksRequest(BaseModel):
@@ -154,6 +156,8 @@ class TaskStatusResponse(BaseModel):
     system_col: Optional[str]
     output_col: Optional[str]
     instruction_col: Optional[str]
+    format_col: Optional[str]
+    no_input_format_col: Optional[str]
     started: str
     end: str
     created: str

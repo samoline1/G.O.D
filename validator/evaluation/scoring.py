@@ -262,9 +262,11 @@ def add_raw_scores_to_miner_results(miner_results: list[MinerResults]) -> list[M
 def _get_dataset_type(task: Task) -> CustomDatasetType:
     return CustomDatasetType(
         field_system=task.system,
-        field_instruction=task.instruction or task.input,
+        field_instruction=task.instruction,
         field_input=task.input,
-        field_output=task.output
+        field_output=task.output,
+        format=task.format,
+        no_input_format=task.no_input_format
     )
 
 def _create_failed_miner_result(hotkey: str) -> MinerResults:

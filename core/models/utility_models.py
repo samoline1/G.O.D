@@ -33,13 +33,13 @@ class TaskStatus(str, Enum):
     IDLE = "idle"
     READY = "ready"
     SUCCESS = "success"
-    LOOKING_FOR_NODES = "looking for nodes"
+    LOOKING_FOR_NODES = "looking_for_nodes"
     EVALUATING = "evaluating"
     TRAINING = "training"
     FAILURE = "failure"
-    FAILURE_FINDING_NODES = "failure finding nodes"
-    PREP_TASK_FAILURE = "prep task failure"
-    NODE_TRAINING_FAILURE = "node training failure"
+    FAILURE_FINDING_NODES = "failure_finding_nodes"
+    PREP_TASK_FAILURE = "prep_task_failure"
+    NODE_TRAINING_FAILURE = "node_training_failure"
 
 
 class CustomDatasetType(BaseModel):
