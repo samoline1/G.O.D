@@ -100,11 +100,11 @@ class SubmissionResponse(BaseModel):
 class NewTaskRequest(BaseModel):
     model_repo: str
     ds_repo: str
-    input_col: Optional[str] = None
+    instruction_col: str
     hours_to_complete: int
+    input_col: Optional[str] = None
     system_col: Optional[str] = None
     output_col: Optional[str] = None
-    instruction_col: str
 
 
 class GetTasksRequest(BaseModel):
