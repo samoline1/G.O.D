@@ -95,6 +95,7 @@ async def create_task(
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
 ) -> NewTaskResponse:
+    logger.info(f"The request coming in is {request}")
     current_time = datetime.utcnow()
     end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
 
