@@ -10,6 +10,7 @@ from datasets import load_dataset
 from fiber.logging_utils import get_logger
 
 import validator.core.constants as cst
+from validator.evaluation.utils import get_default_dataset_config
 from validator.synth.synth import generate_synthetic_dataset
 from validator.utils.minio import async_minio_client
 
@@ -33,7 +34,12 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     if test_size is None:
         test_size = cst.TRAIN_TEST_SPLIT_PERCENTAGE
     logger.info(f"Loading dataset '{dataset_name}'")
-    dataset = load_dataset(dataset_name)
+    try:
+        config_name = get_default_dataset_config(dataset_name)
+        dataset = load_dataset(dataset_name, config_name)
+    except Exception as e:
+        logger.exception(f'Failed to load dataset {dataset_name}: {e}')
+        raise e
 
     if isinstance(dataset, DatasetDict):
         combined_dataset = concatenate_datasets([split for split in dataset.values()])
@@ -43,6 +49,7 @@ def train_test_split(dataset_name: str, test_size: float = None) -> DatasetDict:
     logger.info(f"Combined dataset size: {len(combined_dataset)}")
     logger.info(f"Splitting combined dataset into train and test with test size {test_size}")
 
+    test_size = min(int(len(combined_dataset) * cst.TRAIN_TEST_SPLIT_PERCENTAGE), cst.MAX_SYNTH_DATA_POINTS)
     split_dataset = combined_dataset.train_test_split(test_size=test_size, shuffle=True, seed=42)
     logger.info(f"Train set size: {len(split_dataset['train'])}")
     logger.info(f"Test set size: {len(split_dataset['test'])}")
@@ -94,10 +101,10 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple
     test_json_path = await save_json_to_temp_file(test_data_json, prefix="test_data_")
     synth_json_path = await save_json_to_temp_file(synthetic_data_json, prefix="synth_data_") if synthetic_data else None
 
-    train_json_url = await upload_json_to_minio(train_json_path, "tuning", f"{dataset_name}_train_data.json")
-    test_json_url = await upload_json_to_minio(test_json_path, "tuning", f"{dataset_name}_test_data.json")
+    train_json_url = await upload_json_to_minio(train_json_path, "tuning", f"{os.urandom(8).hex()}_train_data.json")
+    test_json_url = await upload_json_to_minio(test_json_path, "tuning", f"{os.urandom(8).hex()}_test_data.json")
     synth_json_url = (
-        await upload_json_to_minio(synth_json_path, "tuning", f"{dataset_name}_synth_data.json") if synthetic_data else None
+        await upload_json_to_minio(synth_json_path, "tuning", f"{os.urandom(8).hex()}_synth_data.json") if synthetic_data else None
     )
 
     os.remove(test_json_path)
