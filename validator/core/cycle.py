@@ -185,6 +185,8 @@ async def _process_ready_to_train_tasks(config: Config):
 
 async def _evaluate_task(task: Task, config: Config):
     try:
+       task.status = TaskStatus.EVALUATING
+       await tasks_sql.update_task(task, config.psql_db)
        task = await evaluate_and_score(task, config)
        await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
