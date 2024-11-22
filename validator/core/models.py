@@ -16,11 +16,13 @@ class Task(BaseModel):
     task_id: Optional[UUID] = None
     model_id: str
     ds_id: str
-    input: str
+    input: Optional[str] = None
     status: str
     system: Optional[str] = None
     instruction: Optional[str] = None
     output: Optional[str] = None
+    format: Optional[str] = None
+    no_input_format: Optional[str] = None
     test_data: Optional[str] = None
     synthetic_data: Optional[str] = None
     hf_training_repo: Optional[str] = None

@@ -75,6 +75,8 @@ async def get_tasks(
                 system_col=task.get("system"),
                 instruction_col=task.get("instruction"),
                 output_col=task.get("output"),
+                format_col=task.get("format"),
+                no_input_format_col=task.get("no_input_format"),
                 miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
                 dataset=task.get("ds_id"),
                 started=str(task['started_timestamp']),
@@ -93,6 +95,7 @@ async def create_task(
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
 ) -> NewTaskResponse:
+    logger.info(f"The request coming in is {request}")
     current_time = datetime.utcnow()
     end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
 
@@ -104,6 +107,8 @@ async def create_task(
         instruction=request.instruction_col,
         input=request.input_col,
         output=request.output_col,
+        format=request.format_col,
+        no_input_format=request.no_input_format_col,
         status=TaskStatus.PENDING,
         end_timestamp=end_timestamp,
         hours_to_complete=request.hours_to_complete,
@@ -178,6 +183,8 @@ async def get_task_status(
         system_col=task.system,
         instruction_col=task.instruction,
         output_col=task.output,
+        format_col=task.format,
+        no_input_format_col=task.no_input_format,
         started=str(task.started_timestamp),
         miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
         end=str(task.end_timestamp),

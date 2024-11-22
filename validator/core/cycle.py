@@ -1,10 +1,14 @@
 import asyncio
 import datetime
 import random
+
 from datasets import get_dataset_infos
 from fiber.logging_utils import get_logger
+from fiber.networking.models import NodeWithFernet as Node
 
 import validator.core.constants as cst
+import validator.db.sql.nodes as nodes_sql
+import validator.db.sql.tasks as tasks_sql
 from core.models.payload_models import MinerTaskRequst
 from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequest
@@ -13,15 +17,12 @@ from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.models import Task
-from fiber.networking.models import NodeWithFernet as Node
-from validator.core.refresh_nodes import get_and_store_nodes, perform_handshakes
-import validator.db.sql.tasks as tasks_sql
-import validator.db.sql.nodes as nodes_sql
+from validator.core.refresh_nodes import get_and_store_nodes
+from validator.core.refresh_nodes import perform_handshakes
 from validator.evaluation.scoring import evaluate_and_score
 from validator.evaluation.weight_setting import set_weights_periodically
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream_fiber
-
 
 
 logger = get_logger(__name__)
@@ -96,7 +97,12 @@ async def _select_miner_pool_and_add_to_task(task: Task, nodes: list[Node], conf
 
 async def _let_miners_know_to_start_training(task: Task, nodes: list[Node], config: Config):
     dataset_type = CustomDatasetType(
-        field_system=task.system, field_input=task.input, field_output=task.output, field_instruction=task.instruction
+        field_system=task.system,
+        field_input=task.input,
+        field_output=task.output,
+        field_instruction=task.instruction,
+        format=task.format,
+        no_input_format=task.no_input_format
     )
 
     dataset = task.hf_training_repo if task.hf_training_repo else "dataset error"
@@ -174,7 +180,7 @@ async def _process_ready_to_train_tasks(config: Config):
         logger.info(f"There are {len(ready_to_train_tasks)} ready to train")
         await asyncio.gather(*[_start_training_task(task, config ) for task in ready_to_train_tasks[: cst.MAX_CONCURRENT_TRAININGS]])
     else:
-        logger.info(f"No pending tasks - waiting for 30 seconds")
+        logger.info("No pending tasks - waiting for 30 seconds")
         await asyncio.sleep(30)
 
 async def _evaluate_task(task: Task, config: Config):
@@ -259,4 +265,3 @@ async def _run_main_validator_loop(config: Config) -> None:
 
 def init_validator_cycles(config: Config) -> Task:
        return asyncio.create_task(run_validator_cycles(config))
-
