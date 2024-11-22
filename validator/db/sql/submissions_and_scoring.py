@@ -239,6 +239,7 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
 
         return results
 
+
 async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> QualityMetrics:
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -259,6 +260,7 @@ async def get_node_quality_metrics(hotkey: str, interval: str, psql_db: PSQLDB) 
         """
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return QualityMetrics.model_validate(dict(row) if row else {})
+
 
 # llm wrote this - someone that's more experienced should read through - tests work ok but still
 async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> WorkloadMetrics:
@@ -300,6 +302,7 @@ async def get_node_workload_metrics(hotkey: str, interval: str, psql_db: PSQLDB)
         """
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return WorkloadMetrics.model_validate(dict(row) if row else {})
+
 
 async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) -> ModelMetrics:
     async with await psql_db.connection() as connection:
@@ -343,32 +346,24 @@ async def get_node_model_metrics(hotkey: str, interval: str, psql_db: PSQLDB) ->
         row = await connection.fetchrow(query, hotkey, NETUID, interval)
         return ModelMetrics.model_validate(dict(row) if row else {})
 
+
 async def get_node_stats(hotkey: str, interval: str, psql_db: PSQLDB) -> NodeStats:
     quality, workload, models = await asyncio.gather(
         get_node_quality_metrics(hotkey, interval, psql_db),
         get_node_workload_metrics(hotkey, interval, psql_db),
-        get_node_model_metrics(hotkey, interval, psql_db)
+        get_node_model_metrics(hotkey, interval, psql_db),
     )
 
-    return NodeStats(
-        quality_metrics=quality,
-        workload_metrics=workload,
-        model_metrics=models
-    )
+    return NodeStats(quality_metrics=quality, workload_metrics=workload, model_metrics=models)
+
 
 async def get_all_node_stats(hotkey: str, psql_db: PSQLDB) -> AllNodeStats:
     daily, three_day, weekly, monthly, all_time = await asyncio.gather(
-        get_node_stats(hotkey, '24 hours', psql_db),
-        get_node_stats(hotkey, '3 days', psql_db),
-        get_node_stats(hotkey, '7 days', psql_db),
-        get_node_stats(hotkey, '30 days', psql_db),
-        get_node_stats(hotkey, 'all', psql_db)
+        get_node_stats(hotkey, "24 hours", psql_db),
+        get_node_stats(hotkey, "3 days", psql_db),
+        get_node_stats(hotkey, "7 days", psql_db),
+        get_node_stats(hotkey, "30 days", psql_db),
+        get_node_stats(hotkey, "all", psql_db),
     )
 
-    return AllNodeStats(
-        daily=daily,
-        three_day=three_day,
-        weekly=weekly,
-        monthly=monthly,
-        all_time=all_time
-    )
+    return AllNodeStats(daily=daily, three_day=three_day, weekly=weekly, monthly=monthly, all_time=all_time)

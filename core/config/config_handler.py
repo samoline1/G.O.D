@@ -1,5 +1,6 @@
 import os
 
+import toml
 import yaml
 from fiber.logging_utils import get_logger
 from transformers import AutoTokenizer
@@ -58,12 +59,14 @@ def save_config(config: dict, config_path: str):
         yaml.dump(config, file)
 
 
+def save_config_toml(config: dict, config_path: str):
+    with open(config_path, "w") as file:
+        toml.dump(config, file)
+
+
 def _process_custom_dataset_fields(custom_type_dict: dict) -> dict:
     if not custom_type_dict.get("field_output"):
-        return {
-            "type": "completion",
-            "field": custom_type_dict.get("field_instruction")
-        }
+        return {"type": "completion", "field": custom_type_dict.get("field_instruction")}
 
     processed_dict = custom_type_dict.copy()
     processed_dict.setdefault("no_input_format", "{instruction}")
@@ -72,7 +75,4 @@ def _process_custom_dataset_fields(custom_type_dict: dict) -> dict:
     else:
         processed_dict.setdefault("format", "{instruction}")
 
-    return {
-        "format": "custom",
-        "type": processed_dict
-    }
+    return {"format": "custom", "type": processed_dict}

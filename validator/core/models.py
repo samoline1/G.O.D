@@ -94,19 +94,23 @@ class QualityMetrics(BaseModel):
     success_rate: float = Field(ge=0.0, le=1.0)
     quality_rate: float = Field(ge=0.0, le=1.0)
 
+
 class WorkloadMetrics(BaseModel):
     competition_hours: int = Field(ge=0)
     total_params_billions: float = Field(ge=0.0)
+
 
 class ModelMetrics(BaseModel):
     modal_model: str
     unique_models: int = Field(ge=0)
     unique_datasets: int = Field(ge=0)
 
+
 class NodeStats(BaseModel):
     quality_metrics: QualityMetrics
     workload_metrics: WorkloadMetrics
     model_metrics: ModelMetrics
+
 
 class AllNodeStats(BaseModel):
     daily: NodeStats
@@ -115,19 +119,23 @@ class AllNodeStats(BaseModel):
     monthly: NodeStats
     all_time: NodeStats
 
+
 class LeaderboardRow(BaseModel):
     hotkey: str
     stats: AllNodeStats
+
 
 class DatasetUrls(BaseModel):
     test_url: str
     synthetic_url: Optional[str] = None
     train_url: str
 
+
 class DatasetFiles(BaseModel):
     prefix: str
     data: str
     temp_path: Optional[Path] = None
+
 
 class DatasetJsons(BaseModel):
     train_data: list[Any]
@@ -136,7 +144,7 @@ class DatasetJsons(BaseModel):
 
     def to_json_strings(self) -> dict[str, str]:
         return {
-            'train_data': json.dumps(self.train_data),
-            'test_data': json.dumps(self.test_data),
-            'synthetic_data': json.dumps(self.synthetic_data) if self.synthetic_data else ""
+            "train_data": json.dumps(self.train_data),
+            "test_data": json.dumps(self.test_data),
+            "synthetic_data": json.dumps(self.synthetic_data) if self.synthetic_data else "",
         }

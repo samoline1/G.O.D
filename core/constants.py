@@ -15,14 +15,17 @@ except (TypeError, ValueError):
     NETUID = DEFAULT_NETUID
 
 MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
+MINER_DOCKER_IMAGE_DIFFUSION = "diagonalge/diffusion_miner:latest"
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
 
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
 
 CONFIG_DIR = "./core/config/"
 OUTPUT_DIR = "./core/outputs/"
+DIFFUSION_DATASET_DIR = "./core/dataset/images"
 
 CONFIG_TEMPLATE_PATH = CONFIG_DIR + "base.yml"
+CONFIG_TEMPLATE_PATH_DIFFUSION = CONFIG_DIR + "base_diffusion.toml"
 
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 WANDB_TOKEN = os.getenv("WANDB_TOKEN")
