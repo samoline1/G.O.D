@@ -67,8 +67,7 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
 
 
 def change_to_json_format(dataset: Dataset, columns: List[str]):
-    logger.info(f"HERE  ARE THE COLUMNS {columns}")
-    return [{col: row[col] for col in columns} for row in dataset]
+    return [{col: str(row[col]) for col in columns} for row in dataset]
 
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str]) -> tuple[str, str, str]:
