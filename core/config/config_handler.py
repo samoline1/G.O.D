@@ -51,7 +51,7 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
     config["base_model"] = model
     config["wandb_runid"] = job_id
     config["wandb_name"] = job_id
-    config["hub_model_id"] = f"{config.get('hub_repo')}/{job_id}"
+    config["hub_model_id"] = f"{config.get('hub_repo')}/{job_id.split('-')[0]}"
     return config
 
 
