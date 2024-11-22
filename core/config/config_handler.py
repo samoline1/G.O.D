@@ -1,3 +1,4 @@
+from asyncio import wait
 import os
 
 import yaml
@@ -17,21 +18,6 @@ def create_dataset_entry(
     dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
 ) -> dict:
-    """
-    Create a dataset entry for the configuration file.
-
-    Args:
-        dataset (str): The path or identifier of the dataset.
-        dataset_type (DatasetType | CustomDatasetType): The type of the dataset,
-        a simple example would be INSTRUCT which will have columns [INSTRUCTION, INPUT, OUTPUT]
-        file_format (FileFormat): The format of the dataset file - HF, JSON, CSV -
-        HF is a dataset on Hugging Face, JSON and CSV are local files
-
-    Returns:
-        dict: A dictionary containing the dataset entry information,
-        this is basically the dataset information, how it should be parsed by the axolotl library
-    """
-
     dataset_entry = {"path": dataset}
 
     if file_format == FileFormat.JSON:
@@ -54,10 +40,7 @@ def create_dataset_entry(
 
 def update_model_info(config: dict, model: str, job_id: str = ""):
     logger.info("WE ARE UPDATING THE MODEL INFO")
-
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
-    # we need to make sure the pad token is defined
-    logger.info(f"HERE ARE THE CURRENT PAD TOKENS STUFF {tokenizer.pad_token} {tokenizer.eos_token}")
     if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
         config["special_tokens"] = {"pad_token": tokenizer.eos_token}
 
@@ -78,29 +61,13 @@ def save_config(config: dict, config_path: str):
 
 
 def _process_custom_dataset_fields(custom_type_dict: dict) -> dict:
-    """
-    Process custom dataset fields and set appropriate format configurations.
-
-    Args:
-        custom_type_dict: Dictionary containing the custom dataset field configurations
-
-    Returns:
-        dict: Processed configuration dictionary with proper format settings
-
-    Raises:
-        ValueError: If the field combinations don't meet the requirements
-    """
-    # Completion tasks: only need field_instruction, simplify the structure
     if not custom_type_dict.get("field_output"):
         return {
             "type": "completion",
             "field": custom_type_dict.get("field_instruction")
         }
 
-    # Instruction-following tasks: keep existing nested structure
     processed_dict = custom_type_dict.copy()
-    # Even if dataset has input, some rows might not have it
-    # TODO: Needs setting. Consequently and bcz of special tokens, need to allow in FE?
     processed_dict.setdefault("no_input_format", "{instruction}")
     if processed_dict.get("field_input"):
         processed_dict.setdefault("format", "{instruction} {input}")
