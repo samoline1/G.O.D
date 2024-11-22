@@ -8,9 +8,7 @@ from core.models.payload_models import EvaluationRequest
 from core.models.payload_models import EvaluationResponse
 from core.models.payload_models import TaskRequest
 from core.models.payload_models import TaskResponse
-from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
-from core.utils import validate_dataset
 from validator.evaluation.docker_evaluation import run_evaluation_docker
 from validator.evaluation.task_prep import prepare_task
 
