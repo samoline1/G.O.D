@@ -65,11 +65,10 @@ def load_config() -> Config:
         # this is only used for testing
         substrate = None
     keypair = chain_utils.load_hotkey_keypair(wallet_name=wallet_name, hotkey_name=hotkey_name)
-    logger.info(f'This is my own keypair {keypair}')
+    logger.info(f"This is my own keypair {keypair}")
 
     httpx_limits = httpx.Limits(max_connections=500, max_keepalive_connections=100)
     httpx_client = httpx.AsyncClient(limits=httpx_limits)
-
 
     set_metagraph_weights_with_high_updated_to_not_dereg = bool(
         os.getenv("SET_METAGRAPH_WEIGHTS_WITH_HIGH_UPDATED_TO_NOT_DEREG", "false").lower() == "true"

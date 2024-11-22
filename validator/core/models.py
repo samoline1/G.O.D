@@ -1,15 +1,13 @@
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from typing import Optional
-import json
 from uuid import UUID
 from uuid import uuid4
-from cryptography.fernet import Fernet
-from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
-
 
 
 class Task(BaseModel):
@@ -46,14 +44,17 @@ class PeriodScore(BaseModel):
     hotkey: str
     normalised_score: Optional[float] = 0.0
 
+
 class TaskNode(BaseModel):
     task_id: str
     hotkey: str
     quality_score: float
 
+
 class TaskResults(BaseModel):
     task: Task
     node_scores: list[TaskNode]
+
 
 class NodeAggregationResult(BaseModel):
     task_work_scores: list[float] = Field(default_factory=list)
@@ -63,9 +64,11 @@ class NodeAggregationResult(BaseModel):
     emission: Optional[float] = Field(default=0.0)
     task_raw_scores: list[float] = Field(default_factory=list)
     hotkey: str
+
     class Config:
         validate_assignment = True
         arbitrary_types_allowed = True
+
 
 class Submission(BaseModel):
     submission_id: UUID = Field(default_factory=uuid4)
@@ -75,6 +78,7 @@ class Submission(BaseModel):
     repo: str
     created_on: Optional[datetime]
     updated_on: Optional[datetime]
+
 
 class MinerResults(BaseModel):
     hotkey: str
@@ -136,4 +140,3 @@ class DatasetJsons(BaseModel):
             'test_data': json.dumps(self.test_data),
             'synthetic_data': json.dumps(self.synthetic_data) if self.synthetic_data else ""
         }
-

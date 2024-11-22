@@ -1,7 +1,10 @@
 import re
-from typing import Callable, TypeVar, Any
+from typing import Callable
+from typing import TypeVar
 
-T = TypeVar('T')
+
+T = TypeVar("T")
+
 
 def validate_input(prompt: str, validator: Callable[[str], bool], default: str | None = None) -> str:
     """Validate user input with a given validator function."""
@@ -12,6 +15,7 @@ def validate_input(prompt: str, validator: Callable[[str], bool], default: str |
         if validator(value):
             return value
         print("Invalid input. Please try again.")
+
 
 class InputValidators:
     @staticmethod
@@ -43,4 +47,3 @@ class InputValidators:
     @staticmethod
     def http_url(value: str) -> bool:
         return bool(re.match(r"^https?://.+", value))
-

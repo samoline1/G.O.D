@@ -1,17 +1,25 @@
-import json
-
 import asyncio
+import json
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 from uuid import UUID
 
 from asyncpg.connection import Connection
 
-from validator.core.models import AllNodeStats, ModelMetrics, NodeStats, QualityMetrics, Submission, Task, TaskNode, TaskResults, WorkloadMetrics
 import validator.db.constants as cst
-from validator.db.database import PSQLDB
-
 from core.constants import NETUID
+from validator.core.models import AllNodeStats
+from validator.core.models import ModelMetrics
+from validator.core.models import NodeStats
+from validator.core.models import QualityMetrics
+from validator.core.models import Submission
+from validator.core.models import Task
+from validator.core.models import TaskNode
+from validator.core.models import TaskResults
+from validator.core.models import WorkloadMetrics
+from validator.db.database import PSQLDB
 
 
 async def add_submission(submission: Submission, psql_db: PSQLDB) -> Submission:
@@ -135,11 +143,7 @@ async def get_all_quality_scores_for_task(task_id: UUID, psql_db: PSQLDB) -> Dic
         return {row[cst.HOTKEY]: row[cst.TASK_NODE_QUALITY_SCORE] for row in rows}
 
 
-async def set_multiple_task_node_quality_scores(
-    task_id: UUID,
-    quality_scores: Dict[str, float],
-    psql_db: PSQLDB
-) -> None:
+async def set_multiple_task_node_quality_scores(task_id: UUID, quality_scores: Dict[str, float], psql_db: PSQLDB) -> None:
     """Set multiple quality scores for task nodes"""
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -152,11 +156,7 @@ async def set_multiple_task_node_quality_scores(
                 ON CONFLICT ({cst.TASK_ID}, {cst.HOTKEY}, {cst.NETUID}) DO UPDATE
                 SET {cst.TASK_NODE_QUALITY_SCORE} = EXCLUDED.{cst.TASK_NODE_QUALITY_SCORE}
             """
-            await connection.executemany(
-                query,
-                [(task_id, hotkey, NETUID, score)
-                 for hotkey, score in quality_scores.items()]
-            )
+            await connection.executemany(query, [(task_id, hotkey, NETUID, score) for hotkey, score in quality_scores.items()])
 
 
 async def get_all_scores_for_hotkey(hotkey: str, psql_db: PSQLDB) -> List[Dict]:
@@ -219,10 +219,10 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
         results = []
         for row in rows:
             row_dict = dict(row)
-            task_dict = {k: v for k, v in row_dict.items() if k != 'node_scores'}
+            task_dict = {k: v for k, v in row_dict.items() if k != "node_scores"}
             task = Task(**task_dict)
 
-            node_scores_data = row_dict['node_scores']
+            node_scores_data = row_dict["node_scores"]
             if isinstance(node_scores_data, str):
                 node_scores_data = json.loads(node_scores_data)
 
@@ -230,7 +230,7 @@ async def get_aggregate_scores_since(start_time: datetime, psql_db: PSQLDB) -> L
                 TaskNode(
                     task_id=str(node[cst.TASK_ID]),
                     hotkey=node[cst.HOTKEY],
-                    quality_score=float(node[cst.QUALITY_SCORE]) if node[cst.QUALITY_SCORE] is not None else None
+                    quality_score=float(node[cst.QUALITY_SCORE]) if node[cst.QUALITY_SCORE] is not None else None,
                 )
                 for node in node_scores_data
             ]

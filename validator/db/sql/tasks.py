@@ -54,7 +54,7 @@ async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node
             AND task_nodes.netuid = $2
             """,
             task_id,
-            NETUID
+            NETUID,
         )
         return [Node(**dict(row)) for row in rows]
 
@@ -71,6 +71,7 @@ async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Task]:
             return Task(**dict(row))
         return None
 
+
 async def get_tasks_with_status(status: str, psql_db: PSQLDB) -> List[Task]:
     """Get all tasks with a specific status and delay_timestamp before current time"""
     async with await psql_db.connection() as connection:
@@ -82,6 +83,7 @@ async def get_tasks_with_status(status: str, psql_db: PSQLDB) -> List[Task]:
         """
         rows = await connection.fetch(query, status)
         return [Task(**dict(row)) for row in rows]
+
 
 async def get_tasks_with_miners(psql_db: PSQLDB) -> List[Dict]:
     """Get all tasks for a user with their assigned miners"""
@@ -155,7 +157,7 @@ async def update_task(updated_task: Task, psql_db: PSQLDB) -> Task:
                 await connection.execute(
                     f"DELETE FROM {cst.TASK_NODES_TABLE} WHERE {cst.TASK_ID} = $1 AND {cst.NETUID} = $2",
                     updated_task.task_id,
-                    NETUID
+                    NETUID,
                 )
                 if updated_task.assigned_miners:
                     # Now assuming assigned_miners is just a list of hotkeys
@@ -235,7 +237,7 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
                 WHERE {cst.TASK_ID} = $1 AND {cst.NETUID} = $2
                 """,
                 task_id,
-                NETUID
+                NETUID,
             )
 
             # Then delete the task if it has no more node assignments
@@ -248,8 +250,10 @@ async def delete_task(task_id: UUID, psql_db: PSQLDB) -> None:
                     WHERE {cst.TASK_ID} = $1
                 )
                 """,
-                task_id
+                task_id,
             )
+
+
 async def get_miners_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Node]:
     """Retrieve all miners assigned to a specific task."""
     async with await psql_db.connection() as connection:
@@ -261,6 +265,7 @@ async def get_miners_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Node]:
         """
         rows = await connection.fetch(query, task_id)
         return [Node(**dict(row)) for row in rows]
+
 
 async def get_winning_submissions_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Dict]:
     """Retrieve the winning submission for a task based on the highest quality score in task_nodes."""

@@ -16,7 +16,6 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 from core.config.config_handler import create_dataset_entry
-from core.config.config_handler import update_model_info
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
@@ -201,8 +200,9 @@ def main():
         tokenizer.pad_token_id = tokenizer.eos_token_id
     try:
         is_finetune = model_is_a_finetune(original_model, finetuned_model)
-    except:
-        logger.info('PROBLME WITH IS FINETUNE - ASSUMING TRUE FOR NOW')
+    except Exception as e:  # NOTE: What is this supposed to be catching?
+        logger.info(f"Problem with detection of finetune: {e}")
+        logger.info("Assuming true for now")
         is_finetune = True
 
     results = evaluate_finetuned_model(

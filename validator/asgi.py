@@ -22,8 +22,6 @@ from validator.endpoints.tasks import factory_router as tasks_router
 logger = get_logger(__name__)
 
 
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.debug("Entering lifespan context manager")

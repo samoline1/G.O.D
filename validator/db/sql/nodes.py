@@ -1,31 +1,33 @@
 import datetime
 from logging import getLogger
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
 from asyncpg.connection import Connection
+from fiber import SubstrateInterface
 from fiber import utils as futils
 from fiber.networking.models import NodeWithFernet as Node
 
-from fiber import SubstrateInterface
-from validator.utils.query_substrate import query_substrate
+from core.constants import NETUID
 from validator.db import constants as dcst
 from validator.db.database import PSQLDB
-from core.constants import NETUID
+from validator.utils.query_substrate import query_substrate
+
 
 logger = getLogger(__name__)
 
 
 async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
     """Get all nodes for the current NETUID"""
-    logger.info('Attempting to get all nodes')
+    logger.info("Attempting to get all nodes")
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
             SELECT * FROM {dcst.NODES_TABLE}
         """
-        rows = await connection.fetch(query) # , NETUID)
+        rows = await connection.fetch(query)  # , NETUID)
         nodes = [Node(**dict(row)) for row in rows]
-        logger.info(f'Here is the list of nodes {nodes}')
+        logger.info(f"Here is the list of nodes {nodes}")
         return nodes
 
 
@@ -47,7 +49,7 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
         return_value = await connection.fetchval(
             query,
             node.hotkey,
-            NETUID, # why is this twice, what is the diff between network and netuid
+            NETUID,  # why is this twice, what is the diff between network and netuid
             node.coldkey,
             node.ip,
             node.ip_type,
@@ -62,7 +64,7 @@ async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
             False,  # assume not our validator
             node.trust,
             node.vtrust,
-            node.node_id
+            node.node_id,
         )
         if return_value:
             return await get_node_by_hotkey(return_value, psql_db)
@@ -175,19 +177,15 @@ async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:
             FROM {dcst.NODES_TABLE}
             WHERE {dcst.NETUID} = $1
         """,
-            NETUID
+            NETUID,
         )
 
         logger.debug(f"Truncating node info table for NETUID {NETUID}")
-        await connection.execute(
-            f"DELETE FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1",
-            NETUID
-        )
+        await connection.execute(f"DELETE FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1", NETUID)
+
 
 async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_address: str) -> str | None:
-    _, uid = query_substrate(
-        substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True
-    )
+    _, uid = query_substrate(substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True)
     return uid
 
 

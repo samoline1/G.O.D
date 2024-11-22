@@ -18,6 +18,7 @@ async def get_config(request: fastapi.Request) -> Config:
 
     return config
 
+
 async def get_api_key(credentials: HTTPAuthorizationCredentials = Security(auth_scheme)):
     expected_api_key = os.getenv("API_KEY")
 

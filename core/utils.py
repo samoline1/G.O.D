@@ -1,7 +1,8 @@
 import os
-
 from urllib.parse import urlparse
+
 import aiohttp
+
 
 async def download_s3_file(file_url: str) -> str:
     parsed_url = urlparse(file_url)
@@ -17,5 +18,3 @@ async def download_s3_file(file_url: str) -> str:
                 raise Exception(f"Failed to download file: {response.status}")
 
     return local_file_path
-
-

@@ -1,4 +1,3 @@
-from asyncio import wait
 import os
 
 import yaml
@@ -46,7 +45,6 @@ def update_model_info(config: dict, model: str, job_id: str = ""):
 
     if not config.get("hub_repo"):
         raise ValueError("hub_repo is not set in the config.")
-
 
     config["base_model"] = model
     config["wandb_runid"] = job_id

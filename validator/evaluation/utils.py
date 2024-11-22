@@ -39,14 +39,15 @@ def model_is_a_finetune(original_repo: str, finetuned_model: AutoModelForCausalL
     )
     return architecture_same and (base_model_match or has_lora_modules)
 
+
 def get_default_dataset_config(dataset_name: str) -> str | None:
     try:
         logger.info(dataset_name)
         config_names = get_dataset_config_names(dataset_name)
-    except:
+    except Exception:
         return None
     if config_names:
-        logger.info(f'Dataset {dataset_name} has configs: {config_names}. Taking the first config name: {config_names[0]}')
+        logger.info(f"Dataset {dataset_name} has configs: {config_names}. Taking the first config name: {config_names[0]}")
         return config_names[0]
     else:
         return None

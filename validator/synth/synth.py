@@ -34,7 +34,7 @@ def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> 
         config_name = get_default_dataset_config(dataset_name)
         dataset = load_dataset(dataset_name, config_name)
     except Exception as e:
-        logger.exception(f'Failed to load dataset {dataset_name}: {e}')
+        logger.exception(f"Failed to load dataset {dataset_name}: {e}")
         raise e
 
     logger.info(f"Dataset: {dataset}")
@@ -72,19 +72,19 @@ async def generate_synthetic_dataset(sampled_data: List[dict]) -> List[dict]:
             "messages": [message.dict() for message in messages],
             "model": SYNTH_MODEL,
             "temperature": SYNTH_MODEL_TEMPERATURE,
-            "stream": True
+            "stream": True,
         }
         try:
-            logger.info(f'Attempting to process with {PROMPT_GEN_ENDPOINT} {PROMPT_GEN_TOKEN}, {payload}')
+            logger.info(f"Attempting to process with {PROMPT_GEN_ENDPOINT} {PROMPT_GEN_TOKEN}, {payload}")
             synthetic_data_point = await process_stream(PROMPT_GEN_ENDPOINT, PROMPT_GEN_TOKEN, payload)
             json_synthetic_data_point = json.loads(synthetic_data_point)
             if check_the_synthetic_data(json_synthetic_data_point, row.keys()):
                 return json_synthetic_data_point
         except json.JSONDecodeError as e:
-            logger.info(f'Json Error was {e}')
+            logger.info(f"Json Error was {e}")
             pass
         except Exception as e:
-            logger.info(f'Erorr was {e}')
+            logger.info(f"Error was {e}")
             pass
         return None  # Return None if there's an error or invalid data
 
