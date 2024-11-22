@@ -1,4 +1,4 @@
-FROM winglian/axolotl-cloud:main-latest
+FROM winglian/axolotl:main-20241101-py3.11-cu124-2.5.0
 
 WORKDIR /app
 
@@ -7,7 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV HUGGINGFACE_TOKEN=""
 ENV JOB_ID=""
 ENV DATASET=""
 ENV MODEL=""

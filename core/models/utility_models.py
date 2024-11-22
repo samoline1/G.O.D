@@ -29,13 +29,17 @@ class JobStatus(str, Enum):
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
+    PREPARING_DATA = "preparing_data"
     IDLE = "idle"
     READY = "ready"
     SUCCESS = "success"
-    DATA_READY = "data_ready"
+    LOOKING_FOR_NODES = "looking_for_nodes"
     EVALUATING = "evaluating"
     TRAINING = "training"
     FAILURE = "failure"
+    FAILURE_FINDING_NODES = "failure_finding_nodes"
+    PREP_TASK_FAILURE = "prep_task_failure"
+    NODE_TRAINING_FAILURE = "node_training_failure"
 
 
 class CustomDatasetType(BaseModel):

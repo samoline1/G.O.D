@@ -1,5 +1,7 @@
+import json
 from datetime import datetime
-from typing import List
+from pathlib import Path
+from typing import Any
 from typing import Optional
 from uuid import UUID
 from uuid import uuid4
@@ -12,16 +14,18 @@ class Task(BaseModel):
     task_id: Optional[UUID] = None
     model_id: str
     ds_id: str
-    input: str
+    input: Optional[str] = None
     status: str
     system: Optional[str] = None
     instruction: Optional[str] = None
     output: Optional[str] = None
+    format: Optional[str] = None
+    no_input_format: Optional[str] = None
     test_data: Optional[str] = None
     synthetic_data: Optional[str] = None
     hf_training_repo: Optional[str] = None
-    assigned_miners: Optional[List[int]] = None
-    miner_scores: Optional[List[float]] = None
+    assigned_miners: Optional[list[int]] = None
+    miner_scores: Optional[list[float]] = None
     created_timestamp: Optional[datetime] = None
     delay_timestamp: Optional[datetime] = None
     updated_timestamp: Optional[datetime] = None
@@ -53,12 +57,12 @@ class TaskResults(BaseModel):
 
 
 class NodeAggregationResult(BaseModel):
-    task_work_scores: List[float] = Field(default_factory=list)
+    task_work_scores: list[float] = Field(default_factory=list)
     average_raw_score: Optional[float] = Field(default=0.0)
     summed_adjusted_task_scores: float = Field(default=0.0)
     quality_score: Optional[float] = Field(default=0.0)
     emission: Optional[float] = Field(default=0.0)
-    task_raw_scores: List[float] = Field(default_factory=list)
+    task_raw_scores: list[float] = Field(default_factory=list)
     hotkey: str
 
     class Config:
@@ -85,8 +89,54 @@ class MinerResults(BaseModel):
     submission: Optional[Submission] = None
 
 
+class QualityMetrics(BaseModel):
+    avg_quality_score: float = Field(ge=0.0, le=1.0)
+    success_rate: float = Field(ge=0.0, le=1.0)
+    quality_rate: float = Field(ge=0.0, le=1.0)
+
+class WorkloadMetrics(BaseModel):
+    competition_hours: int = Field(ge=0)
+    total_params_billions: float = Field(ge=0.0)
+
+class ModelMetrics(BaseModel):
+    modal_model: str
+    unique_models: int = Field(ge=0)
+    unique_datasets: int = Field(ge=0)
+
+class NodeStats(BaseModel):
+    quality_metrics: QualityMetrics
+    workload_metrics: WorkloadMetrics
+    model_metrics: ModelMetrics
+
+class AllNodeStats(BaseModel):
+    daily: NodeStats
+    three_day: NodeStats
+    weekly: NodeStats
+    monthly: NodeStats
+    all_time: NodeStats
+
 class LeaderboardRow(BaseModel):
     hotkey: str
-    average_quality_score: float
-    sum_quality_score: float
-    num_games_entered: int
+    stats: AllNodeStats
+
+class DatasetUrls(BaseModel):
+    test_url: str
+    synthetic_url: Optional[str] = None
+    train_url: str
+
+class DatasetFiles(BaseModel):
+    prefix: str
+    data: str
+    temp_path: Optional[Path] = None
+
+class DatasetJsons(BaseModel):
+    train_data: list[Any]
+    test_data: list[Any]
+    synthetic_data: list[Any] = Field(default_factory=list)
+
+    def to_json_strings(self) -> dict[str, str]:
+        return {
+            'train_data': json.dumps(self.train_data),
+            'test_data': json.dumps(self.test_data),
+            'synthetic_data': json.dumps(self.synthetic_data) if self.synthetic_data else ""
+        }

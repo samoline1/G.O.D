@@ -1,6 +1,5 @@
 from datetime import datetime
 from datetime import timedelta
-from statistics import mean
 from typing import List
 from uuid import UUID
 
@@ -80,6 +79,8 @@ async def get_tasks(
                 system_col=task.get("system"),
                 instruction_col=task.get("instruction"),
                 output_col=task.get("output"),
+                format_col=task.get("format"),
+                no_input_format_col=task.get("no_input_format"),
                 miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
                 dataset=task.get("ds_id"),
                 started=str(task["started_timestamp"]),
@@ -98,6 +99,7 @@ async def create_task(
     config: Config = Depends(get_config),
     api_key: str = Depends(get_api_key),
 ) -> NewTaskResponse:
+    logger.info(f"The request coming in is {request}")
     current_time = datetime.utcnow()
     end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
 
@@ -109,6 +111,8 @@ async def create_task(
         instruction=request.instruction_col,
         input=request.input_col,
         output=request.output_col,
+        format=request.format_col,
+        no_input_format=request.no_input_format_col,
         status=TaskStatus.PENDING,
         end_timestamp=end_timestamp,
         hours_to_complete=request.hours_to_complete,
@@ -184,6 +188,8 @@ async def get_task_status(
         system_col=task.system,
         instruction_col=task.instruction,
         output_col=task.output,
+        format_col=task.format,
+        no_input_format_col=task.no_input_format,
         started=str(task.started_timestamp),
         miners=[{"hotkey": miner.hotkey, "trust": miner.trust} for miner in miners],
         end=str(task.end_timestamp),
@@ -203,21 +209,11 @@ async def get_leaderboard(
     for node in nodes:
         logger.info(f"Trying node {node}")
         try:
-            scores = await submissions_and_scoring_sql.get_all_scores_for_hotkey(node.hotkey, config.psql_db)
-            if scores:
-                quality_scores = [score["quality_score"] for score in scores]
-                leaderboard_rows.append(
-                    LeaderboardRow(
-                        hotkey=node.hotkey,
-                        average_quality_score=mean(quality_scores),
-                        sum_quality_score=sum(quality_scores),
-                        num_games_entered=len(quality_scores),
-                    )
-                )
+            node_stats = await submissions_and_scoring_sql.get_all_node_stats(node.hotkey, config.psql_db)
+            leaderboard_rows.append(LeaderboardRow(hotkey=node.hotkey, stats=node_stats))
         except Exception as e:
             logger.error(f"Error processing scores for hotkey {node.hotkey}: {e}")
             continue
-    leaderboard_rows.sort(key=lambda x: x.average_quality_score, reverse=True)
     return leaderboard_rows
 
 

@@ -263,9 +263,11 @@ def add_raw_scores_to_miner_results(miner_results: list[MinerResults]) -> list[M
 def _get_dataset_type(task: Task) -> CustomDatasetType:
     return CustomDatasetType(
         field_system=task.system,
-        field_instruction=task.instruction or task.input,
+        field_instruction=task.instruction,
         field_input=task.input,
         field_output=task.output,
+        format=task.format,
+        no_input_format=task.no_input_format,
     )
 
 
@@ -457,10 +459,10 @@ async def evaluate_and_score(task: Task, config: Config) -> Task:
     # all_scores_zero = all(result.score == 0.0 for result in task_results)
     all_scores_zero = False  # for now we just let them fail, need to come back to decide whether we wanna restart the job
     if all_scores_zero:
-        task.status = TaskStatus.DATA_READY
+        task.status = TaskStatus.NODE_TRAINING_FAILURE
         logger.info(
-            f"All scores are zero for task {task.task_id}"
-            ", setting status to DATA_READY to find new miner since we are going to try again."
+            f"All scores are zero for task {task.task_id}, setting status to LOOKING FOR NODES to find new miner since"
+            "we are going to try again."
         )
     else:
         task.status = TaskStatus.SUCCESS

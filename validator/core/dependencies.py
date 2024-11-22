@@ -1,3 +1,5 @@
+import os
+
 import fastapi
 from fastapi import HTTPException
 from fastapi import Security
@@ -18,6 +20,12 @@ async def get_config(request: fastapi.Request) -> Config:
 
 
 async def get_api_key(credentials: HTTPAuthorizationCredentials = Security(auth_scheme)):
-    if not credentials.credentials:
+    expected_api_key = os.getenv("API_KEY")
+
+    if not expected_api_key:
+        raise HTTPException(status_code=500, detail="API key is not configured in the environment")
+
+    if credentials.credentials != expected_api_key:
         raise HTTPException(status_code=403, detail="Invalid API key")
+
     return credentials.credentials

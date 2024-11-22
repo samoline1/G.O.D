@@ -16,7 +16,6 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 from core.config.config_handler import create_dataset_entry
-from core.config.config_handler import update_model_info
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
@@ -29,7 +28,6 @@ logger = get_logger(__name__)
 
 def _load_and_update_evaluation_config(
     dataset_name: str,
-    language_model: AutoModelForCausalLM,
     dataset_type: Union[DatasetType, CustomDatasetType],
     file_format: FileFormat,
     config_path: str,
@@ -37,13 +35,12 @@ def _load_and_update_evaluation_config(
     with open(config_path, "r") as file:
         config_dict = yaml.safe_load(file)
 
-    dataset_entry = create_dataset_entry(
+    dataset_entry = create_dataset_entry( # TODO: double-check works outta the box
         dataset=dataset_name,
         dataset_type=dataset_type,
         file_format=file_format,
     )
     config_dict["datasets"] = [dataset_entry]
-    update_model_info(config_dict, language_model, "")
     return DictDefault(config_dict)
 
 
@@ -172,7 +169,7 @@ def evaluate_finetuned_model(
     tokenizer: AutoTokenizer,
 ) -> dict[str, float]:
     evaluation_config = _load_and_update_evaluation_config(
-        dataset_name, finetuned_model, dataset_type, file_format, cst.VALI_CONFIG_PATH
+        dataset_name, dataset_type, file_format, cst.VALI_CONFIG_PATH
     )
     return evaluate_language_model_loss(evaluation_config, finetuned_model, tokenizer)
 
