@@ -144,6 +144,8 @@ async def _find_miners_for_task(config: Config):
 async def prep_task(task: Task, config: Config):
     logger.info('PREPING TASK')
     try:
+        task.status = TaskStatus.PREPARING_DATA
+        await tasks_sql.update_task(task, config.psql_db)
         task = await _run_task_prep(task)
         await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
