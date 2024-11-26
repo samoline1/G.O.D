@@ -1,5 +1,7 @@
 import os
 from dataclasses import dataclass
+from typing import Type
+from typing import Union
 
 import docker
 import toml
@@ -16,8 +18,10 @@ from core.config.config_handler import update_model_info
 from core.docker_utils import stream_logs
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
+from core.models.utility_models import DiffusionJob
 from core.models.utility_models import FileFormat
 from core.models.utility_models import Job
+from core.models.utility_models import TextJob
 
 
 logger = get_logger(__name__)
@@ -89,19 +93,10 @@ def _load_and_modify_config_diffusion(config_path: str) -> dict:
 
 
 def create_job(
-    job_id: str,
-    dataset: str,
-    model: str,
-    dataset_type: DatasetType | CustomDatasetType,
-    file_format: FileFormat,
+    job_class: Type[Union[TextJob, DiffusionJob]],
+    **kwargs,
 ) -> Job:
-    return Job(
-        job_id=job_id,
-        dataset=dataset,
-        model=model,
-        dataset_type=dataset_type,
-        file_format=file_format,
-    )
+    return job_class(**kwargs)
 
 
 def start_tuning_container_diffusion(job_id: str):

@@ -26,16 +26,28 @@ class MinerTaskRequst(BaseModel):
 
 
 class TrainRequest(BaseModel):
+    model: str = Field(..., description="Name or path of the model to be trained", min_length=1)
+    task_id: str
+    hours_to_complete: int
+
+
+class TrainRequestText(TrainRequest):
     dataset: str = Field(
         ...,
         description="Path to the dataset file or Hugging Face dataset name",
         min_length=1,
     )
-    model: str = Field(..., description="Name or path of the model to be trained", min_length=1)
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
-    task_id: str
-    hours_to_complete: int
+
+
+class TrainRequestDiffusion(TrainRequest):
+    dataset_zip: str = Field(
+        ...,
+        description="Link to dataset zip file",
+        min_length=1,
+    )
+    prompt_mapping: Dict
 
 
 class TrainResponse(BaseModel):

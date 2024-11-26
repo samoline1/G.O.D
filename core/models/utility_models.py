@@ -1,5 +1,6 @@
 import uuid
 from enum import Enum
+from typing import Dict
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -56,12 +57,24 @@ class CustomDatasetType(BaseModel):
 
 class Job(BaseModel):
     job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    dataset: str
     model: str
-    dataset_type: DatasetType | CustomDatasetType
-    file_format: FileFormat
     status: JobStatus = JobStatus.QUEUED
     error_message: str | None = None
+
+
+class TextJob(Job):
+    dataset: str
+    dataset_type: DatasetType | CustomDatasetType
+    file_format: FileFormat
+
+
+class DiffusionJob(Job):
+    dataset_zip: str = Field(
+        ...,
+        description="Link to dataset zip file",
+        min_length=1,
+    )
+    prompt_mapping: Dict
 
 
 class Role(str, Enum):

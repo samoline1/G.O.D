@@ -18,9 +18,12 @@ from pydantic import ValidationError
 import core.constants as cst
 from core.models.payload_models import MinerTaskRequst
 from core.models.payload_models import MinerTaskResponse
-from core.models.payload_models import TrainRequest
+from core.models.payload_models import TrainRequestDiffusion
+from core.models.payload_models import TrainRequestText
 from core.models.payload_models import TrainResponse
+from core.models.utility_models import DiffusionJob
 from core.models.utility_models import FileFormat
+from core.models.utility_models import TextJob
 from core.utils import download_s3_file
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
@@ -33,7 +36,7 @@ finish_time = None
 
 
 async def tune_model(
-    decrypted_payload: TrainRequest = Depends(partial(decrypt_general_payload, TrainRequest)),
+    decrypted_payload: TrainRequestText = Depends(partial(decrypt_general_payload, TrainRequestText)),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     global finish_time
@@ -54,11 +57,36 @@ async def tune_model(
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
+        job_class=TextJob,
         job_id=str(decrypted_payload.task_id),
         dataset=decrypted_payload.dataset,
         model=decrypted_payload.model,
         dataset_type=decrypted_payload.dataset_type,
         file_format=decrypted_payload.file_format,
+    )
+    logger.info(f"Created job {job}")
+    worker_config.trainer.enqueue_job(job)
+
+    return {"message": "Training job enqueued.", "task_id": job.job_id}
+
+
+async def tune_model_diffusion(
+    decrypted_payload: TrainRequestDiffusion,
+    worker_config: WorkerConfig = Depends(get_worker_config),
+):
+    global finish_time
+    logger.info("Starting model tuning.")
+
+    finish_time = datetime.now() + timedelta(hours=decrypted_payload.hours_to_complete)
+    logger.info(f"Job received is {decrypted_payload}")
+
+    # TODO: download s3 dataset
+
+    job = create_job(
+        job_class=DiffusionJob,
+        job_id=str(decrypted_payload.task_id),
+        dataset_zip=decrypted_payload.dataset_zip,
+        model=decrypted_payload.model,
     )
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)
@@ -145,5 +173,8 @@ def factory_router() -> APIRouter:
         methods=["POST"],
         response_model=TrainResponse,
         dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
+    )
+    router.add_api_route(
+        "/start_training_diffusion/", tune_model_diffusion, tags=["Subnet"], methods=["POST"], response_model=TrainResponse
     )
     return router
