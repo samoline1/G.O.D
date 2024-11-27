@@ -1,6 +1,5 @@
 import uuid
 from enum import Enum
-from typing import Dict
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -74,7 +73,6 @@ class DiffusionJob(Job):
         description="Link to dataset zip file",
         min_length=1,
     )
-    prompt_mapping: Dict
 
 
 class Role(str, Enum):

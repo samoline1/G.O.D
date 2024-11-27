@@ -47,7 +47,6 @@ class TrainRequestDiffusion(TrainRequest):
         description="Link to dataset zip file",
         min_length=1,
     )
-    prompt_mapping: Dict
 
 
 class TrainResponse(BaseModel):

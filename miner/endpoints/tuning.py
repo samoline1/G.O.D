@@ -79,8 +79,14 @@ async def tune_model_diffusion(
 
     finish_time = datetime.now() + timedelta(hours=decrypted_payload.hours_to_complete)
     logger.info(f"Job received is {decrypted_payload}")
+    try:
+        decrypted_payload.dataset_zip = await download_s3_file(
+            decrypted_payload.dataset_zip, f"{cst.DIFFUSION_DATASET_DIR}/{decrypted_payload.task_id}.zip"
+        )
+        logger.info(decrypted_payload.dataset_zip)
 
-    # TODO: download s3 dataset
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
         job_class=DiffusionJob,

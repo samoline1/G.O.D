@@ -22,6 +22,7 @@ from core.models.utility_models import DiffusionJob
 from core.models.utility_models import FileFormat
 from core.models.utility_models import Job
 from core.models.utility_models import TextJob
+from core.utils import prepare_diffusion_dataset
 
 
 logger = get_logger(__name__)
@@ -80,7 +81,7 @@ def _load_and_modify_config(
     return config
 
 
-def _load_and_modify_config_diffusion(config_path: str) -> dict:
+def _load_and_modify_config_diffusion(config_path: str, model: str, task_id) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
     """
@@ -88,7 +89,8 @@ def _load_and_modify_config_diffusion(config_path: str) -> dict:
     logger.info(cst.CONFIG_TEMPLATE_PATH_DIFFUSION)
     with open(cst.CONFIG_TEMPLATE_PATH_DIFFUSION, "r") as file:
         config = toml.load(file)
-
+    config["pretrained_model_name_or_path"] = model
+    config["train_data_dir"] = f"/dataset/images/{task_id}/img/"
     return config
 
 
@@ -99,21 +101,29 @@ def create_job(
     return job_class(**kwargs)
 
 
-def start_tuning_container_diffusion(job_id: str):
+def start_tuning_container_diffusion(job: DiffusionJob):
     logger.info("=" * 80)
     logger.info("STARTING THE DIFFUSION TUNING CONTAINER")
     logger.info("=" * 80)
 
     config_filename = "base_diffusion"
-    config_path = os.path.join(cst.CONFIG_DIR, config_filename)
+    config_path = os.path.join(cst.CONFIG_DIR, f"{job.job_id}.toml")
 
-    config = _load_and_modify_config_diffusion(config_path)
+    config = _load_and_modify_config_diffusion(config_path, job.model, job.job_id)
     save_config_toml(config, config_path)
 
     logger.info(config)
 
+    prepare_diffusion_dataset(
+        training_images_zip_path=job.dataset_zip,
+        training_images_repeat=cst.DIFFUSION_DEFAULT_REPEATS,
+        instance_prompt=cst.DIFFUSION_DEFAULT_INSTANCE_PROMPT,
+        class_prompt=cst.DIFFUSION_DEFAULT_CLASS_PROMPT,
+        job_id=job.job_id,
+    )
+
     docker_env = DockerEnvironmentDiffusion(
-        huggingface_token=cst.HUGGINGFACE_TOKEN, wandb_token=cst.WANDB_TOKEN, job_id=job_id
+        huggingface_token=cst.HUGGINGFACE_TOKEN, wandb_token=cst.WANDB_TOKEN, job_id=job.job_id
     ).to_dict()
     logger.info(f"Docker environment: {docker_env}")
 
@@ -162,7 +172,7 @@ def start_tuning_container_diffusion(job_id: str):
             container.remove(force=True)
 
 
-def start_tuning_container(job: Job):
+def start_tuning_container(job: TextJob):
     logger.info("=" * 80)
     logger.info("STARTING THE TUNING CONTAINER")
     logger.info("=" * 80)

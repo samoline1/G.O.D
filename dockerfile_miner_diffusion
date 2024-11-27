@@ -1,4 +1,3 @@
-
 FROM ghcr.io/bmaltais/kohya-ss-gui:latest
 
 RUN mkdir -p /dataset/configs \
