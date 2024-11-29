@@ -15,6 +15,7 @@ from core.config.config_handler import create_dataset_entry
 from core.config.config_handler import save_config
 from core.config.config_handler import save_config_toml
 from core.config.config_handler import update_model_info
+from core.dataset.prepare_dataset import prepare_diffusion_dataset
 from core.docker_utils import stream_logs
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
@@ -22,7 +23,6 @@ from core.models.utility_models import DiffusionJob
 from core.models.utility_models import FileFormat
 from core.models.utility_models import Job
 from core.models.utility_models import TextJob
-from core.utils import prepare_diffusion_dataset
 
 
 logger = get_logger(__name__)
