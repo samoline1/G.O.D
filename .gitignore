@@ -24,6 +24,7 @@ core/custom_task_config.py
 core/config/*.yml
 !core/config/base.yml
 core/dataset/images/*
+!core/dataset/images/.gitkeep
 
 
 *_keys.encrypted
