@@ -55,6 +55,8 @@ PROMPT_GEN_ENDPOINT = "https://api.nineteen.ai/v1/chat/completions"
 GRADIENTS_ENDPOINT = "https://api.gradients.io/validator-signup"
 PROMPT_PATH = "validator/prompts.yml"
 NINETEEN_API_KEY = os.getenv("NINETEEN_API_KEY")
+# Probability for using output reformulation method
+OUTPUT_REFORMULATION_PROBABILITY = 0.5
 
 # Task Stuff
 MINIMUM_MINER_POOL = 1
