@@ -1,8 +1,9 @@
-FROM ghcr.io/bmaltais/kohya-ss-gui:latest
+FROM diagonalge/kohya:latest
 
 RUN mkdir -p /dataset/configs \
     /dataset/outputs \
-    /dataset/images
+    /dataset/images && \
+    chmod -R 777 /dataset
 
 ENV CONFIG_DIR="/dataset/configs"
 ENV OUTPUT_DIR="/dataset/outputs"

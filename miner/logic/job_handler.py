@@ -91,6 +91,7 @@ def _load_and_modify_config_diffusion(config_path: str, model: str, task_id) -> 
         config = toml.load(file)
     config["pretrained_model_name_or_path"] = model
     config["train_data_dir"] = f"/dataset/images/{task_id}/img/"
+    config["huggingface_token"] = cst.HUGGINGFACE_TOKEN
     return config
 
 
