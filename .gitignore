@@ -60,6 +60,7 @@ sample2.txt
 config.yaml
 
 test_images/
+ComfyUI/
 
 score_records.csv
 models_cache/*

@@ -10,15 +10,8 @@ from minio import Minio
 logger = get_logger(__name__)
 
 
-# NOTE: wen type hints
-# NOTE: POINTS:
-# - why are you using a separate event loop
-# - why are you using a thread pool executor
-# Do we really need to do this object orienteated? Would much
-# prefer functional style.
-# Add the minio client to config and use it directly
 class AsyncMinioClient:
-    def __init__(self, endpoint, access_key, secret_key, secure=True, region="us-east-1"):
+    def __init__(self, endpoint, access_key, secret_key, secure=True, region="eu-north-1"):
         self.endpoint = endpoint
         self.client = Minio(
             endpoint,
@@ -76,8 +69,10 @@ class AsyncMinioClient:
         self.executor.shutdown(wait=False)
 
 
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+S3_COMPATIBLE_ENDPOINT = os.getenv("S3_COMPATIBLE_ENDPOINT", "localhost:9000")
+S3_COMPATIBLE_ACCESS_KEY = os.getenv("S3_COMPATIBLE_ACCESS_KEY", "minioadmin")
+S3_COMPATIBLE_SECRET_KEY = os.getenv("S3_COMPATIBLE_SECRET_KEY", "minioadmin")
 
-async_minio_client = AsyncMinioClient(endpoint=MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY)
+async_minio_client = AsyncMinioClient(
+    endpoint=S3_COMPATIBLE_ENDPOINT, access_key=S3_COMPATIBLE_ACCESS_KEY, secret_key=S3_COMPATIBLE_SECRET_KEY
+)
