@@ -1,5 +1,5 @@
 {
-  "6": {
+  "Checkpoint_loader": {
     "inputs": {
       "ckpt_name": ""
     },
@@ -8,20 +8,20 @@
       "title": "Load Checkpoint"
     }
   },
-  "7": {
+  "Sampler": {
     "inputs": {
       "seed": 908820999791964,
-      "steps": 30,
-      "cfg": 7,
-      "sampler_name": "euler",
-      "scheduler": "normal",
+      "steps": 20,
+      "cfg": 4,
+      "sampler_name": "dpmpp_sde_gpu",
+      "scheduler": "karras",
       "denoise": 0.8,
       "model": [
-        "37",
+        "Lora_loader",
         0
       ],
       "positive": [
-        "8",
+        "Prompt",
         0
       ],
       "negative": [
@@ -38,11 +38,11 @@
       "title": "KSampler"
     }
   },
-  "8": {
+  "Prompt": {
     "inputs": {
       "text": "",
       "clip": [
-        "37",
+        "Lora_loader",
         1
       ]
     },
@@ -54,11 +54,11 @@
   "11": {
     "inputs": {
       "samples": [
-        "7",
+        "Sampler",
         0
       ],
       "vae": [
-        "6",
+        "Checkpoint_loader",
         2
       ]
     },
@@ -83,7 +83,7 @@
     "inputs": {
       "text": "",
       "clip": [
-        "37",
+        "Lora_loader",
         1
       ]
     },
@@ -92,7 +92,7 @@
       "title": "CLIP Text Encode (Prompt)"
     }
   },
-  "33": {
+  "Image_loader": {
     "inputs": {
       "image": ""
     },
@@ -104,11 +104,11 @@
   "34": {
     "inputs": {
       "pixels": [
-        "33",
+        "Image_loader",
         0
       ],
       "vae": [
-        "6",
+        "Checkpoint_loader",
         2
       ]
     },
@@ -117,17 +117,17 @@
       "title": "VAE Encode"
     }
   },
-  "37": {
+  "Lora_loader": {
     "inputs": {
       "lora_name": "",
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "6",
+        "Checkpoint_loader",
         0
       ],
       "clip": [
-        "6",
+        "Checkpoint_loader",
         1
       ]
     },
