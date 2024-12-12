@@ -73,3 +73,7 @@ MAX_CONCURRENT_TASK_PREPS = 3
 MAX_CONCURRENT_TRAININGS = 10
 MAX_CONCURRENT_EVALUATIONS = 1
 MAX_TIME_DELAY_TO_FIND_MINERS = 1  # hours
+
+# comfyui stuff
+LORA_WORKFLOW_PATH = "validator/evaluation/comfy_workflows/lora.json"
+BASE_WORKFLOW_PATH = "validator/evaluation/comfy_workflows/base.json"

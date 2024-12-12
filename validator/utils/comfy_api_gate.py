@@ -1,6 +1,3 @@
-# This is an example that uses the websockets api to know when a prompt execution is done
-# Once the prompt execution is done it downloads the images using the /history endpoint
-
 import io
 import json
 import time
@@ -12,41 +9,48 @@ import websocket
 from PIL import Image
 
 
+# Configuration variables
 server_address = "127.0.0.1:8188"
 client_id = str(uuid.uuid4())
-ws = websocket.WebSocket()
+ws = None  # WebSocket connection object
 
-while True:
-    try:
-        ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
-        break
-    except ConnectionRefusedError:
-        print("Could not connect to ComfyUI because it is not up yet. Sleeping for 2 seconds before trying again.")
-        time.sleep(2)
+
+def connect():
+    global ws
+    ws = websocket.WebSocket()
+    while True:
+        try:
+            ws.connect(f"ws://{server_address}/ws?clientId={client_id}")
+            print("Connected to WebSocket.")
+            break
+        except ConnectionRefusedError:
+            print("Could not connect to ComfyUI because it is not up yet. Sleeping for 2 seconds before trying again.")
+            time.sleep(2)
 
 
 def queue_prompt(prompt):
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode("utf-8")
-    req = urllib.request.Request("http://{}/prompt".format(server_address), data=data)
+    req = urllib.request.Request(f"http://{server_address}/prompt", data=data)
     return json.loads(urllib.request.urlopen(req).read())
 
 
 def get_image(filename, subfolder, folder_type):
     data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
     url_values = urllib.parse.urlencode(data)
-    with urllib.request.urlopen("http://{}/view?{}".format(server_address, url_values)) as response:
+    with urllib.request.urlopen(f"http://{server_address}/view?{url_values}") as response:
         return response.read()
 
 
 def get_history(prompt_id):
-    with urllib.request.urlopen("http://{}/history/{}".format(server_address, prompt_id)) as response:
+    with urllib.request.urlopen(f"http://{server_address}/history/{prompt_id}") as response:
         return json.loads(response.read())
 
 
-def get_images(ws, prompt):
+def get_images(prompt):
     prompt_id = queue_prompt(prompt)["prompt_id"]
     output_images = {}
+
     while True:
         out = ws.recv()
         if isinstance(out, str):
@@ -74,7 +78,7 @@ def get_images(ws, prompt):
 
 def generate(payload):
     img_list = []
-    images = get_images(ws, payload)
+    images = get_images(payload)
     for node_id in images:
         for image_data in images[node_id]:
             image = Image.open(io.BytesIO(image_data))
