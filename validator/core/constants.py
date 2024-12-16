@@ -76,4 +76,8 @@ MAX_TIME_DELAY_TO_FIND_MINERS = 1  # hours
 
 # comfyui stuff
 LORA_WORKFLOW_PATH = "validator/evaluation/comfy_workflows/lora.json"
-BASE_WORKFLOW_PATH = "validator/evaluation/comfy_workflows/base.json"
+CHECKPOINTS_SAVE_PATH = "ComfyUI/models/checkpoints"
+LORAS_SAVE_PATH = "ComfyUI/models/loras"
+DEFAULT_STEPS = 10
+DEFAULT_CFG = 4
+DEFAULT_DENOISE = 0.9
