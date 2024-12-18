@@ -260,7 +260,7 @@ async def _processing_pending_tasks(config: Config):
 
 async def _start_training_task(task: RawTask, config: Config) -> None:
     async with TaskContext(str(task.task_id)):
-        task.started_at = datetime.datetime.now()
+        task.started_at = datetime.datetime.now(datetime.timezone.utc)
         task.termination_at = task.started_at + datetime.timedelta(hours=task.hours_to_complete)
         assigned_miners = await tasks_sql.get_nodes_assigned_to_task(str(task.task_id), config.psql_db)
         logger.info(
