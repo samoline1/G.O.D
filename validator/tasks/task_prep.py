@@ -106,9 +106,11 @@ def assign_some_of_the_train_to_synth(train_dataset: Dataset):
 
     dataset_length = len(train_dataset)
     split_index = dataset_length - num_synthetic_samples
-
-    synthetic_dataset = train_dataset.select(range(split_index, dataset_length))
-    remaining_train_dataset = train_dataset.select(range(split_index))
+    try:
+        synthetic_dataset = train_dataset.select(range(split_index, dataset_length))
+        remaining_train_dataset = train_dataset.select(range(split_index))
+    except Exception as e:
+        logger.info(f"There was an issue with the split {e} ", extra=create_extra_log())
 
     logger.info(
         f"Taking {num_synthetic_samples} samples from the train set to be synthetic data. "
