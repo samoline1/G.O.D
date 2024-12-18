@@ -37,11 +37,13 @@ class TaskStatus(str, Enum):
     LOOKING_FOR_NODES = "looking_for_nodes"
     DELAYED = "delayed"
     EVALUATING = "evaluating"
+    PREEVALUATION = "preevaluation"
     TRAINING = "training"
     FAILURE = "failure"
     FAILURE_FINDING_NODES = "failure_finding_nodes"
     PREP_TASK_FAILURE = "prep_task_failure"
     NODE_TRAINING_FAILURE = "node_training_failure"
+
 
 class WinningSubmission(BaseModel):
     hotkey: str

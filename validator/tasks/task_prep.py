@@ -102,6 +102,7 @@ def assign_some_of_the_train_to_synth(train_dataset: Dataset):
     synthetic_data = train_dataset.select(range(dataset_length - cst.MAX_SYNTH_DATA_POINTS, dataset_length))
     train_dataset = train_dataset.select(range(dataset_length - cst.MAX_SYNTH_DATA_POINTS))
 
+    logger.info("We have a train and synth dataset ready")
     return train_dataset, synthetic_data
 
 
