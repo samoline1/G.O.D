@@ -101,5 +101,4 @@ MAX_CONCURRENT_TRAININGS = 10
 MAX_CONCURRENT_EVALUATIONS = 1
 MAX_TIME_DELAY_TO_FIND_MINERS = 1  # hours
 
-
-LOGPATH = "validator/logs"
+LOGPATH = "/root/G.O.D/validator/logs"
