@@ -6,6 +6,10 @@ from pathlib import Path
 import json
 
 
+def create_extra_log(task_id: str | None = None, node_hotkey: str | None = None, status: str | None = None) -> Dict[str, Any]:
+    return {"tags": {"task_id": task_id, "status": status, "node_hotkey": node_hotkey}}
+
+
 class JSONFormatter(Formatter):
     def format(self, record: LogRecord) -> str:
         log_data: Dict[str, Any] = {
