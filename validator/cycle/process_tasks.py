@@ -328,7 +328,18 @@ async def _move_any_evaluating_tasks_to_pending_evaluation(config: Config):
     await asyncio.gather(*[_move_back_to_preevaluation_status(task, config) for task in stopped_mid_evaluation])
 
 
+async def _move_back_to_pending_status(task, config):
+    task.status = TaskStatus.PENDING
+    await tasks_sql.update_task(task, config.psql_db)
+
+
+async def _move_any_prep_data_to_pending(config):
+    stopped_in_prep = await tasks_sql.get_tasks_with_status(TaskStatus.PREPARING_DATA, psql_db=config.psql_db)
+    await asyncio.gather(*[_move_back_to_pending_status(task, config) for task in stopped_in_prep])
+
+
 async def process_pending_tasks(config: Config) -> None:
+    await _move_any_prep_data_to_pending(config)
     while True:
         try:
             await _processing_pending_tasks(config)
