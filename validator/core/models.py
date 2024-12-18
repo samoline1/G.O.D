@@ -214,6 +214,6 @@ class DatasetJsons(BaseModel):
 
 
 class TrainingTaskStatus(BaseModel):
-    training_count: int
+    number_of_jobs_training: int
     next_training_end: datetime | None
     job_can_be_made: bool = True

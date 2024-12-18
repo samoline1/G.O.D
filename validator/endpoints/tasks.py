@@ -206,7 +206,7 @@ async def get_network_status(
     try:
         logger.info("IN get network status")
         training_stats = await task_sql.get_training_tasks_stats(config.psql_db)
-        if training_stats.training_count >= MAX_CONCURRENT_JOBS:
+        if training_stats.number_of_jobs_training >= MAX_CONCURRENT_JOBS:
             training_stats.job_can_be_made = False
         return training_stats
     except Exception as e:
@@ -216,7 +216,6 @@ async def get_network_status(
 
 def factory_router() -> APIRouter:
     router = APIRouter(tags=["Gradients On Demand"], dependencies=[Depends(get_api_key)])
-
     router.add_api_route(TASKS_CREATE_ENDPOINT, create_task, methods=["POST"])
     router.add_api_route(GET_TASK_DETAILS_ENDPOINT, get_task_details, methods=["GET"])
     router.add_api_route(DELETE_TASK_ENDPOINT, delete_task, methods=["DELETE"])
