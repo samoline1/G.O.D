@@ -318,6 +318,7 @@ async def _handle_delayed_tasks(config: Config):
 
 async def _move_back_to_preevaluation_status(task, config):
     task.status = TaskStatus.PREEVALUATION
+    logger.info(f"Moving this one back {task}")
     await tasks_sql.update_task(task, config.psql_db)
 
 
