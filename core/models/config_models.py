@@ -37,6 +37,7 @@ class ValidatorConfig(BaseConfig):
     validator_port: str
     set_metagraph_weights: bool
     validator_port: str
+    gpu_ids: str
     gpu_server: Optional[str] = None
     localhost: bool = False
     env_file: str = ".vali.env"
