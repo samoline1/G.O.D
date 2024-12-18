@@ -203,10 +203,14 @@ async def get_leaderboard(
 async def get_network_status(
     config: Config = Depends(get_config),
 ) -> TrainingTaskStatus:
-    training_stats = await task_sql.get_training_tasks_stats(config.psql_db)
-    if training_stats.training_count >= MAX_CONCURRENT_JOBS:
-        training_stats.job_can_be_made = False
-    return training_stats
+    try:
+        training_stats = await task_sql.get_training_tasks_stats(config.psql_db)
+        if training_stats.training_count >= MAX_CONCURRENT_JOBS:
+            training_stats.job_can_be_made = False
+        return training_stats
+    except Exception as e:
+        logger.info(f"There was an erorr with getting training status {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def factory_router() -> APIRouter:
