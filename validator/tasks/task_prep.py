@@ -102,11 +102,10 @@ def assign_some_of_the_train_to_synth(train_dataset: Dataset):
     if len(train_dataset) == 0:
         raise ValueError("Cannot split an empty dataset")
 
-    num_synthetic_samples = min(cst.MAX_SYNTH_DATA_POINTS, int(len(train_dataset) * cst.ADDITIONAL_SYNTH_DATA_PERCENTAGE))
-
-    dataset_length = len(train_dataset)
-    split_index = dataset_length - num_synthetic_samples
     try:
+        num_synthetic_samples = min(cst.MAX_SYNTH_DATA_POINTS, int(len(train_dataset) * cst.ADDITIONAL_SYNTH_DATA_PERCENTAGE))
+        dataset_length = len(train_dataset)
+        split_index = dataset_length - num_synthetic_samples
         synthetic_dataset = train_dataset.select(range(split_index, dataset_length))
         remaining_train_dataset = train_dataset.select(range(split_index))
     except Exception as e:
