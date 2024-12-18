@@ -21,9 +21,8 @@ from validator.core.models import RawTask
 from validator.evaluation.scoring import evaluate_and_score
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream_fiber
-from validator.utils.logging import create_extra_log, create_extra_log_from_task, get_json_logger
-
-logger = get_json_logger(__name__)
+from validator.utils.logging import create_extra_log
+from validator.utils.logging import logger
 
 
 def _get_total_dataset_size(repo_name: str) -> int:
