@@ -170,18 +170,18 @@ async def get_synthetic_set_for_task(task_id: str, psql_db: PSQLDB):
 
 
 async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[RawTask]:
-    """Get all tasks ready for evaluation"""
     async with await psql_db.connection() as connection:
         connection: Connection
-        query = f"""
-            SELECT * FROM {cst.TASKS_TABLE} t
-            WHERE {cst.STATUS} IN ($1, $2)
-            AND NOW() AT TIME ZONE 'UTC' > {cst.TERMINATION_AT} AT TIME ZONE 'UTC'
+        query = """
+            SELECT * FROM tasks t
+            WHERE status IN ($1, $2)
+            AND NOW() > termination_at
             AND EXISTS (
-                SELECT 1 FROM {cst.TASK_NODES_TABLE} tn
-                WHERE tn.{cst.TASK_ID} = t.{cst.TASK_ID}
-                AND tn.{cst.NETUID} = $3
+                SELECT 1 FROM task_nodes tn
+                WHERE tn.task_id = t.task_id
+                AND tn.netuid = $3
             )
+            ORDER BY termination_at ASC
         """
         rows = await connection.fetch(query, TaskStatus.TRAINING.value, TaskStatus.PREEVALUATION.value, NETUID)
         return [RawTask(**dict(row)) for row in rows]
