@@ -92,7 +92,11 @@ async def get_additional_synth_data(dataset: Dataset, columns_to_sample: List[st
 
 
 def change_to_json_format(dataset: Dataset, columns: List[str]):
-    return [{col: str(row[col]) for col in columns} for row in dataset]
+    try:
+        return [{col: str(row[col]) if row[col] is not None else "" for col in columns if col in row} for row in dataset]
+    except Exception as e:
+        logger.error(f"Error converting to JSON format: {str(e)}")
+        return []
 
 
 def assign_some_of_the_train_to_synth(train_dataset: Dataset):
