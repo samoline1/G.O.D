@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import tempfile
+import shutil
 from io import BytesIO
 from typing import Dict
 from typing import List
@@ -15,9 +16,9 @@ from huggingface_hub import hf_hub_download
 from PIL import Image
 from pydantic import BaseModel
 
-import core.constants as cst
+from validator.core import constants as cst
 
-from ..validator.utils import comfy_api_gate as api_gate
+from validator.utils import comfy_api_gate as api_gate
 
 
 logger = get_logger(__name__)
@@ -29,9 +30,10 @@ class Img2ImgPayload(BaseModel):
     steps: int
     cfg: float
     denoise: float
-    comfy_template: str
+    comfy_template: Dict
     prompt: Optional[str] = None
     base_image: Optional[str] = None
+
 
 def load_comfy_workflows():
     with open(cst.LORA_WORKFLOW_PATH, "r") as file:
@@ -64,7 +66,7 @@ def base64_to_image(base64_string: str) -> Image.Image:
 
 
 def download_from_huggingface(repo_id: str, filename: str, local_dir: str = None) -> str:
-    # Need to use a temp folder to make sure we place the files correctly even if its inside a folder on HF
+    # Use a temp folder to ensure correct file placement
     try:
         local_filename = os.path.basename(filename)
         final_path = os.path.join(local_dir, local_filename)
@@ -73,11 +75,11 @@ def download_from_huggingface(repo_id: str, filename: str, local_dir: str = None
         else:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_file_path = hf_hub_download(repo_id=repo_id, filename=filename, local_dir=temp_dir)
-                os.rename(temp_file_path, final_path)
+                shutil.move(temp_file_path, final_path)
             logger.info(f"File {filename} downloaded successfully")
         return final_path
     except Exception as e:
-        logger.info(f"Error downloading file: {e}")
+        logger.error(f"Error downloading file: {e}")
 
 
 def calculate_l2_loss(image1: Image.Image, image2: Image.Image) -> float:
@@ -110,7 +112,7 @@ def inference(image_base64: str, params: Dict, use_prompt: bool = False, prompt:
 
     params.base_image = image_base64
 
-    lora_payload = edit_workflow(params.lora_template, params, text_guided=use_prompt)
+    lora_payload = edit_workflow(params.comfy_template, params, text_guided=use_prompt)
     lora_gen = api_gate.generate(lora_payload)[0]
     lora_gen_loss = calculate_l2_loss(base64_to_image(image_base64), lora_gen)
 
@@ -122,7 +124,7 @@ def eval_loop(dataset_path: str, params: Img2ImgPayload) -> Dict[str, List]:
     lora_losses_no_text = []
 
     for file_name in os.listdir(dataset_path):
-        if file_name.lower.endswith((".png", ".jpg", ".jpeg", ".webp")):
+        if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
             logger.info(f"Calculating losses for {file_name}")
             base_name = os.path.splitext(file_name)[0]
             png_path = os.path.join(dataset_path, file_name)
@@ -151,35 +153,44 @@ def eval_loop(dataset_path: str, params: Img2ImgPayload) -> Dict[str, List]:
 
 
 def main():
-    start_comfyui()
-    # test_dataset_path = "/root/anime-test-split"
-    # trained_lora_model_repo = "diagonalge/animelora"
-    # base_model_repo = "SG161222/RealVisXL_V4.0"
-    # base_model_filename = "RealVisXL_V4.0.safetensors"
-    # lora_model_filename = "test/kohyatest.safetensors"
     test_dataset_path = os.getenv("TEST_DATASET_PATH")
-    trained_lora_model_repo = os.getenv("TRAINED_LORA_MODEL_REPO")
+    trained_lora_model_repos = os.getenv("TRAINED_LORA_MODEL_REPOS").split(",")
     base_model_repo = os.getenv("BASE_MODEL_REPO")
     base_model_filename = os.getenv("BASE_MODEL_FILENAME")
-    lora_model_filename = os.getenv("LORA_MODEL_FILENAME")
+    lora_model_filenames = os.getenv("LORA_MODEL_FILENAMES").split(",")
 
+    # Base model download
     _ = download_from_huggingface(base_model_repo, base_model_filename, cst.CHECKPOINTS_SAVE_PATH)
-    lora_model_path = download_from_huggingface(trained_lora_model_repo, lora_model_filename, cst.LORAS_SAVE_PATH)
+
+    loras_to_evaluate = {}
+
+    for lora_repo, lora_filename in zip(trained_lora_model_repos, lora_model_filenames):
+        lora_metadata = {"hf_filename": lora_filename, "hf_repo": lora_repo}
+        lora_metadata["local_model_path"] = download_from_huggingface(lora_repo, lora_filename, cst.LORAS_SAVE_PATH)
+        loras_to_evaluate[f"{lora_repo}/{lora_filename}"] = lora_metadata
 
     lora_comfy_template = load_comfy_workflows()
-
-    img2img_payload = Img2ImgPayload(
-        ckpt_name=base_model_filename,
-        lora_name=os.path.basename(lora_model_filename),
-        steps=cst.DEFAULT_STEPS,
-        cfg=cst.DEFAULT_CFG,
-        denoise=cst.DEFAULT_DENOISE,
-        comfy_template=lora_comfy_template,
-    )
-
     api_gate.connect()
 
-    results = eval_loop(test_dataset_path, img2img_payload)
+    results = {}
+
+    for lora_key, lora_metadata in loras_to_evaluate.items():
+        img2img_payload = Img2ImgPayload(
+            ckpt_name=base_model_filename,
+            lora_name=os.path.basename(lora_metadata["hf_filename"]),
+            steps=cst.DEFAULT_STEPS,
+            cfg=cst.DEFAULT_CFG,
+            denoise=cst.DEFAULT_DENOISE,
+            comfy_template=lora_comfy_template,
+        )
+
+        loss_data = eval_loop(test_dataset_path, img2img_payload)
+
+        repo = lora_metadata["hf_repo"]
+        filename = lora_metadata["hf_filename"]
+
+        results[f"{repo}/{filename}"] = loss_data
+        os.remove(lora_metadata["local_model_path"])
 
     output_file = "/aplp/evaluation_results_diffusion.json"
     output_dir = os.path.dirname(output_file)
@@ -194,11 +205,7 @@ def main():
 
     logger.info(f"Evaluation results saved to {output_file}")
 
-    os.remove(lora_model_path)
-
     logger.info(json.dumps(results))
-
-    stop_comfyui()
 
 
 if __name__ == "__main__":
