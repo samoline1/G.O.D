@@ -100,6 +100,7 @@ def assign_some_of_the_train_to_synth(train_dataset: Dataset):
     synthetic_data = train_dataset.select(range(dataset_length - cst.MAX_SYNTH_DATA_POINTS, dataset_length))
     train_dataset = train_dataset.select(range(dataset_length - cst.MAX_SYNTH_DATA_POINTS))
 
+    logger.info("We have a train and synth dataset ready")
     return train_dataset, synthetic_data
 
 
@@ -127,8 +128,6 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], keypair:
         else:
             logger.info("Skipping synthetic data generation")
     except Exception as e:
-        # if for some reason the api is down, we move some of the train over to be synth
-
         logger.info(f"Synthetic dataset gen is down, moving part of the train over: {e}")
 
         train_dataset, synthetic_data = assign_some_of_the_train_to_synth(train_dataset)
