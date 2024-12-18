@@ -81,14 +81,14 @@ async def _select_miner_pool_and_add_to_task(task: RawTask, nodes: list[Node], c
     )
     logger.info(
         f"We are offering the following task to the miners: {task_request.model_dump()}",
-        extra=create_extra_log(task.status),
+        extra=create_extra_log(task_status=task.status),
     )
     miners_already_assigned = await tasks_sql.get_miners_for_task(task.task_id, config.psql_db)
 
     already_assigned_hotkeys = [miner.hotkey for miner in miners_already_assigned]
     logger.info(
         f"There are {len(already_assigned_hotkeys)} miners already assigned to this task",
-        extra=create_extra_log(task.status),
+        extra=create_extra_log(task_status=task.status),
     )
 
     # Filter out nodes that are already assigned to this task - this will occur if we had to restart a task due to all miners
