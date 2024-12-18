@@ -10,10 +10,12 @@ current_task_id = ContextVar[str | None]("current_task_id", default=None)
 
 
 def create_extra_log(**tags: str | None) -> dict[str, dict[str, str | None]]:
-    context_task_id = current_task_id.get()
-    if context_task_id:
-        tags["task_id"] = context_task_id
-
+    try:
+        context_task_id = current_task_id.get()
+        if context_task_id is not None:
+            tags["task_id"] = context_task_id
+    except LookupError:
+        pass
     return {"tags": {k: v for k, v in tags.items() if v is not None}}
 
 
