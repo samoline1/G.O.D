@@ -175,13 +175,12 @@ async def get_training_tasks_stats(psql_db: PSQLDB) -> TrainingTaskStatus:
         query = f"""
             SELECT
                 COUNT(*) as training_count,
-                MIN(termination_at) as training_end
+                MIN(termination_at) as next_training_end
             FROM {cst.TASKS_TABLE}
             WHERE {cst.STATUS} = $1
         """
         row = await connection.fetchrow(query, TaskStatus.TRAINING.value)
-
-        return TrainingTaskStatus(training_count=row["training_count"], next_training_end=row["training_end"])
+        return TrainingTaskStatus(training_count=row["training_count"], next_training_end=row["next_training_end"])
 
 
 async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[RawTask]:
