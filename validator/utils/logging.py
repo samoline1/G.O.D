@@ -1,14 +1,16 @@
 from fiber.logging_utils import get_logger
 from logging import LogRecord, Formatter
 from logging.handlers import RotatingFileHandler
-from typing import Any, Dict
 from pathlib import Path
 import json
 import os
 
 
-def create_extra_log(task_id: str | None = None, node_hotkey: str | None = None, status: str | None = None) -> Dict[str, Any]:
-    return {"tags": {"task_id": task_id, "status": status, "node_hotkey": node_hotkey}}
+def create_extra_log(
+    task_id: str | None = None, node_hotkey: str | None = None, status: str | None = None, **additional_tags: str
+) -> dict[str, dict[str, str | None]]:
+    tags = {"task_id": task_id, "status": status, "node_hotkey": node_hotkey, **additional_tags}
+    return {"tags": tags}
 
 
 class JSONFormatter(Formatter):
