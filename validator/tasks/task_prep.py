@@ -149,16 +149,18 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], keypair:
         # if for some reason the api is down, we move some of the train over to be synth
 
         logger.info(f"Synthetic dataset gen is down, moving part of the train over: {e}", extra=create_extra_log())
-
         train_dataset, synthetic_data = assign_some_of_the_train_to_synth(train_dataset)
 
     if synthetic_data is None:
         logger.info("There was not enough synthetic data created we are instead grabbing from train ", extra=create_extra_log())
         train_dataset, synthetic_data = assign_some_of_the_train_to_synth(train_dataset)
 
-    train_data_json = change_to_json_format(train_dataset, columns_to_sample)
-    test_data_json = change_to_json_format(test_dataset, columns_to_sample)
-    synthetic_data_json = change_to_json_format(synthetic_data, columns_to_sample) if synthetic_data else []
+    try:
+        train_data_json = change_to_json_format(train_dataset, columns_to_sample)
+        test_data_json = change_to_json_format(test_dataset, columns_to_sample)
+        synthetic_data_json = change_to_json_format(synthetic_data, columns_to_sample) if synthetic_data else []
+    except Exception as e:
+        logger.info(f"There was a problem going to json {e}", extra=create_extra_log())
 
     train_json_path = await save_json_to_temp_file(train_data_json, prefix="train_data_")
     test_json_path = await save_json_to_temp_file(test_data_json, prefix="test_data_")
