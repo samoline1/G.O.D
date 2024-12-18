@@ -238,7 +238,7 @@ async def _find_miners_for_task(config: Config):
 
 
 async def _prep_task(task: RawTask, config: Config):
-    async with TaskContext(task_id):
+    async with TaskContext(str(task_id)):
         try:
             task.status = TaskStatus.PREPARING_DATA
             await tasks_sql.update_task(task, config.psql_db)
