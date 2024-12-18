@@ -21,7 +21,7 @@ from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.dependencies import get_api_key
 from validator.core.dependencies import get_config
-from validator.core.models import RawTask
+from validator.core.models import RawTask, TrainingTaskStats
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
 from validator.db.sql import tasks as task_sql
 from validator.db.sql.nodes import get_all_nodes
@@ -34,6 +34,7 @@ TASKS_CREATE_ENDPOINT = "/v1/tasks/create"
 GET_TASKS_BY_ACCOUNT_ENDPOINT = "/v1/tasks/account/{account_id}"
 GET_TASK_DETAILS_ENDPOINT = "/v1/tasks/{task_id}"
 GET_TASKS_RESULTS_ENDPOINT = "/v1/tasks/breakdown/{task_id}"
+GET_NETWORK_STATUS = "/v1/network/status"
 GET_NODE_RESULTS_ENDPOINT = "/v1/tasks/node_results/{hotkey}"
 DELETE_TASK_ENDPOINT = "/v1/tasks/delete/{task_id}"
 LEADERBOARD_ENDPOINT = "/v1/leaderboard"
@@ -198,6 +199,13 @@ async def get_leaderboard(
     return leaderboard_rows
 
 
+async def get_network_status(
+    config: Config = Depends(get_config),
+) -> TrainingTaskStats:
+    training_stats = await task_sql.get_training_tasks_stats(config.psql_db)
+    return training_stats
+
+
 def factory_router() -> APIRouter:
     router = APIRouter(tags=["Gradients On Demand"], dependencies=[Depends(get_api_key)])
 
@@ -208,5 +216,6 @@ def factory_router() -> APIRouter:
     router.add_api_route(GET_NODE_RESULTS_ENDPOINT, get_node_results, methods=["GET"])
     router.add_api_route(GET_TASKS_BY_ACCOUNT_ENDPOINT, get_task_details_by_account, methods=["GET"])
     router.add_api_route(LEADERBOARD_ENDPOINT, get_leaderboard, methods=["GET"])
+    router.add_api_route(GET_NETWORK_STATUS, get_network_status, methods=["GET"])
 
     return router

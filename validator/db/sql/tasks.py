@@ -10,7 +10,7 @@ from fiber.logging_utils import get_logger
 import validator.db.constants as cst
 from core.constants import NETUID
 from core.models.utility_models import TaskStatus
-from validator.core.models import RawTask
+from validator.core.models import RawTask, TrainingTaskStats
 from validator.core.models import Task
 from validator.db.database import PSQLDB
 
@@ -167,6 +167,21 @@ async def get_synthetic_set_for_task(task_id: str, psql_db: PSQLDB):
             WHERE {cst.TASK_ID} = $1
         """
         return await connection.fetchval(query, task_id)
+
+
+async def get_training_tasks_stats(psql_db: PSQLDB) -> TrainingTaskStats:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            SELECT
+                COUNT(*) as training_count,
+                MIN(termination_at) as next_termination
+            FROM {cst.TASKS_TABLE}
+            WHERE {cst.STATUS} = $1
+        """
+        row = await connection.fetchrow(query, TaskStatus.TRAINING.value)
+
+        return TrainingTaskStats(training_count=row["training_count"], next_termination=row["next_termination"])
 
 
 async def get_tasks_ready_to_evaluate(psql_db: PSQLDB) -> List[RawTask]:
