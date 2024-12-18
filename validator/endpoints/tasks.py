@@ -204,6 +204,7 @@ async def get_network_status(
     config: Config = Depends(get_config),
 ) -> TrainingTaskStatus:
     try:
+        logger.info("IN get network status")
         training_stats = await task_sql.get_training_tasks_stats(config.psql_db)
         if training_stats.training_count >= MAX_CONCURRENT_JOBS:
             training_stats.job_can_be_made = False
@@ -224,4 +225,7 @@ def factory_router() -> APIRouter:
     router.add_api_route(GET_TASKS_BY_ACCOUNT_ENDPOINT, get_task_details_by_account, methods=["GET"])
     router.add_api_route(LEADERBOARD_ENDPOINT, get_leaderboard, methods=["GET"])
     router.add_api_route(GET_NETWORK_STATUS, get_network_status, methods=["GET"])
+    logger.info("Router routes at end of factory:")
+    for route in router.routes:
+        logger.info(f"- {route.path} [{route.methods}]")
     return router
