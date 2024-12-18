@@ -238,12 +238,12 @@ async def _find_miners_for_task(config: Config):
 
 
 async def _prep_task(task: RawTask, config: Config):
-    async with TaskContext(str(task_id)):
+    async with TaskContext(str(task.task_id)):
         try:
             task.status = TaskStatus.PREPARING_DATA
             await tasks_sql.update_task(task, config.psql_db)
             task = await _run_task_prep(task, config.keypair)
-            logger.info(f"THE TASK HAS BEEN PREPPED {task}", extras=create_extra_log(status=task.status))
+            logger.info(f"THE TASK HAS BEEN PREPPED {task}", extra=create_extra_log(status=task.status))
             await tasks_sql.update_task(task, config.psql_db)
         except Exception:
             task.status = TaskStatus.PREP_TASK_FAILURE
