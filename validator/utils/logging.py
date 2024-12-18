@@ -13,12 +13,13 @@ def create_extra_log(task_id: str | None = None, node_hotkey: str | None = None,
 
 class JSONFormatter(Formatter):
     def format(self, record: LogRecord) -> str:
+        tags = record.__dict__.get("tags", {}) if hasattr(record, "tags") else {}
         log_data: Dict[str, Any] = {
             "timestamp": self.formatTime(record),
             "level": record.levelname,
             "message": record.getMessage(),
             "logger": record.name,
-            "tags": getattr(record, "tags", {}),
+            "tags": tags,
         }
         return json.dumps(log_data)
 
