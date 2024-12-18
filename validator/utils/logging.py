@@ -14,9 +14,10 @@ def create_extra_log(task_id: str | None = None, node_hotkey: str | None = None,
 class JSONFormatter(Formatter):
     def format(self, record: LogRecord) -> str:
         tags = record.__dict__.get("tags", {}) if hasattr(record, "tags") else {}
+        clean_level = record.levelname.replace("\u001b[32m", "").replace("\u001b[1m", "").replace("\u001b[0m", "")
         log_data: Dict[str, Any] = {
             "timestamp": self.formatTime(record),
-            "level": record.levelname,
+            "level": clean_level,
             "message": record.getMessage(),
             "logger": record.name,
             "tags": tags,
