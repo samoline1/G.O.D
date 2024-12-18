@@ -215,4 +215,4 @@ class DatasetJsons(BaseModel):
 
 class TrainingTaskStats(BaseModel):
     training_count: int
-    next_termination: datetime | None
+    next_training_end: datetime | None
