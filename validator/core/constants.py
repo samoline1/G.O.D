@@ -30,12 +30,12 @@ TASK_OFFER_ENDPOINT = "/task_offer/"
 SUBMISSION_ENDPOINT = "/get_latest_model_submission/"
 
 # to update when live
-#PROD_CONTENT_BASE_URL = "https://content.gradients.io"
+# PROD_CONTENT_BASE_URL = "https://content.gradients.io"
 DEV_CONTENT_BASE_URL = "https://dev.content.gradients.io"
 PROD_CONTENT_BASE_URL = "https://dev.content.gradients.io"
 
 # 241 is testnet
-CONTENT_BASE_URL = DEV_CONTENT_BASE_URL # if NETUID == 241 else PROD_CONTENT_BASE_URL
+CONTENT_BASE_URL = DEV_CONTENT_BASE_URL  # if NETUID == 241 else PROD_CONTENT_BASE_URL
 
 GET_RANDOM_DATASETS_ENDPOINT = f"{CONTENT_BASE_URL}/datasets/random"
 GET_RANDOM_MODELS_ENDPOINT = f"{CONTENT_BASE_URL}/models/random"
@@ -49,7 +49,7 @@ GET_ALL_MODELS_ID = "model_id"
 
 
 HOW_MANY_TASKS_MINIMAL_AT_THE_SAME_TIME = 4
-NUMBER_OF_MINUTES_BETWEEN_SYNTH_TASK_CHECK = 90
+NUMBER_OF_MINUTES_BETWEEN_SYNTH_TASK_CHECK = 60
 
 
 # data stuff
@@ -60,7 +60,7 @@ MAX_SYNTH_DATA_POINTS = 300
 ADDITIONAL_SYNTH_DATA_PERCENTAGE = 1.0  # same size as training set
 
 # synth stuff
-SYNTH_GEN_BATCH_SIZE = 5
+SYNTH_GEN_BATCH_SIZE = 10
 SYNTH_MODEL_TEMPERATURE = 0.4
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
 GPU_SERVER = os.getenv("GPU_SERVER")
