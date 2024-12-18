@@ -30,12 +30,12 @@ TASK_OFFER_ENDPOINT = "/task_offer/"
 SUBMISSION_ENDPOINT = "/get_latest_model_submission/"
 
 # to update when live
-#PROD_CONTENT_BASE_URL = "https://content.gradients.io"
+# PROD_CONTENT_BASE_URL = "https://content.gradients.io"
 DEV_CONTENT_BASE_URL = "https://dev.content.gradients.io"
 PROD_CONTENT_BASE_URL = "https://dev.content.gradients.io"
 
 # 241 is testnet
-CONTENT_BASE_URL = DEV_CONTENT_BASE_URL # if NETUID == 241 else PROD_CONTENT_BASE_URL
+CONTENT_BASE_URL = DEV_CONTENT_BASE_URL  # if NETUID == 241 else PROD_CONTENT_BASE_URL
 
 GET_RANDOM_DATASETS_ENDPOINT = f"{CONTENT_BASE_URL}/datasets/random"
 GET_RANDOM_MODELS_ENDPOINT = f"{CONTENT_BASE_URL}/models/random"
@@ -100,3 +100,6 @@ MAX_CONCURRENT_TASK_PREPS = 3
 MAX_CONCURRENT_TRAININGS = 10
 MAX_CONCURRENT_EVALUATIONS = 1
 MAX_TIME_DELAY_TO_FIND_MINERS = 1  # hours
+
+
+LOGPATH = "validator/logs"
