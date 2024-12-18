@@ -216,3 +216,4 @@ class DatasetJsons(BaseModel):
 class TrainingTaskStats(BaseModel):
     training_count: int
     next_training_end: datetime | None
+    job_can_be_made: bool = True

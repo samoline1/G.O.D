@@ -25,6 +25,7 @@ from validator.core.models import RawTask, TrainingTaskStats
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
 from validator.db.sql import tasks as task_sql
 from validator.db.sql.nodes import get_all_nodes
+from validator.core.constants import MAX_CONCURRENT_JOBS
 
 
 logger = get_logger(__name__)
@@ -203,6 +204,8 @@ async def get_network_status(
     config: Config = Depends(get_config),
 ) -> TrainingTaskStats:
     training_stats = await task_sql.get_training_tasks_stats(config.psql_db)
+    if training_stats.training_count >= MAX_CONCURRENT_JOBS:
+        training_stats.job_can_be_made = False
     return training_stats
 
 
