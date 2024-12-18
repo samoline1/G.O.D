@@ -113,6 +113,10 @@ def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
     validator_port = input(
         "👀 Enter an exposed port to run the validator on (default: 9001): ") or "9001"
 
+    gpu_ids = input(
+        "🎮 Enter comma-separated GPU IDs to use (e.g., 0,1,2 or leave empty to use all GPUs): "
+    ).strip()
+
     s3_compatible_endpoint = input("🎯 Enter s3 compatible endpoint: ")
     s3_compatible_access_key = input("🎯 Enter s3 compatible access key: ")
     s3_compatible_secret_key = input("🎯 Enter s3 compatible secret key: ")
@@ -139,6 +143,7 @@ def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
         s3_bucket_name=s3_bucket_name,
         frontend_api_key=frontend_api_key,
         validator_port=validator_port,
+        gpu_ids=gpu_ids,
         gpu_server=None,
         set_metagraph_weights=parse_bool_input(
             "Set metagraph weights when updated gets really high to not dereg?",

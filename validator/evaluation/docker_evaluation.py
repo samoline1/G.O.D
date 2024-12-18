@@ -95,7 +95,10 @@ async def run_evaluation_docker(
             volumes=volume_bindings,
             runtime="nvidia",
             device_requests=[
-                docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])
+                docker.types.DeviceRequest(
+                    capabilities=[["gpu"]],
+                    device_ids=cst.VALIDATOR_GPU_IDS
+                )
             ],
             detach=True,
         )
