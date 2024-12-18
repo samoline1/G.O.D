@@ -96,14 +96,29 @@ def change_to_json_format(dataset: Dataset, columns: List[str]):
 
 
 def assign_some_of_the_train_to_synth(train_dataset: Dataset):
-    logger.info("Taking some of the train set to be synthetic data", extra=create_extra_log())
+    if not isinstance(train_dataset, Dataset):
+        raise TypeError("train_dataset must be an instance of datasets.Dataset")
+
+    if len(train_dataset) == 0:
+        raise ValueError("Cannot split an empty dataset")
+
+    num_synthetic_samples = min(cst.MAX_SYNTH_DATA_POINTS, int(len(train_dataset) * cst.ADDITIONAL_SYNTH_DATA_PERCENTAGE))
+
     dataset_length = len(train_dataset)
+    split_index = dataset_length - num_synthetic_samples
 
-    synthetic_data = train_dataset.select(range(dataset_length - cst.MAX_SYNTH_DATA_POINTS, dataset_length))
-    train_dataset = train_dataset.select(range(dataset_length - cst.MAX_SYNTH_DATA_POINTS))
+    synthetic_dataset = train_dataset.select(range(split_index, dataset_length))
+    remaining_train_dataset = train_dataset.select(range(split_index))
 
-    logger.info("We have a train and synth dataset ready")
-    return train_dataset, synthetic_data
+    logger.info(
+        f"Taking {num_synthetic_samples} samples from the train set to be synthetic data. "
+        f"Original size: {dataset_length}, "
+        f"Training size: {len(remaining_train_dataset)}, "
+        f"Synthetic size: {len(synthetic_dataset)}",
+        extra=create_extra_log(),
+    )
+
+    return remaining_train_dataset, synthetic_dataset
 
 
 async def prepare_task(dataset_name: str, columns_to_sample: List[str], keypair: Keypair) -> tuple[str, str, str]:
@@ -137,6 +152,7 @@ async def prepare_task(dataset_name: str, columns_to_sample: List[str], keypair:
         train_dataset, synthetic_data = assign_some_of_the_train_to_synth(train_dataset)
 
     if synthetic_data is None:
+        logger.info("There was not enough synthetic data created we are instead grabbing from train ", extra=create_extra_log())
         train_dataset, synthetic_data = assign_some_of_the_train_to_synth(train_dataset)
 
     train_data_json = change_to_json_format(train_dataset, columns_to_sample)
