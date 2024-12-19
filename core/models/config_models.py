@@ -42,3 +42,4 @@ class ValidatorConfig(BaseConfig):
     localhost: bool = False
     env_file: str = ".vali.env"
     hf_datasets_trust_remote_code = True
+    s3_region: str = "us-east-1"
