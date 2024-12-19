@@ -1,9 +1,9 @@
 import base64
 import json
 import os
+import shutil
 import subprocess
 import tempfile
-import shutil
 from io import BytesIO
 from typing import Dict
 from typing import List
@@ -17,7 +17,6 @@ from PIL import Image
 from pydantic import BaseModel
 
 from validator.core import constants as cst
-
 from validator.utils import comfy_api_gate as api_gate
 
 
@@ -192,6 +191,7 @@ def main():
         results[f"{repo}/{filename}"] = loss_data
         os.remove(lora_metadata["local_model_path"])
 
+    eval_losses = {"eval_losses": results}
     output_file = "/aplp/evaluation_results_diffusion.json"
     output_dir = os.path.dirname(output_file)
 
@@ -201,7 +201,7 @@ def main():
 
     # Write the results to the file
     with open(output_file, "w") as f:
-        json.dump(results, f)
+        json.dump(eval_losses, f)
 
     logger.info(f"Evaluation results saved to {output_file}")
 

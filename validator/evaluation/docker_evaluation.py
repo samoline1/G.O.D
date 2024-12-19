@@ -3,6 +3,7 @@ import json
 import os
 import tarfile
 import threading
+from typing import List
 from typing import Union
 
 import docker
@@ -11,6 +12,7 @@ from fiber.logging_utils import get_logger
 from core import constants as cst
 from core.docker_utils import stream_logs
 from core.models.payload_models import EvaluationResult
+from core.models.payload_models import EvaluationResultDiffusion
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
@@ -99,6 +101,79 @@ async def run_evaluation_docker(
 
         container.remove()
         return EvaluationResult(**eval_results)
+    except Exception as e:
+        logger.error(f"Failed to retrieve evaluation results: {str(e)}")
+        raise Exception(f"Failed to retrieve evaluation results: {str(e)}")
+    finally:
+        client.close()
+
+
+async def run_evaluation_docker_diffusion(
+    test_split_path: str, base_model_repo: str, base_model_filename: str, lora_repo_list: List[str], lora_filename_list: List[str]
+) -> EvaluationResultDiffusion:
+    client = docker.from_env()
+
+    dataset_dir = os.path.abspath(test_split_path)
+    container_dataset_path = "/workspace/input_data"
+    volume_bindings = {}
+    volume_bindings[dataset_dir] = {
+        "bind": container_dataset_path,
+        "mode": "ro",
+    }
+
+    environment = {
+        "TEST_DATASET_PATH": container_dataset_path,
+        "BASE_MODEL_REPO": base_model_repo,
+        "BASE_MODEL_FILENAME": base_model_filename,
+        "LORA_MODEL_REPOS": ",".join(lora_repo_list),
+        "LORA_MODEL_FILENAMES": ",".join(lora_filename_list),
+    }
+
+    try:
+        container = client.containers.run(
+            cst.VALIDATOR_DOCKER_IMAGE_DIFFUSION,
+            environment=environment,
+            volumes=volume_bindings,
+            runtime="nvidia",
+            device_requests=[docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])],
+            detach=True,
+        )
+
+        log_thread = threading.Thread(target=stream_logs, args=(container,))
+        log_thread.start()
+
+        result = container.wait()
+
+        log_thread.join()
+
+        if result["StatusCode"] != 0:
+            raise Exception(f"Container exited with status {result['StatusCode']}")
+
+        tar_stream, _ = container.get_archive(cst.CONTAINER_EVAL_RESULTS_PATH_DIFFUSION)
+
+        file_like_object = io.BytesIO()
+        for chunk in tar_stream:
+            file_like_object.write(chunk)
+        file_like_object.seek(0)
+
+        with tarfile.open(fileobj=file_like_object) as tar:
+            members = tar.getnames()
+            logger.debug(f"Tar archive members: {members}")
+
+            eval_results_file = None
+            for member_info in tar.getmembers():
+                if member_info.name.endswith("evaluation_results_diffusion.json"):
+                    eval_results_file = tar.extractfile(member_info)
+                    break
+
+            if eval_results_file is None:
+                raise Exception("Evaluation results file not found in tar archive")
+
+            eval_results_content = eval_results_file.read().decode("utf-8")
+            eval_results = json.loads(eval_results_content)
+
+        container.remove()
+        return EvaluationResultDiffusion(**eval_results)
     except Exception as e:
         logger.error(f"Failed to retrieve evaluation results: {str(e)}")
         raise Exception(f"Failed to retrieve evaluation results: {str(e)}")

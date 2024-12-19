@@ -67,10 +67,22 @@ class EvaluationRequest(TrainRequest):
     original_model: str
 
 
+class EvaluationRequestDiffusion(BaseModel):
+    test_split_path: str
+    base_model_repo: str
+    base_model_filename: str
+    lora_repo_list: List[str]
+    lora_filename_list: List[str]
+
+
 class EvaluationResult(BaseModel):
     is_finetune: bool
     eval_loss: float
     perplexity: float
+
+
+class EvaluationResultDiffusion(BaseModel):
+    eval_losses: Dict
 
 
 class MinerTaskResponse(BaseModel):
