@@ -93,7 +93,7 @@ async def run_evaluation_docker(
             environment=environment,
             volumes=volume_bindings,
             runtime="nvidia",
-            device_requests=[docker.types.DeviceRequest(capabilities=[["gpu"]], device_ids=gpu_ids)],
+            device_requests=[docker.types.DeviceRequest(capabilities=[["gpu"]], device_ids=[str(gid) for gid in gpu_ids])],
             detach=True,
         )
         log_task = asyncio.create_task(asyncio.to_thread(stream_logs, container))
