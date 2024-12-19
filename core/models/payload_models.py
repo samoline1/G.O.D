@@ -108,7 +108,7 @@ class NewTaskRequest(BaseModel):
 class NewTaskResponse(BaseModel):
     success: bool = Field(..., description="Whether the task was created successfully")
     task_id: UUID | None = Field(..., description="The ID of the task")
-    created_at: datetime | None = Field(..., description="The creation time of the task")
+    created_at: datetime = Field(..., description="The creation time of the task")
     account_id: UUID | None = Field(..., description="The account ID who owns the task")
 
 

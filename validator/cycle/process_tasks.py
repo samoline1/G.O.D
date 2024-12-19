@@ -6,7 +6,6 @@ from datasets import get_dataset_infos
 from fiber import Keypair
 from fiber.chain.models import Node
 
-
 import validator.core.constants as cst
 import validator.db.sql.nodes as nodes_sql
 import validator.db.sql.tasks as tasks_sql
@@ -21,7 +20,8 @@ from validator.core.models import RawTask
 from validator.evaluation.scoring import evaluate_and_score
 from validator.tasks.task_prep import prepare_task
 from validator.utils.call_endpoint import process_non_stream_fiber
-from validator.utils.logging import TaskContext, create_extra_log
+from validator.utils.logging import TaskContext
+from validator.utils.logging import create_extra_log
 from validator.utils.logging import logger
 
 
@@ -318,7 +318,7 @@ async def _handle_delayed_tasks(config: Config):
 
 async def _move_to_preevaluation_status(task, config):
     task.status = TaskStatus.PREEVALUATION
-    logger.info(f"Moving this one back {task}")
+    logger.info(f"Changing status to {task.status}", create_extra_log(task_id=task.task_id))
     await tasks_sql.update_task(task, config.psql_db)
 
 
@@ -355,16 +355,29 @@ async def process_pending_tasks(config: Config) -> None:
             await asyncio.sleep(30)
 
 
-async def process_completed_tasks(config: Config) -> None:
+async def move_tasks_to_preevaluation_loop(config: Config):
     await _move_any_evaluating_tasks_to_pending_evaluation(config)
     while True:
         completed_tasks = await tasks_sql.get_tasks_ready_to_evaluate(config.psql_db)
-        await _move_to_preevaluation(completed_tasks, config)
-
-        if len(completed_tasks) > 0:
-            logger.info(f"There are {len(completed_tasks)} awaiting evaluation")
-            for task in completed_tasks:
-                await _evaluate_task(task, config)
-        if len(completed_tasks) == 0:
-            logger.info("There are no tasks to evaluate - waiting 30 seconds")
+        if completed_tasks:
+            await _move_to_preevaluation(completed_tasks, config)
+            logger.info(f"Moved {len(completed_tasks)} tasks to preevaluation status")
+        else:
+            logger.info("No tasks to move to preevaluation - waiting 30 seconds")
             await asyncio.sleep(30)
+
+
+async def evaluate_tasks_loop(config: Config):
+    while True:
+        tasks_to_evaluate = await tasks_sql.get_tasks_with_status(TaskStatus.PREEVALUATION, psql_db=config.psql_db)
+        if tasks_to_evaluate:
+            logger.info(f"There are {len(tasks_to_evaluate)} tasks awaiting evaluation")
+            for task in tasks_to_evaluate:
+                await _evaluate_task(task, config)
+        else:
+            logger.info("No tasks awaiting evaluation - waiting 30 seconds")
+            await asyncio.sleep(30)
+
+
+async def process_completed_tasks(config: Config) -> None:
+    await asyncio.gather(move_tasks_to_preevaluation_loop(config), evaluate_tasks_loop(config))

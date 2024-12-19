@@ -19,13 +19,14 @@ from core.models.utility_models import MinerTaskResult
 from core.models.utility_models import TaskMinerResult
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
+from validator.core.constants import MAX_CONCURRENT_JOBS
 from validator.core.dependencies import get_api_key
 from validator.core.dependencies import get_config
-from validator.core.models import RawTask, TrainingTaskStatus
+from validator.core.models import RawTask
+from validator.core.models import TrainingTaskStatus
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
 from validator.db.sql import tasks as task_sql
 from validator.db.sql.nodes import get_all_nodes
-from validator.core.constants import MAX_CONCURRENT_JOBS
 
 
 logger = get_logger(__name__)
@@ -204,13 +205,13 @@ async def get_network_status(
     config: Config = Depends(get_config),
 ) -> TrainingTaskStatus:
     try:
-        logger.info("IN get network status")
+        logger.debug("IN get network status")
         training_stats = await task_sql.get_training_tasks_stats(config.psql_db)
         if training_stats.number_of_jobs_training >= MAX_CONCURRENT_JOBS:
             training_stats.job_can_be_made = False
         return training_stats
     except Exception as e:
-        logger.info(f"There was an erorr with getting training status {e}")
+        logger.info(f"There was an issue with getting training status {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
