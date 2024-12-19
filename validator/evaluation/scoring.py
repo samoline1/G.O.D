@@ -7,7 +7,6 @@ from fiber.chain.models import Node
 from fiber.logging_utils import get_logger
 from scipy.stats import gmean
 
-import validator.core.constants as cts
 from core.models.payload_models import EvaluationResult
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
@@ -21,6 +20,7 @@ from validator.core.models import RawTask
 from validator.core.models import Submission
 from validator.core.models import TaskNode
 from validator.core.models import TaskResults
+import validator.core.constants as cts
 from validator.db.sql.submissions_and_scoring import add_submission
 from validator.db.sql.submissions_and_scoring import get_aggregate_scores_since
 from validator.db.sql.submissions_and_scoring import set_task_node_quality_score
@@ -281,7 +281,7 @@ async def _get_submission_repo(miner: Node, task_id: str, config: Config) -> str
 
 
 async def _evaluate_submission(
-    task: RawTask, submission_repo: str, dataset_type: CustomDatasetType, gpu_ids: list[intj]
+    task: RawTask, submission_repo: str, dataset_type: CustomDatasetType, gpu_ids: list[int]
 ) -> tuple[EvaluationResult, EvaluationResult]:
     evaluation_params = {
         "file_format": FileFormat.JSON,
@@ -474,7 +474,7 @@ async def evaluate_and_score(task: RawTask, config: Config) -> RawTask:
     dataset_type = _get_dataset_type(task)
 
     logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
-    gpu_ids = [i for i in range(len(cts.GPU_SERVERS))]
+    gpu_ids = [i for i in range(len(cts.GPU_IDS))]
     task_results = await process_miners_batch(miner_pool, task, dataset_type, config, gpu_ids)
     logger.info("Checking for duplicates ...")
     keep_submission = await handle_duplicate_submissions(task_results)
