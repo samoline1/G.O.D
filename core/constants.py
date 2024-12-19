@@ -16,9 +16,6 @@ except (TypeError, ValueError):
 
 MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
-# Convert string IDs to integers if GPU IDs are specified
-gpu_ids = os.getenv("VALIDATOR_GPU_IDS", "").strip()
-VALIDATOR_GPU_IDS = [int(id) for id in gpu_ids.split(",")] if gpu_ids else [0]
 
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
 

@@ -63,7 +63,7 @@ ADDITIONAL_SYNTH_DATA_PERCENTAGE = 0.1  # same size as training set
 SYNTH_GEN_BATCH_SIZE = 10
 SYNTH_MODEL_TEMPERATURE = 0.4
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
-gpu_ids = os.getenv("VALIDATOR_GPU_IDS", "").strip()
+gpu_ids = os.getenv("GPU_IDS", "").strip()
 GPU_IDS = [int(id) for id in gpu_ids.split(",")] if gpu_ids else [0]
 
 
