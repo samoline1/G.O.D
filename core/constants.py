@@ -18,7 +18,7 @@ MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
 # Convert string IDs to integers if GPU IDs are specified
 gpu_ids = os.getenv("VALIDATOR_GPU_IDS", "").strip()
-VALIDATOR_GPU_IDS = [int(id) for id in gpu_ids.split(",")] if gpu_ids else None
+VALIDATOR_GPU_IDS = [int(id) for id in gpu_ids.split(",")] if gpu_ids else [0]
 
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
 
@@ -27,7 +27,7 @@ OUTPUT_DIR = "./core/outputs/"
 
 CONFIG_TEMPLATE_PATH = CONFIG_DIR + "base.yml"
 
-BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
 WANDB_TOKEN = os.getenv("WANDB_TOKEN")

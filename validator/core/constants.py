@@ -63,7 +63,9 @@ ADDITIONAL_SYNTH_DATA_PERCENTAGE = 0.1  # same size as training set
 SYNTH_GEN_BATCH_SIZE = 10
 SYNTH_MODEL_TEMPERATURE = 0.4
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
-GPU_SERVER = os.getenv("GPU_SERVER")
+gpu_ids = os.getenv("VALIDATOR_GPU_IDS", "").strip()
+GPU_IDS = [int(id) for id in gpu_ids.split(",")] if gpu_ids else [0]
+
 
 SYNTH_MODEL = "chat-llama-3-2-3b"
 PROMPT_GEN_ENDPOINT = "https://api.nineteen.ai/v1/chat/completions"

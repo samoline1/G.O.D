@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from datetime import timedelta
-
+import asyncio
 import numpy as np
 from fiber.chain.models import Node
 from fiber.logging_utils import get_logger
@@ -281,13 +281,14 @@ async def _get_submission_repo(miner: Node, task_id: str, config: Config) -> str
 
 
 async def _evaluate_submission(
-    task: RawTask, submission_repo: str, dataset_type: CustomDatasetType
+    task: RawTask, submission_repo: str, dataset_type: CustomDatasetType, gpu_ids: list[intj]
 ) -> tuple[EvaluationResult, EvaluationResult]:
     evaluation_params = {
         "file_format": FileFormat.JSON,
         "original_model": task.model_id,
         "model": submission_repo,
         "dataset_type": dataset_type,
+        "gpu_ids": gpu_ids,
     }
 
     assert task.synthetic_data is not None, "Synthetic data shouldn't be none"
@@ -320,7 +321,9 @@ async def _clear_up_s3(file_paths: list[str]) -> None:
             logger.error(f"Failed to delete file {file_path} from MinIO: {e}")
 
 
-async def _process_miner(miner: Node, task: RawTask, dataset_type: CustomDatasetType, config: Config) -> MinerResults:
+async def _process_miner(
+    miner: Node, task: RawTask, dataset_type: CustomDatasetType, config: Config, gpu_ids: list[int]
+) -> MinerResults:
     assert task.task_id is not None, "We should have a task id when processing the miner"
     submission_repo = await _get_submission_repo(miner, str(task.task_id), config)
     logger.info(f"Found repo {submission_repo}")
@@ -336,7 +339,7 @@ async def _process_miner(miner: Node, task: RawTask, dataset_type: CustomDataset
             updated_on=datetime.now(),
         )
 
-        synth_result, test_result = await _evaluate_submission(task, submission_repo, dataset_type)
+        synth_result, test_result = await _evaluate_submission(task, submission_repo, dataset_type, gpu_ids)
 
         return MinerResults(
             hotkey=miner.hotkey,
@@ -443,6 +446,24 @@ def zero_duplicate_scores(task_results: list[MinerResults], keep_submission: dic
     return task_results
 
 
+async def process_miners_batch(
+    miners: list[Node], task: RawTask, dataset_type: CustomDatasetType, config: Config, gpu_ids: list[int]
+) -> list[MinerResults]:
+    batches = []
+    for i in range(0, len(miners), len(gpu_ids)):
+        batch = [(miner, [gpu_id]) for miner, gpu_id in zip(miners[i : i + len(gpu_ids)], gpu_ids)]
+        batches.append(batch)
+
+    results = []
+    for batch in batches:
+        batch_results = await asyncio.gather(
+            *[_process_miner(miner, task, dataset_type, config, gpu_list) for miner, gpu_list in batch]
+        )
+        results.extend(batch_results)
+
+    return results
+
+
 async def evaluate_and_score(task: RawTask, config: Config) -> RawTask:
     """Main function to evaluate and score task submissions."""
     assert task.task_id is not None, "Task ID must be present"
@@ -453,8 +474,8 @@ async def evaluate_and_score(task: RawTask, config: Config) -> RawTask:
     dataset_type = _get_dataset_type(task)
 
     logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
-    task_results = [await _process_miner(miner, task, dataset_type, config) for miner in miner_pool]
-
+    gpu_ids = [i for i in range(len(cts.GPU_SERVERS))]
+    task_results = await process_miners_batch(miner_pool, task, dataset_type, config, gpu_ids)
     logger.info("Checking for duplicates ...")
     keep_submission = await handle_duplicate_submissions(task_results)
     task_results = zero_duplicate_scores(task_results, keep_submission)

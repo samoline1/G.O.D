@@ -20,10 +20,7 @@ logger = get_logger(__name__)
 
 
 async def get_evaluation_results(container):
-    archive_data = await asyncio.to_thread(
-        container.get_archive,
-        cst.CONTAINER_EVAL_RESULTS_PATH
-    )
+    archive_data = await asyncio.to_thread(container.get_archive, cst.CONTAINER_EVAL_RESULTS_PATH)
     tar_stream = archive_data[0]
 
     file_like_object = io.BytesIO()
@@ -53,6 +50,7 @@ async def run_evaluation_docker(
     original_model: str,
     dataset_type: Union[DatasetType, CustomDatasetType],
     file_format: FileFormat,
+    gpu_ids: list[int],
 ) -> EvaluationResult:
     client = docker.from_env()
 
@@ -82,11 +80,12 @@ async def run_evaluation_docker(
     async def cleanup_resources():
         try:
             await asyncio.to_thread(client.containers.prune)
-            await asyncio.to_thread(client.images.prune, filters={'dangling': True})
+            await asyncio.to_thread(client.images.prune, filters={"dangling": True})
             await asyncio.to_thread(client.volumes.prune)
             logger.debug("Completed Docker resource cleanup")
         except Exception as e:
             logger.error(f"Cleanup failed: {str(e)}")
+
     try:
         container = await asyncio.to_thread(
             client.containers.run,
@@ -94,22 +93,15 @@ async def run_evaluation_docker(
             environment=environment,
             volumes=volume_bindings,
             runtime="nvidia",
-            device_requests=[
-                docker.types.DeviceRequest(
-                    capabilities=[["gpu"]],
-                    device_ids=cst.VALIDATOR_GPU_IDS
-                )
-            ],
+            device_requests=[docker.types.DeviceRequest(capabilities=[["gpu"]], device_ids=gpu_ids)],
             detach=True,
         )
-        log_task = asyncio.create_task(
-            asyncio.to_thread(stream_logs, container))
+        log_task = asyncio.create_task(asyncio.to_thread(stream_logs, container))
         result = await asyncio.to_thread(container.wait)
         log_task.cancel()
 
         if result["StatusCode"] != 0:
-            raise Exception(
-                f"Container exited with status {result['StatusCode']}")
+            raise Exception(f"Container exited with status {result['StatusCode']}")
 
         eval_results = await get_evaluation_results(container)
 
