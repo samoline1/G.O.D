@@ -1,7 +1,5 @@
 import os
 
-from core.constants import NETUID
-
 
 SUCCESS = "success"
 ACCOUNT_ID = "account_id"
@@ -48,7 +46,7 @@ GET_ALL_MODELS_ID = "model_id"
 # task stuff
 
 
-HOW_MANY_TASKS_MINIMAL_AT_THE_SAME_TIME = 4
+HOW_MANY_TASKS_MINIMAL_AT_THE_SAME_TIME = 3
 NUMBER_OF_MINUTES_BETWEEN_SYNTH_TASK_CHECK = 60
 
 
