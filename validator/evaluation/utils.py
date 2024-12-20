@@ -41,12 +41,16 @@ def model_is_a_finetune(original_repo: str, finetuned_model: AutoModelForCausalL
         "num_attention_heads",
         "num_key_value_heads",
     ]
-    architecture_same = all(
-        hasattr(original_config, attr)
-        and hasattr(finetuned_config, attr)
-        and getattr(original_config, attr) == getattr(finetuned_config, attr)
-        for attr in attrs_to_compare
-    )
+    architecture_same = True
+    for attr in attrs_to_compare:
+        if hasattr(original_config, attr):
+            if not hasattr(finetuned_config, attr):
+                architecture_same = False
+                break
+            if getattr(original_config, attr) != getattr(finetuned_config, attr):
+                architecture_same = False
+                break
+
     logger.info(
         f"Architecture same: {architecture_same}, Base model match: {base_model_match}, Has lora modules: {has_lora_modules}"
     )
