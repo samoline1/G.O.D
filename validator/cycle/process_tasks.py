@@ -361,10 +361,9 @@ async def move_tasks_to_preevaluation_loop(config: Config):
         completed_tasks = await tasks_sql.get_tasks_ready_to_evaluate(config.psql_db)
         if completed_tasks:
             await _move_to_preevaluation(completed_tasks, config)
-            logger.info(f"Moved {len(completed_tasks)} tasks to preevaluation status")
         else:
-            logger.info("No tasks to move to preevaluation - waiting 30 seconds")
-            await asyncio.sleep(30)
+            logger.info("No tasks to move to preevaluation - waiting 60 seconds")
+        await asyncio.sleep(60)
 
 
 async def evaluate_tasks_loop(config: Config):
