@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import shutil
-import subprocess
 import tempfile
 from io import BytesIO
 from typing import Dict
@@ -39,22 +38,6 @@ def load_comfy_workflows():
         lora_template = json.load(file)
 
     return lora_template
-
-
-def start_comfyui():
-    try:
-        subprocess.run(["./start_comfy.sh", "start"], check=True)
-        logger.info("ComfyUI started")
-    except subprocess.CalledProcessError as e:
-        logger.info(f"Failed to start ComfyUI: {e}")
-
-
-def stop_comfyui():
-    try:
-        subprocess.run(["./start_comfy.sh", "stop"], check=True)
-        logger.info("ComfyUI stopped.")
-    except subprocess.CalledProcessError as e:
-        logger.info(f"Failed to stop ComfyUI: {e}")
 
 
 def base64_to_image(base64_string: str) -> Image.Image:
@@ -159,7 +142,9 @@ def main():
     lora_model_filenames = os.getenv("LORA_MODEL_FILENAMES").split(",")
 
     # Base model download
+    logger.info("Downloading base model")
     _ = download_from_huggingface(base_model_repo, base_model_filename, cst.CHECKPOINTS_SAVE_PATH)
+    logger.info("Base model downloaded")
 
     loras_to_evaluate = {}
 

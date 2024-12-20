@@ -71,8 +71,8 @@ class EvaluationRequestDiffusion(BaseModel):
     test_split_path: str
     base_model_repo: str
     base_model_filename: str
-    lora_repo_list: List[str]
-    lora_filename_list: List[str]
+    lora_repo_list: str
+    lora_filename_list: str
 
 
 class EvaluationResult(BaseModel):

@@ -3,7 +3,6 @@ import json
 import os
 import tarfile
 import threading
-from typing import List
 from typing import Union
 
 import docker
@@ -109,7 +108,7 @@ async def run_evaluation_docker(
 
 
 async def run_evaluation_docker_diffusion(
-    test_split_path: str, base_model_repo: str, base_model_filename: str, lora_repo_list: List[str], lora_filename_list: List[str]
+    test_split_path: str, base_model_repo: str, base_model_filename: str, lora_repo_list: str, lora_filename_list: str
 ) -> EvaluationResultDiffusion:
     client = docker.from_env()
 
@@ -125,8 +124,8 @@ async def run_evaluation_docker_diffusion(
         "TEST_DATASET_PATH": container_dataset_path,
         "BASE_MODEL_REPO": base_model_repo,
         "BASE_MODEL_FILENAME": base_model_filename,
-        "LORA_MODEL_REPOS": ",".join(lora_repo_list),
-        "LORA_MODEL_FILENAMES": ",".join(lora_filename_list),
+        "TRAINED_LORA_MODEL_REPOS": lora_repo_list,
+        "LORA_MODEL_FILENAMES": lora_filename_list,
     }
 
     try:
