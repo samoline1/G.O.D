@@ -216,7 +216,7 @@ def main():
     except Exception as e:  # What is this supposed to be catching?
         logger.info(f"Problem with detection of finetune: {e}")
         logger.info("Assuming true for now")
-        is_finetune = True
+        is_finetune = False
 
     results = evaluate_finetuned_model(
         dataset_name=dataset,
