@@ -1,7 +1,14 @@
+import base64
 import os
+import shutil
+import tempfile
+from io import BytesIO
 
+import numpy as np
 from datasets import get_dataset_config_names
 from fiber.logging_utils import get_logger
+from huggingface_hub import hf_hub_download
+from PIL import Image
 from transformers import AutoConfig
 from transformers import AutoModelForCausalLM
 
@@ -51,3 +58,36 @@ def get_default_dataset_config(dataset_name: str) -> str | None:
         return config_names[0]
     else:
         return None
+
+
+def base64_to_image(base64_string: str) -> Image.Image:
+    image_data = base64.b64decode(base64_string)
+    image_stream = BytesIO(image_data)
+    image = Image.open(image_stream)
+    return image
+
+
+def download_from_huggingface(repo_id: str, filename: str, local_dir: str = None) -> str:
+    # Use a temp folder to ensure correct file placement
+    try:
+        local_filename = os.path.basename(filename)
+        final_path = os.path.join(local_dir, local_filename)
+        if os.path.exists(final_path):
+            logger.info(f"File {filename} already exists. Skipping download.")
+        else:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_file_path = hf_hub_download(repo_id=repo_id, filename=filename, local_dir=temp_dir)
+                shutil.move(temp_file_path, final_path)
+            logger.info(f"File {filename} downloaded successfully")
+        return final_path
+    except Exception as e:
+        logger.error(f"Error downloading file: {e}")
+
+
+def calculate_l2_loss(test_image: Image.Image, generated_image: Image.Image) -> float:
+    test_image = np.array(test_image.convert("RGB")) / 255.0
+    generated_image = np.array(generated_image.convert("RGB")) / 255.0
+    if test_image.shape != generated_image.shape:
+        raise ValueError("Images must have the same dimensions to calculate L2 loss.")
+    l2_loss = np.mean((test_image - generated_image) ** 2)
+    return l2_loss

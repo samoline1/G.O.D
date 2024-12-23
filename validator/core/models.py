@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from typing import Dict
 from typing import Optional
 from uuid import UUID
 from uuid import uuid4
@@ -148,3 +149,13 @@ class DatasetJsons(BaseModel):
             "test_data": json.dumps(self.test_data),
             "synthetic_data": json.dumps(self.synthetic_data) if self.synthetic_data else "",
         }
+
+class Img2ImgPayload(BaseModel):
+    ckpt_name: str
+    lora_name: str
+    steps: int
+    cfg: float
+    denoise: float
+    comfy_template: Dict
+    prompt: Optional[str] = None
+    base_image: Optional[str] = None

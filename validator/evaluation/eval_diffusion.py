@@ -1,19 +1,15 @@
 import base64
 import json
 import os
-import shutil
-import tempfile
-from io import BytesIO
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 
-import numpy as np
 from fiber.logging_utils import get_logger
-from huggingface_hub import hf_hub_download
-from PIL import Image
-from pydantic import BaseModel
+from utils import base64_to_image
+from utils import calculate_l2_loss
+from utils import download_from_huggingface
+from validtor.core.models import Img2ImgPayload
 
 from validator.core import constants as cst
 from validator.utils import comfy_api_gate as api_gate
@@ -22,56 +18,11 @@ from validator.utils import comfy_api_gate as api_gate
 logger = get_logger(__name__)
 
 
-class Img2ImgPayload(BaseModel):
-    ckpt_name: str
-    lora_name: str
-    steps: int
-    cfg: float
-    denoise: float
-    comfy_template: Dict
-    prompt: Optional[str] = None
-    base_image: Optional[str] = None
-
-
 def load_comfy_workflows():
     with open(cst.LORA_WORKFLOW_PATH, "r") as file:
         lora_template = json.load(file)
 
     return lora_template
-
-
-def base64_to_image(base64_string: str) -> Image.Image:
-    image_data = base64.b64decode(base64_string)
-    image_stream = BytesIO(image_data)
-    image = Image.open(image_stream)
-    return image
-
-
-def download_from_huggingface(repo_id: str, filename: str, local_dir: str = None) -> str:
-    # Use a temp folder to ensure correct file placement
-    try:
-        local_filename = os.path.basename(filename)
-        final_path = os.path.join(local_dir, local_filename)
-        if os.path.exists(final_path):
-            logger.info(f"File {filename} already exists. Skipping download.")
-        else:
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_file_path = hf_hub_download(repo_id=repo_id, filename=filename, local_dir=temp_dir)
-                shutil.move(temp_file_path, final_path)
-            logger.info(f"File {filename} downloaded successfully")
-        return final_path
-    except Exception as e:
-        logger.error(f"Error downloading file: {e}")
-
-
-def calculate_l2_loss(image1: Image.Image, image2: Image.Image) -> float:
-    image1 = np.array(image1.convert("RGB")) / 255.0
-    image2 = np.array(image2.convert("RGB")) / 255.0
-    if image1.shape != image2.shape:
-        raise ValueError("Images must have the same dimensions to calculate L2 loss.")
-    l2_loss = np.mean((image1 - image2) ** 2)
-    return l2_loss
-
 
 def edit_workflow(payload: Dict, edit_elements: Img2ImgPayload, text_guided: bool) -> Dict:
     payload["Checkpoint_loader"]["inputs"]["ckpt_name"] = edit_elements.ckpt_name
@@ -106,7 +57,7 @@ def eval_loop(dataset_path: str, params: Img2ImgPayload) -> Dict[str, List]:
     lora_losses_no_text = []
 
     for file_name in os.listdir(dataset_path):
-        if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+        if file_name.lower().endswith(cst.SUPPORTED_FILE_EXTENSIONS):
             logger.info(f"Calculating losses for {file_name}")
             base_name = os.path.splitext(file_name)[0]
             png_path = os.path.join(dataset_path, file_name)

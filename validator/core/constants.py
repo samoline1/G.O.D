@@ -81,3 +81,4 @@ LORAS_SAVE_PATH = "validator/evaluation/ComfyUI/models/loras"
 DEFAULT_STEPS = 10
 DEFAULT_CFG = 4
 DEFAULT_DENOISE = 0.9
+SUPPORTED_FILE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
