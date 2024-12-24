@@ -215,36 +215,45 @@ def main():
 
     results_dict = {}
     for repo in lora_repos:
-        finetuned_model = PeftModel.from_pretrained(base_model, repo, is_trainable=False)
-        finetuned_model.eval()
-
         try:
-            is_finetune = model_is_a_finetune(original_model, finetuned_model)
-        except Exception as e:
-            logger.info(f"Problem with detection of finetune for {repo}: {e}")
-            logger.info("Assuming False")
-            is_finetune = False
+            finetuned_model = PeftModel.from_pretrained(base_model, repo, is_trainable=False)
+            finetuned_model.eval()
 
-        results = evaluate_finetuned_model(
-            dataset_name=dataset,
-            finetuned_model=finetuned_model,
-            dataset_type=dataset_type,
-            file_format=file_format,
-            tokenizer=tokenizer,
-        )
-        results["is_finetune"] = is_finetune
-        results_dict[repo] = results
+            try:
+                is_finetune = model_is_a_finetune(original_model, finetuned_model)
+            except Exception as e:
+                logger.info(f"Problem with detection of finetune for {repo}: {e}")
+                logger.info("Assuming False")
+                is_finetune = False
+
+            results = evaluate_finetuned_model(
+                dataset_name=dataset,
+                finetuned_model=finetuned_model,
+                dataset_type=dataset_type,
+                file_format=file_format,
+                tokenizer=tokenizer,
+            )
+            results["is_finetune"] = is_finetune
+            results_dict[repo] = results
+        except Exception as e:
+            results_dict[repo] = e
 
     output_file = "/aplp/evaluation_results.json"
     output_dir = os.path.dirname(output_file)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    # Serialize results, converting exceptions to strings
+    serializable_results = {
+        repo: (str(result) if isinstance(result, Exception) else result)
+        for repo, result in results_dict.items()
+    }
+
     with open(output_file, "w") as f:
-        json.dump(results_dict, f, indent=2)
+        json.dump(serializable_results, f, indent=2)
 
     logger.info(f"Evaluation results saved to {output_file}")
-    logger.info(json.dumps(results_dict, indent=2))
+    logger.info(json.dumps(serializable_results, indent=2))
 
 
 if __name__ == "__main__":
