@@ -525,7 +525,7 @@ async def process_miners_pool(
     return results
 
 
-async def evaluate_and_score(task: RawTask, config: Config) -> RawTask:
+async def evaluate_and_score(task: RawTask, gpu_ids: list[int], config: Config) -> RawTask:
     """Main function to evaluate and score task submissions."""
     assert task.task_id is not None, "Task ID must be present"
     assert task.synthetic_data is not None, "Synthetic data must be present"
@@ -535,7 +535,6 @@ async def evaluate_and_score(task: RawTask, config: Config) -> RawTask:
     dataset_type = _get_dataset_type(task)
 
     logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
-    gpu_ids = [i for i in range(len(cts.GPU_IDS))]
     task_results = await process_miners_pool(miner_pool, task, dataset_type, config, gpu_ids)
     logger.info("Checking for duplicates ...")
     keep_submission = await handle_duplicate_submissions(task_results)

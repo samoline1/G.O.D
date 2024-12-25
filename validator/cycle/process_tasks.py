@@ -285,11 +285,11 @@ async def _process_ready_to_train_tasks(config: Config):
         await asyncio.sleep(30)
 
 
-async def _evaluate_task(task: RawTask, config: Config):
+async def _evaluate_task(task: RawTask, gpu_ids: list[int], config: Config):
     try:
         task.status = TaskStatus.EVALUATING
         await tasks_sql.update_task(task, config.psql_db)
-        task = await evaluate_and_score(task, config)
+        task = await evaluate_and_score(task, [gpu_ids], config)
         await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(
@@ -367,12 +367,47 @@ async def move_tasks_to_preevaluation_loop(config: Config):
 
 
 async def evaluate_tasks_loop(config: Config):
+    gpu_ids = [i for i in range(len(cst.GPU_IDS))]
+
+    # Create queues for tasks and GPUs
+    task_queue = asyncio.Queue()
+    gpu_queue = asyncio.Queue()
+    for gpu_id in gpu_ids:
+        await gpu_queue.put(gpu_id)
+
+    async def evaluation_worker():
+        while True:
+            try:
+                task = await asyncio.wait_for(task_queue.get(), timeout=1)
+                gpu_id = await gpu_queue.get()
+
+                try:
+                    await _evaluate_task(task, [gpu_id], config)
+                finally:
+                    # Return GPU to pool
+                    await gpu_queue.put(gpu_id)
+                    task_queue.task_done()
+            except asyncio.TimeoutError:
+                # No more tasks in queue
+                break
+
     while True:
         tasks_to_evaluate = await tasks_sql.get_tasks_with_status(TaskStatus.PREEVALUATION, psql_db=config.psql_db)
         if tasks_to_evaluate:
             logger.info(f"There are {len(tasks_to_evaluate)} tasks awaiting evaluation")
             for task in tasks_to_evaluate:
-                await _evaluate_task(task, config)
+                await task_queue.put(task)
+
+            # Start workers (one per GPU)
+            workers = [asyncio.create_task(evaluation_worker()) for _ in gpu_ids]
+
+            # Wait for all tasks to complete
+            await task_queue.join()
+
+            # Clean up workers
+            for w in workers:
+                w.cancel()
+
         else:
             logger.info("No tasks awaiting evaluation - waiting 30 seconds")
             await asyncio.sleep(30)
