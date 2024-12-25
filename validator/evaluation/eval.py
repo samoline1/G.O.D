@@ -216,7 +216,16 @@ def main():
     results_dict = {}
     for repo in lora_repos:
         try:
-            finetuned_model = PeftModel.from_pretrained(base_model, repo, is_trainable=False)
+            # First try loading as a LoRA model
+            try:
+                finetuned_model = PeftModel.from_pretrained(base_model, repo, is_trainable=False)
+            except Exception as lora_error:
+                logger.info(f"Loading full model... failed to load as LoRA: {lora_error}")
+                # If LoRA loading fails, try loading as a full model
+                finetuned_model = AutoModelForCausalLM.from_pretrained(
+                    repo,
+                    token=os.environ.get("HUGGINGFACE_TOKEN")
+                )
             finetuned_model.eval()
 
             try:
@@ -236,6 +245,7 @@ def main():
             results["is_finetune"] = is_finetune
             results_dict[repo] = results
         except Exception as e:
+            logger.error(f"Error evaluating {repo}: {e}")
             results_dict[repo] = e
 
     output_file = "/aplp/evaluation_results.json"
