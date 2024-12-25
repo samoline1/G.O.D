@@ -274,7 +274,8 @@ def _create_failed_miner_result(hotkey: str) -> MinerResults:
 async def _get_submission_repo(miner: Node, task_id: str, config: Config) -> str | None:
     url = f"{cts.SUBMISSION_ENDPOINT}{task_id}"
     try:
-        return str(await process_non_stream_fiber_get(url, config, miner))
+        repo = str(await process_non_stream_fiber_get(url, config, miner))
+        return None if repo == "None" else repo
     except Exception as e:
         logger.error(f"Failed to get submission for miner {miner.hotkey}: {e}")
         return None
