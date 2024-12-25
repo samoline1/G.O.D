@@ -289,7 +289,7 @@ async def _evaluate_task(task: RawTask, gpu_ids: list[int], config: Config):
     try:
         task.status = TaskStatus.EVALUATING
         await tasks_sql.update_task(task, config.psql_db)
-        task = await evaluate_and_score(task, [gpu_ids], config)
+        task = await evaluate_and_score(task, gpu_ids, config)
         await tasks_sql.update_task(task, config.psql_db)
     except Exception as e:
         logger.error(
