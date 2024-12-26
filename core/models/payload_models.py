@@ -1,7 +1,4 @@
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
+from datetime import datetime
 from uuid import UUID
 
 from fiber.logging_utils import get_logger
@@ -12,7 +9,10 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import JobStatus
+from core.models.utility_models import MinerTaskResult
+from core.models.utility_models import TaskMinerResult
 from core.models.utility_models import TaskStatus
+from validator.core.models import AllNodeStats
 
 
 logger = get_logger(__name__)
@@ -31,8 +31,7 @@ class TrainRequest(BaseModel):
         description="Path to the dataset file or Hugging Face dataset name",
         min_length=1,
     )
-    model: str = Field(...,
-                       description="Name or path of the model to be trained", min_length=1)
+    model: str = Field(..., description="Name or path of the model to be trained", min_length=1)
     dataset_type: DatasetType | CustomDatasetType
     file_format: FileFormat
     task_id: str
@@ -68,21 +67,10 @@ class MinerTaskResponse(BaseModel):
     accepted: bool
 
 
-class DatasetRequest(BaseModel):
-    instruction_col: str
-    input_col: Optional[str] = None
-    output_col: Optional[str] = None
-    system_col: Optional[str] = None
-
-
-
-class TaskRequest(DatasetRequest):  # did not add format
-    ds_repo: str
-    model_repo: str
-    hours_to_complete: int
-
-    # Turn off protected namespace for model
-    model_config = {"protected_namespaces": ()}
+class DatasetColumnsResponse(BaseModel):
+    field_instruction: str
+    field_input: str | None = None
+    field_output: str | None = None
 
 
 class SubmitTaskSubmissionRequest(BaseModel):
@@ -91,92 +79,82 @@ class SubmitTaskSubmissionRequest(BaseModel):
     repo: str
 
 
-class TaskResponse(BaseModel):
-    success: bool
-    task_id: str
-    message: Optional[str] = None
-
-
 class SubmissionResponse(BaseModel):
     success: bool
     message: str
-    submission_id: Optional[str] = None
+    submission_id: str | None = None
 
 
 class NewTaskRequest(BaseModel):
-    model_repo: str
-    ds_repo: str
-    file_format: FileFormat = FileFormat.HF
-    instruction_col: str
-    input_col: Optional[str] = None
-    hours_to_complete: int
-    system_col: Optional[str] = None
-    output_col: Optional[str] = None
-    format_col: Optional[str] = None
-    no_input_format_col: Optional[str] = None
+    account_id: UUID
+
+    field_instruction: str = Field(..., description="The column name for the instruction", examples=["instruction"])
+    field_input: str | None = Field(None, description="The column name for the input", examples=["input"])
+    field_output: str | None = Field(None, description="The column name for the output", examples=["output"])
+    field_system: str | None = Field(None, description="The column name for the system (prompt)", examples=["system"])
+
+    ds_repo: str = Field(..., description="The repository for the dataset", examples=["yahma/alpaca-cleaned"])
+    file_format: FileFormat = Field(FileFormat.HF, description="The format of the dataset", examples=[FileFormat.HF,
+                                                                                                      FileFormat.S3])
+    model_repo: str = Field(..., description="The repository for the model", examples=["Qwen/Qwen2.5-Coder-32B-Instruct"])
+
+    hours_to_complete: int = Field(..., description="The number of hours to complete the task", examples=[1])
+
+    format: None = None
+    no_input_format: None = None
 
     # Turn off protected namespace for model
     model_config = {"protected_namespaces": ()}
+
+
+class NewTaskResponse(BaseModel):
+    success: bool = Field(..., description="Whether the task was created successfully")
+    task_id: UUID | None = Field(..., description="The ID of the task")
+    created_at: datetime = Field(..., description="The creation time of the task")
+    account_id: UUID | None = Field(..., description="The account ID who owns the task")
 
 
 class GetTasksRequest(BaseModel):
     fingerprint: str
 
 
-class NewTaskResponse(BaseModel):
-    success: bool
-    task_id: Optional[UUID] = None
-
-
-class WinningSubmission(BaseModel):
-    hotkey: str
-    score: float
-    model_repo: str
-
-    # Turn off protected namespace for model
-    model_config = {"protected_namespaces": ()}
-
-
-class MinerTaskResult(BaseModel):
-    hotkey: str
-    quality_score: float
-
-
-class TaskMinerResult(BaseModel):
-    task_id: UUID
-    quality_score: float
+class TaskResultResponse(BaseModel):
+    id: UUID
+    miner_results: list[MinerTaskResult] | None
 
 
 class AllOfNodeResults(BaseModel):
     success: bool
     hotkey: str
-    task_results: Optional[list[TaskMinerResult]]
+    task_results: list[TaskMinerResult] | None
 
 
-class TaskResultResponse(BaseModel):
-    success: bool
+class TaskDetails(BaseModel):
     id: UUID
-    miner_results: Optional[list[MinerTaskResult]]
-
-
-class TaskStatusResponse(BaseModel):
-    success: bool
-    id: UUID
+    account_id: UUID
     status: TaskStatus
-    miners: Optional[List[Dict]]
-    model_repo: str
-    ds_repo: Optional[str]
-    input_col: Optional[str]
-    system_col: Optional[str]
-    output_col: Optional[str]
-    instruction_col: Optional[str]
-    format_col: Optional[str]
-    no_input_format_col: Optional[str]
-    started: str
-    end: str
-    created: str
+    base_model_repository: str
+    ds_repo: str
+
+    field_system: str | None = Field(None, description="The column name for the `system (prompt)`", examples=["system"])
+    field_instruction: str = Field(
+        ..., description="The column name for the instruction - always needs to be provided", examples=["instruction"]
+    )
+    field_input: str | None = Field(None, description="The column name for the `input`", examples=["input"])
+    field_output: str | None = Field(None, description="The column name for the `output`", examples=["output"])
+
+    # NOTE: ATM can not be defined by the user, but should be able to in the future
+    format: None = Field(None, description="The column name for the `format`", examples=["{instruction} {input}"])
+    no_input_format: None = Field(
+        None, description="If the field_input is not provided, what format should we use? ", examples=["{instruction}"]
+    )
+    system_format: None = Field(None, description="How to format the `system (prompt)`", examples=["{system}"])
+
+    started_at: datetime | None
+    finished_at: datetime | None
+    created_at: datetime
     hours_to_complete: int
-    winning_submission: Optional[Union[WinningSubmission, None]] = None
+    trained_model_repository: str | None
 
     # Turn off protected namespace for model
     model_config = {"protected_namespaces": ()}
@@ -186,3 +164,8 @@ class TaskListResponse(BaseModel):
     success: bool
     task_id: UUID
     status: TaskStatus
+
+
+class LeaderboardRow(BaseModel):
+    hotkey: str
+    stats: AllNodeStats

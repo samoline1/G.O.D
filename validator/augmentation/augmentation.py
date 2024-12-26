@@ -33,8 +33,7 @@ def load_prompts() -> Prompts:
 def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> List[dict]:
     try:
         config_name = get_default_dataset_config(dataset_name)
-        dataset = load_dataset(dataset_name, config_name,
-                               trust_remote_code=True, streaming=True)
+        dataset = load_dataset(dataset_name, config_name, trust_remote_code=True, streaming=True)
     except Exception as e:
         logger.exception(f"Failed to load dataset {dataset_name}: {e}")
         raise e
@@ -42,14 +41,12 @@ def load_and_sample_dataset(dataset_name: str, columns_to_sample: List[str]) -> 
     logger.info(f"Loading dataset: {dataset_name}")
     train_dataset = dataset["train"]
 
-    filtered_dataset = train_dataset.remove_columns(
-        [col for col in train_dataset.column_names if col not in columns_to_sample])
+    filtered_dataset = train_dataset.remove_columns([col for col in train_dataset.column_names if col not in columns_to_sample])
 
     num_samples = MAX_SYNTH_DATA_POINTS
     logger.info(f"Taking {num_samples} samples from {dataset_name}")
 
-    sampled_data = filtered_dataset.shuffle(
-        seed=42, buffer_size=1000).take(num_samples)
+    sampled_data = filtered_dataset.shuffle(seed=42, buffer_size=1000).take(num_samples)
 
     sampled_data_list = [sample for sample in sampled_data]
     return sampled_data_list
@@ -69,30 +66,25 @@ def create_messages_for_output_reformulation(row: dict, output_field: str, promp
     messages = []
     system_message = Message(role=Role.SYSTEM, content=prompts.output_field_reformulation_sys)
     messages.append(system_message)
-    user_message = Message(role=Role.USER, content=prompts.output_field_reformulation_user.format(
-        data=json.dumps(row),
-        output_field=output_field
-    ))
+    user_message = Message(
+        role=Role.USER, content=prompts.output_field_reformulation_user.format(data=json.dumps(row), output_field=output_field)
+    )
     messages.append(user_message)
     return messages
 
 
 def create_messages_for_input_generation(
-    reformulated_output: str,
-    description: str,
-    output_field: str,
-    schema: dict,
-    prompts: Prompts
+    reformulated_output: str, description: str, output_field: str, schema: dict, prompts: Prompts
 ) -> List[Message]:
     messages = []
     system_message = Message(role=Role.SYSTEM, content=prompts.input_field_generation_sys)
     messages.append(system_message)
-    user_message = Message(role=Role.USER, content=prompts.input_field_generation_user.format(
-        schema=json.dumps(schema),
-        output_field=output_field,
-        output=reformulated_output,
-        description=description
-    ))
+    user_message = Message(
+        role=Role.USER,
+        content=prompts.input_field_generation_user.format(
+            schema=json.dumps(schema), output_field=output_field, output=reformulated_output, description=description
+        ),
+    )
     messages.append(user_message)
     return messages
 
@@ -102,10 +94,7 @@ def check_the_synthetic_data(synthetic_data_point: dict, original_data_columns: 
 
 
 def convert_to_nineteen_payload(
-    messages: List[Message],
-    model: str = SYNTH_MODEL,
-    temperature: float = SYNTH_MODEL_TEMPERATURE,
-    stream: bool = False
+    messages: List[Message], model: str = SYNTH_MODEL, temperature: float = SYNTH_MODEL_TEMPERATURE, stream: bool = False
 ) -> dict:
     return {
         "messages": [message.model_dump() for message in messages],
@@ -120,10 +109,10 @@ async def generate_from_distribution(row: dict, prompts: Prompts, keypair: Keypa
     payload = convert_to_nineteen_payload(messages)
     synthetic_data_point = await post_to_nineteen_ai(payload, keypair)
     json_synthetic_data_point = (
-        json.loads(synthetic_data_point) if isinstance(synthetic_data_point, str)
-        else synthetic_data_point
+        json.loads(synthetic_data_point) if isinstance(synthetic_data_point, str) else synthetic_data_point
     )
     return json_synthetic_data_point
+
 
 async def generate_from_output(row: dict, output_field: str, prompts: Prompts, keypair: Keypair) -> str:
     # Step 1: Reformulate output and get description
@@ -140,14 +129,14 @@ async def generate_from_output(row: dict, output_field: str, prompts: Prompts, k
     payload = convert_to_nineteen_payload(messages)
     result = await post_to_nineteen_ai(payload, keypair)
     generated_inputs = json.loads(result) if isinstance(result, str) else result
-    generated_inputs[output_field] = reformulated_output # Double check the output is unchanged
+    generated_inputs[output_field] = reformulated_output  # Double check the output is unchanged
 
     return generated_inputs
 
 
-async def generate_synthetic_dataset(sampled_data: List[dict], column_to_reformulate: str | None, keypair: Keypair) -> List[dict]:
+async def generate_augmented_dataset(sampled_data: List[dict], column_to_reformulate: str | None, keypair: Keypair) -> List[dict]:
     prompts = load_prompts()
-    logger.info("Creating synthetic dataset")  # Task id would be nice here
+    logger.info("Creating an augmented dataset...")  # Task id would be nice here
     synthetic_dataset = []
     json_errors = 0
     generic_errors = 0
@@ -172,7 +161,7 @@ async def generate_synthetic_dataset(sampled_data: List[dict], column_to_reformu
             )
 
     for i in range(0, len(sampled_data), SYNTH_GEN_BATCH_SIZE):
-        batch = sampled_data[i: i + SYNTH_GEN_BATCH_SIZE]
+        batch = sampled_data[i : i + SYNTH_GEN_BATCH_SIZE]
         tasks = [process_row(row, column_to_reformulate) for row in batch]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -185,7 +174,7 @@ async def generate_synthetic_dataset(sampled_data: List[dict], column_to_reformu
                     generic_errors += 1
                 consecutive_errors += 1
                 if consecutive_errors >= max_consecutive_errors:
-                    logger.error("Maximum consecutive errors reached. Stopping synth dataset process.")
+                    logger.error("Maximum consecutive errors reached when generating the augmented dataset.")
                     return None
             else:
                 consecutive_errors = 0  # Reset on success
@@ -193,10 +182,6 @@ async def generate_synthetic_dataset(sampled_data: List[dict], column_to_reformu
 
         synthetic_dataset.extend(batch_results)
 
-
-    logger.info(
-        f"Generated {len(synthetic_dataset)} synthetic data points"
-    )
-
+    logger.info(f"Generated {len(synthetic_dataset)} augmented data points")
 
     return synthetic_dataset

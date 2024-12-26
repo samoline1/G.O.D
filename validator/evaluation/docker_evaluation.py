@@ -1,11 +1,13 @@
+import asyncio
 import io
 import json
 import os
 import tarfile
-import asyncio
 from typing import Union
+
 import docker
 from fiber.logging_utils import get_logger
+
 from core import constants as cst
 from core.docker_utils import stream_logs
 from core.models.payload_models import EvaluationResult
@@ -13,14 +15,12 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 
+
 logger = get_logger(__name__)
 
 
 async def get_evaluation_results(container):
-    archive_data = await asyncio.to_thread(
-        container.get_archive,
-        cst.CONTAINER_EVAL_RESULTS_PATH
-    )
+    archive_data = await asyncio.to_thread(container.get_archive, cst.CONTAINER_EVAL_RESULTS_PATH)
     tar_stream = archive_data[0]
 
     file_like_object = io.BytesIO()
@@ -50,6 +50,7 @@ async def run_evaluation_docker(
     original_model: str,
     dataset_type: Union[DatasetType, CustomDatasetType],
     file_format: FileFormat,
+    gpu_ids: list[int],
 ) -> EvaluationResult:
     client = docker.from_env()
 
@@ -79,11 +80,12 @@ async def run_evaluation_docker(
     async def cleanup_resources():
         try:
             await asyncio.to_thread(client.containers.prune)
-            await asyncio.to_thread(client.images.prune, filters={'dangling': True})
+            await asyncio.to_thread(client.images.prune, filters={"dangling": True})
             await asyncio.to_thread(client.volumes.prune)
             logger.debug("Completed Docker resource cleanup")
         except Exception as e:
             logger.error(f"Cleanup failed: {str(e)}")
+
     try:
         container = await asyncio.to_thread(
             client.containers.run,
@@ -91,19 +93,15 @@ async def run_evaluation_docker(
             environment=environment,
             volumes=volume_bindings,
             runtime="nvidia",
-            device_requests=[
-                docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])
-            ],
+            device_requests=[docker.types.DeviceRequest(capabilities=[["gpu"]], device_ids=[str(gid) for gid in gpu_ids])],
             detach=True,
         )
-        log_task = asyncio.create_task(
-            asyncio.to_thread(stream_logs, container))
+        log_task = asyncio.create_task(asyncio.to_thread(stream_logs, container))
         result = await asyncio.to_thread(container.wait)
         log_task.cancel()
 
         if result["StatusCode"] != 0:
-            raise Exception(
-                f"Container exited with status {result['StatusCode']}")
+            raise Exception(f"Container exited with status {result['StatusCode']}")
 
         eval_results = await get_evaluation_results(container)
 

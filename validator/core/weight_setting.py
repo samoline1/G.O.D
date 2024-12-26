@@ -129,7 +129,6 @@ async def _set_metagraph_weights(config: Config) -> None:
 
 # To improve: use activity cutoff & The epoch length to set weights at the perfect times
 async def set_weights_periodically(config: Config, just_once: bool = False) -> None:
-    logger.info("Attempting to set weights")
     substrate = get_substrate(subtensor_address=config.substrate.url)
     substrate, uid = query_substrate(
         substrate,

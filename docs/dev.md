@@ -24,7 +24,7 @@ pip install "git+https://github.com/rayonlabs/fiber.git@1.0.0#egg=fiber[full]"
 3. Setup dev env
 
 ```bash
-task dev_setup
+task setup
 ```
 
 4.  Run validator in dev mode

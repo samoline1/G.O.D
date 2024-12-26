@@ -56,8 +56,7 @@ async def process_non_stream_fiber_get(endpoint: str, config: Config, node: Node
         replace_with_docker_localhost=False,
         replace_with_localhost=False,
     )
-    logger.info(
-        f"Attempting to hit a GET {server_address} endpoint {endpoint}")
+    logger.info(f"Attempting to hit a GET {server_address} endpoint {endpoint}")
     try:
         response = await client.make_non_streamed_get(
             httpx_client=config.httpx_client,
@@ -120,6 +119,7 @@ async def post_to_nineteen_ai(payload: dict[str, Any], keypair: Keypair) -> str 
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(url=PROMPT_GEN_ENDPOINT, json=payload, headers=headers)
         if response.status_code != 200:
+            # NOTE: What do to about these as they pollute everywhere
             logger.error(f"Error in nineteen ai response: {response.content}")
             response.raise_for_status()
         response_json = response.json()
@@ -163,8 +163,7 @@ def get_external_ip() -> str:
     """
     # --- Try AWS
     try:
-        external_ip = requests.get(
-            "https://checkip.amazonaws.com").text.strip()
+        external_ip = requests.get("https://checkip.amazonaws.com").text.strip()
         assert isinstance(_ip_to_int(external_ip), int)
         return str(external_ip)
     except Exception:
@@ -202,8 +201,7 @@ def get_external_ip() -> str:
 
     # --- Try urllib ipv6
     try:
-        external_ip = urllib3.request.urlopen(
-            "https://ident.me").read().decode("utf8")
+        external_ip = urllib3.request.urlopen("https://ident.me").read().decode("utf8")
         assert isinstance(_ip_to_int(external_ip), int)
         return str(external_ip)
     except Exception:
@@ -211,8 +209,7 @@ def get_external_ip() -> str:
 
     # --- Try Wikipedia
     try:
-        external_ip = requests.get(
-            "https://www.wikipedia.org").headers["X-Client-IP"]
+        external_ip = requests.get("https://www.wikipedia.org").headers["X-Client-IP"]
         assert isinstance(_ip_to_int(external_ip), int)
         return str(external_ip)
     except Exception:
@@ -249,12 +246,15 @@ async def sign_up_to_gradients(keypair: Keypair):
                 f"Failed to sign up to Gradients API with status code {response.status_code} and response {response.json()}!"
             )
 
-        logger.info(
-            f"Signed up to Gradients API successfully with response {response.json()}!")
+        logger.info(f"Signed up to Gradients API successfully with response {response.json()}!")
         return response.json()
 
 
-async def sign_up_cron_job(keypair: Keypair):
+async def sign_up_cron_job(keypair: Keypair) -> None:
+    if NETUID != 56:
+        return
+
+    print(f"NETUID: {NETUID}")
     # In case initial signup fails, we try again every 3 hours
     while True:
         await sign_up_to_gradients(keypair)
@@ -262,17 +262,13 @@ async def sign_up_cron_job(keypair: Keypair):
 
 
 @retry_with_backoff
-async def call_content_service(endpoint: str, keypair: Keypair, params: dict = None) -> dict[str, Any]:
+async def call_content_service(endpoint: str, keypair: Keypair, params: dict = None) -> dict[str, Any] | list[dict[str, Any]]:
     """Make a signed request to the content service."""
     headers = _get_headers_for_signed_https_request(keypair)
 
     async with httpx.AsyncClient(timeout=120) as client:
-        response = await client.get(
-            url=endpoint,
-            headers=headers,
-            params=params
-        )
+        response = await client.get(url=endpoint, headers=headers, params=params)
         if response.status_code != 200:
-            logger.error(f"Error in content service response: {response.content}")
+            logger.error(f"Error in content service response. Status code: {response.status_code} and response: {response.text}")
             response.raise_for_status()
         return response.json()

@@ -11,6 +11,7 @@ child hotkeying would not be a bad idea at all.
 - Hugging Face account
 - s3 bucket [Backblaze B2 example](s3_setup.md)
 
+
 ## Setup Steps
 
 0. Clone the repo
@@ -22,9 +23,7 @@ cd G.O.D
 1. Install system dependencies (Ubuntu 24.04 LTS):
 
 ```bash
-sudo -E ./bootstrap.sh
-source $HOME/.bashrc
-source $HOME/.venv/bin/activate
+task bootstrap
 ```
 
 2. Get your key onto the VM:
@@ -33,8 +32,10 @@ You know how to do this, don't you ;)
 
 3. Create and set up the `.vali.env` file:
 
+Within this you'll be asked for the gpu(s) you'd like to use for validation. If you select the default, then gpu at index [0] will be used to evaluate all models. However, you can select whichever you'd like "3,4,5" would mean that evaluation jobs are spread between your third, fourth and fifth gpu, for example.
+
 ```bash
-python -m core.create_config
+task config
 ```
 
 Make sure the VALIDATOR_PORT is not being used by anything else, and is exposed in your firewall settings.

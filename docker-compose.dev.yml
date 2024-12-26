@@ -25,3 +25,5 @@ services:
       ADMINER_PLUGINS: tables-filter tinymce
     depends_on:
       - postgresql
+    networks:
+      - postgres_network

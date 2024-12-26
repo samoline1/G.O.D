@@ -2,6 +2,12 @@ version: "3"
 
 tasks:
 
+  bootstrap:
+    cmds:
+      - sudo -E ./bootstrap.sh
+      - source $HOME/.bashrc
+      - source $HOME/.venv/bin/activate
+
   config:
     cmds:
       - python -m core.create_config
@@ -14,12 +20,22 @@ tasks:
     cmds:
       - ENV=DEV uvicorn miner.server:app --reload --host 0.0.0.0 --port 7999 --env-file .1.env --log-level debug
 
-  dev_setup:
+  dbdown:
+    cmds:
+      - docker compose --env-file .vali.env -f docker-compose.yml run dbmate --wait down
+
+  dbup:
+    cmds:
+      - docker compose --env-file .vali.env -f docker-compose.yml run dbmate --wait up
+
+  setup:
     cmds:
       - docker compose --env-file .vali.env -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
   validator_dev:
     cmds:
+      - docker compose --env-file .vali.env -f docker-compose.yml -f docker-compose.dev.yml up -d --build --remove-orphans
+      - docker compose --env-file .vali.env -f docker-compose.yml -f docker-compose.dev.yml  run dbmate --wait up
       - ./utils/start_validator.sh
 
   autoupdates:
@@ -29,10 +45,14 @@ tasks:
 
   validator:
     cmds:
-      - docker compose --env-file .vali.env up -d --build
+      - docker compose --env-file .vali.env up -d --build --remove-orphans
       - docker compose --env-file .vali.env -f docker-compose.yml run dbmate --wait up
-      - pm2 delete validator || true
       - ./utils/start_validator.sh
+
+  postgres:
+    cmds:
+      - export $(cat .vali.env | grep -v '^#' | xargs)  && PGPASSWORD=$POSTGRES_PASSWORD psql -U $POSTGRES_USER -d $POSTGRES_DB -h $POSTGRES_HOST
+
 
   install:
     cmds:

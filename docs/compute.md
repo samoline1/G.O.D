@@ -14,7 +14,7 @@ Key requirements are to be capable of running inference on multiple 8B models in
 
 ## Miner Requirements
 
-Requirements vary based on accepted jobs and LoRA training usage. 
+Requirements vary based on accepted jobs and LoRA training usage.
 
 | Component    | Specification                           |
 |-------------|----------------------------------------|

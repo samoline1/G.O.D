@@ -37,7 +37,7 @@ async def _is_recent_update(config: Config) -> bool:
         return False
 
 
-async def get_and_store_nodes(config: Config) -> list[Node]:
+async def _get_and_store_nodes(config: Config) -> list[Node]:
     if await _is_recent_update(config):
         nodes = await get_all_nodes(config.psql_db)
 
@@ -50,3 +50,16 @@ async def get_and_store_nodes(config: Config) -> list[Node]:
 
     logger.info(f"Stored {len(nodes)} nodes.")
     return nodes
+
+
+async def refresh_nodes_periodically(config: Config) -> None:
+    while True:
+        try:
+            logger.info("Attempting to refresh nodes with the metagraph")
+            # 1 minute timeout
+            await asyncio.wait_for(_get_and_store_nodes(config), timeout=5 * 60)
+            await asyncio.sleep(60 * 15)  # 15 minutes
+            logger.info("Node refresh cycle complete! Waiting 15 minutes before next refresh...")
+        except asyncio.TimeoutError:
+            logger.error("Node refresh timed out after 5 minutes... :( Please look into this!!")
+            await asyncio.sleep(60)

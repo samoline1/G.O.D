@@ -32,7 +32,7 @@ async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
 
 
 async def insert_nodes(connection: Connection, nodes: list[Node]) -> None:
-    logger.debug(f"Inserting {len(nodes)} nodes into {dcst.NODES_TABLE}...")
+    logger.info(f"Inserting {len(nodes)} nodes into {dcst.NODES_TABLE}...")
     await connection.executemany(
         f"""
         INSERT INTO {dcst.NODES_TABLE} (
@@ -73,7 +73,7 @@ async def insert_nodes(connection: Connection, nodes: list[Node]) -> None:
     )
 
 
-async def get_node_by_hotkey(hotkey: str, psql_db: PSQLDB   ) -> Optional[Node]:
+async def get_node_by_hotkey(hotkey: str, psql_db: PSQLDB) -> Optional[Node]:
     """Get node by hotkey for the current NETUID"""
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -164,6 +164,14 @@ async def migrate_nodes_to_history(connection: Connection) -> None:
     )
     logger.debug(f"Truncating node info table for NETUID {NETUID}")
     await connection.execute(f"DELETE FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1", NETUID)
+
+    # Get length of nodes table to check if migration was successful
+    query = f"""
+        SELECT COUNT(*) FROM {dcst.NODES_TABLE}
+        WHERE {dcst.NETUID} = $1
+    """
+    node_entries = await connection.fetchval(query, NETUID)
+    logger.debug(f"Node entries: {node_entries}")
 
 
 async def get_vali_node_id(substrate: SubstrateInterface, ss58_address: str) -> str | None:
