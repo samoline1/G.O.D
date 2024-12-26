@@ -219,6 +219,7 @@ def main():
             # First try loading as a LoRA model
             try:
                 finetuned_model = PeftModel.from_pretrained(base_model, repo, is_trainable=False)
+                is_finetune = True
             except Exception as lora_error:
                 logger.info(f"Loading full model... failed to load as LoRA: {lora_error}")
                 # If LoRA loading fails, try loading as a full model
@@ -226,14 +227,14 @@ def main():
                     repo,
                     token=os.environ.get("HUGGINGFACE_TOKEN")
                 )
-            finetuned_model.eval()
+                try:
+                    is_finetune = model_is_a_finetune(original_model, finetuned_model)
+                except Exception as e:
+                    logger.info(f"Problem with detection of finetune for {repo}: {e}")
+                    logger.info("Assuming False")
+                    is_finetune = False
 
-            try:
-                is_finetune = model_is_a_finetune(original_model, finetuned_model)
-            except Exception as e:
-                logger.info(f"Problem with detection of finetune for {repo}: {e}")
-                logger.info("Assuming False")
-                is_finetune = False
+            finetuned_model.eval()
 
             results = evaluate_finetuned_model(
                 dataset_name=dataset,
