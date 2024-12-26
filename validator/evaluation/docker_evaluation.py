@@ -106,11 +106,9 @@ async def run_evaluation_docker(
 
         eval_results_dict = await get_evaluation_results(container)
 
-        # Convert results, reconstructing exceptions where needed
         processed_results = {}
         for repo, result in eval_results_dict.items():
             if isinstance(result, str) and not isinstance(result, dict):
-                # This was an exception that was serialized
                 processed_results[repo] = Exception(result)
             else:
                 processed_results[repo] = TypeAdapter(EvaluationResult).validate_python(result)

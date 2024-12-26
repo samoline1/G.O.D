@@ -367,8 +367,6 @@ async def move_tasks_to_preevaluation_loop(config: Config):
 
 
 async def evaluate_tasks_loop(config: Config):
-
-    # Create queues for tasks and GPUs
     task_queue = asyncio.Queue()
     gpu_queue = asyncio.Queue()
     for gpu_id in cst.GPU_IDS:
@@ -383,7 +381,6 @@ async def evaluate_tasks_loop(config: Config):
                 try:
                     await _evaluate_task(task, [gpu_id], config)
                 finally:
-                    # Return GPU to pool
                     await gpu_queue.put(gpu_id)
                     task_queue.task_done()
             except asyncio.TimeoutError:
@@ -396,17 +393,12 @@ async def evaluate_tasks_loop(config: Config):
             logger.info(f"There are {len(tasks_to_evaluate)} tasks awaiting evaluation")
             for task in tasks_to_evaluate:
                 await task_queue.put(task)
-
-            # Start workers (one per GPU)
             workers = [asyncio.create_task(evaluation_worker()) for _ in cst.GPU_IDS]
-
-            # Wait for all tasks to complete
             await task_queue.join()
 
             # Clean up workers
             for w in workers:
                 w.cancel()
-
         else:
             logger.info("No tasks awaiting evaluation - waiting 30 seconds")
             await asyncio.sleep(30)

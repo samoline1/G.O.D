@@ -303,7 +303,6 @@ async def _evaluate_submissions(
 
     results: dict[str, tuple[EvaluationResult, EvaluationResult] | Exception] = {}
 
-    # First get synthetic results and identify finetuned models
     finetuned_repos = []
     for repo in submission_repos:
         if isinstance(synth_eval_results.get(repo), Exception):
@@ -319,7 +318,6 @@ async def _evaluate_submissions(
         else:
             finetuned_repos.append(repo)
 
-    # Only evaluate test data for finetuned models that succeeded synthetic evaluation
     if finetuned_repos:
         test_data_filepath = await download_s3_file(task.test_data)
         test_eval_results = await run_evaluation_docker(
@@ -328,14 +326,12 @@ async def _evaluate_submissions(
             **{k: v for k, v in evaluation_params.items() if k != 'models'}
         )
 
-        # Update results with test evaluation
         for repo in finetuned_repos:
             if isinstance(test_eval_results.get(repo), Exception):
                 results[repo] = test_eval_results[repo]
             else:
                 results[repo] = (synth_eval_results[repo], test_eval_results[repo])
 
-    # Add exceptions for any repos not yet processed
     for repo in submission_repos:
         if repo not in results:
             results[repo] = Exception("Evaluation failed to complete")
@@ -458,22 +454,19 @@ async def process_miners_pool(
     """Process same task miners"""
     assert task.task_id is not None, "We should have a task id when processing miners"
 
-    # Get all submission repos
-    miner_repos: dict[str, str] = {}  # hotkey -> repo mapping
+    miner_repos: dict[str, str] = {}
     for miner in miners:
         repo = await _get_submission_repo(miner, str(task.task_id), config)
         if repo is not None:
             miner_repos[miner.hotkey] = repo
         logger.info(f"Found repo {repo} for miner {miner.hotkey}")
 
-    # Initialize results for miners without repos
     results = [
         _create_failed_miner_result(miner.hotkey)
         for miner in miners
         if miner.hotkey not in miner_repos
     ]
 
-    # If we have valid submissions, evaluate them
     if miner_repos:
         try:
             eval_results = await _evaluate_submissions(
@@ -483,7 +476,6 @@ async def process_miners_pool(
                 gpu_ids=gpu_ids
             )
 
-            # Process evaluation results
             for miner in miners:
                 if miner.hotkey not in miner_repos:
                     continue
@@ -515,7 +507,6 @@ async def process_miners_pool(
 
         except Exception as e:
             logger.error(f"Error during batch evaluation: {e}")
-            # Add failed results for remaining miners
             results.extend([
                 _create_failed_miner_result(miner.hotkey)
                 for miner in miners

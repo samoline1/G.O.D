@@ -216,13 +216,11 @@ def main():
     results_dict = {}
     for repo in lora_repos:
         try:
-            # First try loading as a LoRA model
             try:
                 finetuned_model = PeftModel.from_pretrained(base_model, repo, is_trainable=False)
                 is_finetune = True
             except Exception as lora_error:
                 logger.info(f"Loading full model... failed to load as LoRA: {lora_error}")
-                # If LoRA loading fails, try loading as a full model
                 finetuned_model = AutoModelForCausalLM.from_pretrained(
                     repo,
                     token=os.environ.get("HUGGINGFACE_TOKEN")
@@ -254,7 +252,6 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Serialize results, converting exceptions to strings
     serializable_results = {
         repo: (str(result) if isinstance(result, Exception) else result)
         for repo, result in results_dict.items()
