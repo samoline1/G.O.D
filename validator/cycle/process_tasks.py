@@ -367,12 +367,11 @@ async def move_tasks_to_preevaluation_loop(config: Config):
 
 
 async def evaluate_tasks_loop(config: Config):
-    gpu_ids = [i for i in range(len(cst.GPU_IDS))]
 
     # Create queues for tasks and GPUs
     task_queue = asyncio.Queue()
     gpu_queue = asyncio.Queue()
-    for gpu_id in gpu_ids:
+    for gpu_id in cst.GPU_IDS:
         await gpu_queue.put(gpu_id)
 
     async def evaluation_worker():
@@ -399,7 +398,7 @@ async def evaluate_tasks_loop(config: Config):
                 await task_queue.put(task)
 
             # Start workers (one per GPU)
-            workers = [asyncio.create_task(evaluation_worker()) for _ in gpu_ids]
+            workers = [asyncio.create_task(evaluation_worker()) for _ in cst.GPU_IDS]
 
             # Wait for all tasks to complete
             await task_queue.join()
