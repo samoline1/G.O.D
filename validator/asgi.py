@@ -3,10 +3,11 @@ import os
 import uvicorn
 from dotenv import load_dotenv
 
+from validator.utils.util import try_db_connections
+
 
 load_dotenv(os.getenv("ENV_FILE", ".env"))
 
-import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -14,7 +15,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fiber.logging_utils import get_logger
 
 from validator.core.config import load_config
-from validator.core.cycle import init_validator_cycles
 from validator.endpoints.health import factory_router as health_router
 from validator.endpoints.tasks import factory_router as tasks_router
 
@@ -26,36 +26,11 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     logger.debug("Entering lifespan context manager")
     config = load_config()
-    logger.debug(f"Config created: {config}")
 
-    try:
-        logger.debug("Attempting to connect to PostgreSQL")
-        await asyncio.wait_for(config.psql_db.connect(), timeout=5.0)
-        logger.debug("PostgreSQL connected successfully")
-    except asyncio.TimeoutError:
-        logger.error("Timeout while connecting to PostgreSQL")
-    except Exception as e:
-        logger.error(f"Failed to connect to PostgreSQL: {e}")
-
-    try:
-        logger.debug("Attempting to connect to Redis")
-        await asyncio.wait_for(config.redis_db.ping(), timeout=5.0)
-        logger.debug("Redis connected successfully")
-    except asyncio.TimeoutError:
-        logger.error("Timeout while connecting to Redis")
-    except Exception as e:
-        logger.error(f"Failed to connect to Redis: {e}")
+    await try_db_connections(config)
 
     logger.info("Starting up...")
     app.state.config = config
-
-    # Start the validation cycles
-    try:
-        logger.debug("Initializing validator cycle")
-        init_validator_cycles(config)
-        logger.debug("Validator cycle initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize validator cycle: {e}")
 
     yield
 

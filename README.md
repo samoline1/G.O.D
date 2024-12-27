@@ -1,16 +1,20 @@
-# Tuning Subnet
+<h1 align="center">G.O.D Subnet</h1>
 
-🚀 Welcome to the Tuning Subnet: We're just warming up - MVPin'
+
+🚀 Welcome to the [Gradients on Demand](https://gradients.io) Subnet
+
+> Providing access to Bittensor network for on-demand training at scale.
+
 
 ## Setup Guides
 
 - [Miner Setup Guide](docs/miner_setup.md)
 - [Validator Setup Guide](docs/validator_setup.md)
 
-## Prerequisites
+## Recommended Compute Requirements
 
-- Docker
-- Python 3.8+
-- Hugging Face account, API token and corcel token (for synth gen - to be removed and replaced with anything you like for release - or local llm, validators only)
+[Compute Requirements](docs/compute.md)
 
-For detailed setup instructions, please refer to the respective setup guides linked above.
+## Miner Advice
+
+[Miner Advice](docs/miner_advice.md)

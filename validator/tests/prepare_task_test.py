@@ -2,7 +2,7 @@ import asyncio
 
 from fiber.logging_utils import get_logger
 
-from validator.evaluation.task_prep import prepare_task
+from validator.tasks.task_prep import prepare_task
 
 
 logger = get_logger(__name__)

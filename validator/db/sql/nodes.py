@@ -5,8 +5,7 @@ from typing import Optional
 
 from asyncpg.connection import Connection
 from fiber import SubstrateInterface
-from fiber import utils as futils
-from fiber.networking.models import NodeWithFernet as Node
+from fiber.chain.models import Node
 
 from core.constants import NETUID
 from validator.db import constants as dcst
@@ -24,51 +23,54 @@ async def get_all_nodes(psql_db: PSQLDB) -> List[Node]:
         connection: Connection
         query = f"""
             SELECT * FROM {dcst.NODES_TABLE}
+            WHERE {dcst.NETUID} = $1
         """
-        rows = await connection.fetch(query)  # , NETUID)
+        rows = await connection.fetch(query, NETUID)
         nodes = [Node(**dict(row)) for row in rows]
         logger.info(f"Here is the list of nodes {nodes}")
         return nodes
 
 
-async def add_node(node: Node, psql_db: PSQLDB) -> Optional[Node]:
-    """Add a new node with the current NETUID"""
-    async with await psql_db.connection() as connection:
-        connection: Connection
-        query = f"""
-            INSERT INTO {dcst.NODES_TABLE} (
-                {dcst.HOTKEY}, {dcst.NETUID}, {dcst.COLDKEY}, {dcst.IP},
-                {dcst.IP_TYPE}, {dcst.PORT}, {dcst.SYMMETRIC_KEY}, {dcst.NETWORK},
-                {dcst.STAKE}, {dcst.INCENTIVE}, {dcst.LAST_UPDATED},
-                {dcst.PROTOCOL}, {dcst.SYMMETRIC_KEY_UUID}, {dcst.OUR_VALIDATOR},
-                {dcst.TRUST}, {dcst.VTRUST}, {dcst.NODE_ID}
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-            RETURNING {dcst.HOTKEY}
-        """
-        return_value = await connection.fetchval(
-            query,
-            node.hotkey,
-            NETUID,  # why is this twice, what is the diff between network and netuid
-            node.coldkey,
-            node.ip,
-            node.ip_type,
-            node.port,
-            None,
-            NETUID,
-            node.stake,
-            node.incentive,
-            node.last_updated,
-            node.protocol,
-            node.symmetric_key_uuid,
-            False,  # assume not our validator
-            node.trust,
-            node.vtrust,
-            node.node_id,
+async def insert_nodes(connection: Connection, nodes: list[Node]) -> None:
+    logger.info(f"Inserting {len(nodes)} nodes into {dcst.NODES_TABLE}...")
+    await connection.executemany(
+        f"""
+        INSERT INTO {dcst.NODES_TABLE} (
+            {dcst.HOTKEY},
+            {dcst.COLDKEY},
+            {dcst.NODE_ID},
+            {dcst.INCENTIVE},
+            {dcst.NETUID},
+            {dcst.STAKE},
+            {dcst.TRUST},
+            {dcst.VTRUST},
+            {dcst.LAST_UPDATED},
+            {dcst.IP},
+            {dcst.IP_TYPE},
+            {dcst.PORT},
+            {dcst.PROTOCOL}
         )
-        if return_value:
-            return await get_node_by_hotkey(return_value, psql_db)
-        return None
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        """,
+        [
+            (
+                node.hotkey,
+                node.coldkey,
+                node.node_id,
+                node.incentive,
+                node.netuid,
+                node.stake,
+                node.trust,
+                node.vtrust,
+                node.last_updated,
+                node.ip,
+                node.ip_type,
+                node.port,
+                node.protocol,
+            )
+            for node in nodes
+        ],
+    )
 
 
 async def get_node_by_hotkey(hotkey: str, psql_db: PSQLDB) -> Optional[Node]:
@@ -111,22 +113,6 @@ async def get_vali_ss58_address(psql_db: PSQLDB) -> str | None:
         return row[dcst.HOTKEY]
 
 
-async def insert_symmetric_keys_for_nodes(connection: Connection, nodes: list[Node]) -> None:
-    """Insert symmetric keys for nodes in the current NETUID"""
-    await connection.executemany(
-        f"""
-        UPDATE {dcst.NODES_TABLE}
-        SET {dcst.SYMMETRIC_KEY} = $1, {dcst.SYMMETRIC_KEY_UUID} = $2
-        WHERE {dcst.HOTKEY} = $3 AND {dcst.NETUID} = $4
-        """,
-        [
-            (futils.fernet_to_symmetric_key(node.fernet), node.symmetric_key_uuid, node.hotkey, NETUID)
-            for node in nodes
-            if node.fernet is not None
-        ],
-    )
-
-
 async def get_last_updated_time_for_nodes(connection: Connection) -> datetime.datetime | None:
     """Get last updated time for nodes in the current NETUID"""
     query = f"""
@@ -137,12 +123,11 @@ async def get_last_updated_time_for_nodes(connection: Connection) -> datetime.da
     return await connection.fetchval(query, NETUID)
 
 
-async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:
+async def migrate_nodes_to_history(connection: Connection) -> None:
     """Migrate nodes to history table for the current NETUID"""
-    logger.debug(f"Migrating nodes to history for NETUID {NETUID}")
-    async with await psql_db.connection() as connection:
-        await connection.execute(
-            f"""
+    logger.info(f"Migrating nodes to history for NETUID {NETUID}")
+    await connection.execute(
+        f"""
             INSERT INTO {dcst.NODES_HISTORY_TABLE} (
                 {dcst.HOTKEY},
                 {dcst.COLDKEY},
@@ -156,7 +141,6 @@ async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:
                 {dcst.IP_TYPE},
                 {dcst.PORT},
                 {dcst.PROTOCOL},
-                {dcst.NETWORK},
                 {dcst.NODE_ID}
             )
             SELECT
@@ -172,20 +156,26 @@ async def migrate_nodes_to_history(psql_db: PSQLDB) -> None:
                 {dcst.IP_TYPE},
                 {dcst.PORT},
                 {dcst.PROTOCOL},
-                {dcst.NETWORK},
                 {dcst.NODE_ID}
             FROM {dcst.NODES_TABLE}
             WHERE {dcst.NETUID} = $1
         """,
-            NETUID,
-        )
+        NETUID,
+    )
+    logger.debug(f"Truncating node info table for NETUID {NETUID}")
+    await connection.execute(f"DELETE FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1", NETUID)
 
-        logger.debug(f"Truncating node info table for NETUID {NETUID}")
-        await connection.execute(f"DELETE FROM {dcst.NODES_TABLE} WHERE {dcst.NETUID} = $1", NETUID)
+    # Get length of nodes table to check if migration was successful
+    query = f"""
+        SELECT COUNT(*) FROM {dcst.NODES_TABLE}
+        WHERE {dcst.NETUID} = $1
+    """
+    node_entries = await connection.fetchval(query, NETUID)
+    logger.debug(f"Node entries: {node_entries}")
 
 
-async def get_vali_node_id(substrate: SubstrateInterface, netuid: int, ss58_address: str) -> str | None:
-    _, uid = query_substrate(substrate, "SubtensorModule", "Uids", [netuid, ss58_address], return_value=True)
+async def get_vali_node_id(substrate: SubstrateInterface, ss58_address: str) -> str | None:
+    _, uid = query_substrate(substrate, "SubtensorModule", "Uids", [NETUID, ss58_address], return_value=True)
     return uid
 
 

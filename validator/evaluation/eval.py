@@ -9,6 +9,7 @@ import yaml
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
 from fiber.logging_utils import get_logger
+from peft import PeftModel
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
@@ -35,7 +36,7 @@ def _load_and_update_evaluation_config(
     with open(config_path, "r") as file:
         config_dict = yaml.safe_load(file)
 
-    dataset_entry = create_dataset_entry(  # TODO: double-check works outta the box
+    dataset_entry = create_dataset_entry(
         dataset=dataset_name,
         dataset_type=dataset_type,
         file_format=file_format,
@@ -88,19 +89,20 @@ def _process_evaluation_batches(
     language_model: AutoModelForCausalLM,
     eval_dataloader: DataLoader,
     device: torch.device,
-) -> tuple[float, int]:
-    total_loss = 0.0
+) -> tuple[list[float], int]:
+    batch_losses = []
     num_batches = 0
 
+    language_model.eval()
     with torch.no_grad():
         for batch_idx, batch in enumerate(eval_dataloader):
             logger.info(f"Processing batch {batch_idx + 1}")
             batch_loss = _compute_batch_loss(language_model, batch, device)
             logger.info(f"Batch {batch_idx + 1} loss: {batch_loss}")
-            total_loss += batch_loss
+            batch_losses.append(batch_loss)
             num_batches += 1
 
-    return total_loss, num_batches
+    return batch_losses, num_batches
 
 
 def _compute_batch_loss(language_model: AutoModelForCausalLM, batch: dict, device: torch.device) -> float:
@@ -123,13 +125,30 @@ def _compute_batch_loss(language_model: AutoModelForCausalLM, batch: dict, devic
     return loss.item()
 
 
-def _calculate_evaluation_metrics(total_loss: float, num_batches: int) -> dict[str, float]:
-    if num_batches > 0:
-        average_loss = total_loss / num_batches
-        logger.info(f"Average loss: {average_loss}")
-    else:
-        logger.error("No valid batches were processed during evaluation.")
-        average_loss = float("inf")
+def _calculate_evaluation_metrics(total_losses: list[float], num_batches: int) -> dict[str, float]:
+    valid_losses = [loss for loss in total_losses if not torch.isnan(torch.tensor(loss))]
+    nan_count = len(total_losses) - len(valid_losses)
+    nan_percentage = (nan_count / num_batches) * 100 if num_batches > 0 else 0
+
+    if not valid_losses:
+        logger.error("No valid losses were found during evaluation.")
+        return {
+            "eval_loss": float("inf"),
+            "perplexity": float("inf"),
+        }
+
+    if nan_percentage > 5:
+        logger.error(f"Too many nan values ({nan_percentage:.2f}% of batches)")
+        return {
+            "eval_loss": float("inf"),
+            "perplexity": float("inf"),
+        }
+
+    average_loss = sum(valid_losses) / len(valid_losses)
+    logger.info(f"Average loss: {average_loss} (calculated from {len(valid_losses)} valid batches)")
+
+    if nan_count > 0:
+        logger.warning(f"Skipped {nan_count} batches with nan values ({nan_percentage:.2f}% of total)")
 
     return {
         "eval_loss": average_loss,
@@ -149,13 +168,10 @@ def evaluate_language_model_loss(
     _log_dataset_and_model_info(eval_dataset, language_model, tokenizer)
     eval_dataloader = _create_evaluation_dataloader(eval_dataset, evaluation_config, tokenizer)
 
-    language_model.eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     language_model.to(device)
-
-    total_loss, num_batches = _process_evaluation_batches(language_model, eval_dataloader, device)
-
-    evaluation_results = _calculate_evaluation_metrics(total_loss, num_batches)
+    losses, num_batches = _process_evaluation_batches(language_model, eval_dataloader, device)
+    evaluation_results = _calculate_evaluation_metrics(losses, num_batches)
     logger.info(f"Final evaluation results: {evaluation_results}")
 
     return evaluation_results
@@ -174,12 +190,11 @@ def evaluate_finetuned_model(
 
 def main():
     dataset = os.environ.get("DATASET")
-    model = os.environ.get("MODEL")
     original_model = os.environ.get("ORIGINAL_MODEL")
     dataset_type_str = os.environ.get("DATASET_TYPE", "")
     file_format_str = os.environ.get("FILE_FORMAT")
-
-    if not all([dataset, model, original_model, file_format_str]):
+    models_str = os.environ.get("MODELS", "")  # Comma-separated list of LoRA repos
+    if not all([dataset, original_model, file_format_str, models_str]):
         logger.error("Missing required environment variables.")
         exit(1)
 
@@ -190,43 +205,59 @@ def main():
     except ValueError:
         dataset_type = CustomDatasetType.model_validate_json(dataset_type_str)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    finetuned_model = AutoModelForCausalLM.from_pretrained(model, token=os.environ.get("HUGGINGFACE_TOKEN")).to(device)
+    base_model = AutoModelForCausalLM.from_pretrained(original_model, token=os.environ.get("HUGGINGFACE_TOKEN"))
     tokenizer = AutoTokenizer.from_pretrained(original_model, token=os.environ.get("HUGGINGFACE_TOKEN"))
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
-    try:
-        is_finetune = model_is_a_finetune(original_model, finetuned_model)
-    except Exception as e:  # NOTE: What is this supposed to be catching?
-        logger.info(f"Problem with detection of finetune: {e}")
-        logger.info("Assuming true for now")
-        is_finetune = True
 
-    results = evaluate_finetuned_model(
-        dataset_name=dataset,
-        finetuned_model=finetuned_model,
-        dataset_type=dataset_type,
-        file_format=file_format,
-        tokenizer=tokenizer,
-    )
+    lora_repos = [m.strip() for m in models_str.split(",") if m.strip()]
 
-    results["is_finetune"] = is_finetune
+    results_dict = {}
+    for repo in lora_repos:
+        try:
+            try:
+                finetuned_model = PeftModel.from_pretrained(base_model, repo, is_trainable=False)
+                is_finetune = True
+            except Exception as lora_error:
+                logger.info(f"Loading full model... failed to load as LoRA: {lora_error}")
+                finetuned_model = AutoModelForCausalLM.from_pretrained(repo, token=os.environ.get("HUGGINGFACE_TOKEN"))
+                try:
+                    is_finetune = model_is_a_finetune(original_model, finetuned_model)
+                except Exception as e:
+                    logger.info(f"Problem with detection of finetune for {repo}: {e}")
+                    logger.info("Assuming False")
+                    is_finetune = False
+
+            finetuned_model.eval()
+
+            results = evaluate_finetuned_model(
+                dataset_name=dataset,
+                finetuned_model=finetuned_model,
+                dataset_type=dataset_type,
+                file_format=file_format,
+                tokenizer=tokenizer,
+            )
+            results["is_finetune"] = is_finetune
+            results_dict[repo] = results
+        except Exception as e:
+            logger.error(f"Error evaluating {repo}: {e}")
+            results_dict[repo] = e
 
     output_file = "/aplp/evaluation_results.json"
     output_dir = os.path.dirname(output_file)
-
-    # Create directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Write the results to the file
+    serializable_results = {
+        repo: (str(result) if isinstance(result, Exception) else result) for repo, result in results_dict.items()
+    }
+
     with open(output_file, "w") as f:
-        json.dump(results, f)
+        json.dump(serializable_results, f, indent=2)
 
     logger.info(f"Evaluation results saved to {output_file}")
-
-    logger.info(json.dumps(results))
+    logger.info(json.dumps(serializable_results, indent=2))
 
 
 if __name__ == "__main__":

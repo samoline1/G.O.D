@@ -1,4 +1,8 @@
 import argparse
+import os
+import random
+import secrets
+import string
 from typing import Any
 from typing import Dict
 
@@ -6,6 +10,19 @@ from core.models.config_models import MinerConfig
 from core.models.config_models import ValidatorConfig
 from core.validators import InputValidators
 from core.validators import validate_input
+
+
+def generate_secure_password(length: int = 16) -> str:
+    alphabet = string.ascii_letters + string.digits
+    password = [
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.digits),
+    ]
+    password += [secrets.choice(alphabet) for _ in range(length - 3)]
+    password = list(password)  # Convert to list for shuffling
+    random.shuffle(password)  # Use random.shuffle instead of secrets.shuffle
+    return "".join(password)
 
 
 def parse_bool_input(prompt: str, default: bool = False) -> bool:
@@ -27,21 +44,28 @@ def parse_args() -> argparse.Namespace:
 def generate_miner_config(dev: bool = False) -> Dict[str, Any]:
     print("\n🤖 Let's configure your Miner! 🛠️\n")
 
-    network = input("🌐 Enter subtensor network (default: test): ") or "test"
-    address = validate_input("🔌 Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
+    subtensor_network = input("🌐 Enter subtensor network (default: finney): ") or "finney"
+    subtensor_address = (
+        validate_input(
+            "🔌 Enter subtensor address (default: None): ",
+            InputValidators.websocket_url,
+        )
+        or None
+    )
 
     config = MinerConfig(
         wallet_name=input("\n💼 Enter wallet name (default: default): ") or "default",
         hotkey_name=input("🔑 Enter hotkey name (default: default): ") or "default",
         wandb_token=input("📊 Enter wandb token (default: default): ") or "default",
         huggingface_token=input("🤗 Enter huggingface token (default: default): ") or "default",
-        subtensor_network=network,
-        subtensor_address=address,
+        repo_id=input("🏗️ What is the name of the hugginface repo that you'd like to default to saving models to: "),
+        subtensor_network=subtensor_network,
+        subtensor_address=subtensor_address,
         refresh_nodes=True,
-        netuid=176 if network == "test" else 19,
+        netuid=241 if subtensor_network == "test" else 56,
         env="dev" if dev else "prod",
-        min_stake_threshold=input(f"Enter MIN_STAKE_THRESHOLD (default: {'0' if network == 'test' else '1000'}): ")
-        or ("0" if network == "test" else "1000"),
+        min_stake_threshold=input(f"Enter MIN_STAKE_THRESHOLD (default: {'0' if subtensor_network == 'test' else '1000'}): ")
+        or ("0" if subtensor_network == "test" else "1000"),
     )
 
     return vars(config)
@@ -50,37 +74,69 @@ def generate_miner_config(dev: bool = False) -> Dict[str, Any]:
 def generate_validator_config(dev: bool = False) -> Dict[str, Any]:
     print("\n🎯 Let's set up your Validator! 🚀\n")
 
-    network = input("🌐 Enter subtensor network (default: finney): ") or "finney"
-    address = validate_input("🔌 Enter subtensor address (default: None): ", InputValidators.websocket_url) or None
+    # Check if POSTGRES_PASSWORD already exists in the environment
+    postgres_password = os.getenv("POSTGRES_PASSWORD")
 
-    gpu_server_input = input("🖥️  Enter GPU server address if you're using one for synth generation: (optional) (default:None)")
-    gpu_server = validate_input(gpu_server_input, InputValidators.http_url) if gpu_server_input else None
+    frontend_api_key = os.getenv("FRONTEND_API_KEY")
 
-    config = ValidatorConfig(
-        wallet_name=input("💼 Enter wallet name (default: default): ") or "default",
-        hotkey_name=input("🔑 Enter hotkey name (default: default): ") or "default",
-        subtensor_network=network,
-        subtensor_address=address,
-        netuid=176 if network == "test" else 64,
-        env="dev" if dev else "prod",
-        postgres_user=input("👤 Enter postgres user (default: user): ") or "user",
-        postgres_password=input("🔒 Enter postgres password: "),
-        postgres_db=input("📁 Enter postgres database (default: db): ") or "db",
-        postgres_host=input("🏠 Enter postgres host (default: localhost): ") or "localhost",
-        postgres_port=input("🔌 Enter postgres port (default: 5432): ") or "5432",
-        minio_endpoint=input("🎯 Enter minio endpoint: "),
-        minio_access_key=input("🔑 Enter minio access key: "),
-        minio_secret_key=input("🔐 Enter minio secret key: "),
-        gpu_server=gpu_server,
-        open_ai_key=input("Enter OpenAI key if you would rather use this for synth: ") or None,
-        api_key=input("Enter Parachutes API if you want to use that for synth generation: ") or None,
-        set_metagraph_weights=parse_bool_input(
-            "Set metagraph weights when updated gets really high to not dereg?", default=False
-        ),
-        refresh_nodes=parse_bool_input("Refresh nodes?", default=True) if dev else True,
-        localhost=parse_bool_input("Use localhost?", default=True) if dev else False,
+    subtensor_network = input("🌐 Enter subtensor network (default: finney): ") or "finney"
+    subtensor_address = (
+        validate_input(
+            "🔌 Enter subtensor address (default: None): ",
+            InputValidators.websocket_url,
+        )
+        or None
     )
 
+    wallet_name = input("💼 Enter wallet name (default: default): ") or "default"
+    hotkey_name = input("🔑 Enter hotkey name (default: default): ") or "default"
+    netuid = 241 if subtensor_network.strip() == "test" else 56
+    postgres_user = "user"
+    postgres_password = generate_secure_password() if not postgres_password else postgres_password
+    postgres_db = "god-db"
+    postgres_host = "localhost"
+    postgres_port = "5432"
+
+    validator_port = input("👀 Enter an exposed port to run the validator on (default: 9001): ") or "9001"
+
+    gpu_ids = input("🎮 Enter comma-separated GPU IDs to use (e.g., 0,1,2, default = 0): ").strip() or "0"
+
+    s3_compatible_endpoint = input("🎯 Enter s3 compatible endpoint: ")
+    s3_compatible_access_key = input("🎯 Enter s3 compatible access key: ")
+    s3_compatible_secret_key = input("🎯 Enter s3 compatible secret key: ")
+    s3_bucket_name = input("🎯 Enter your s3 bucket name: ")
+    s3_region = input("🎯 Enter s3 region (default: us-east-1): ") or "us-east-1"
+
+    frontend_api_key = generate_secure_password() if not frontend_api_key else frontend_api_key
+
+    config = ValidatorConfig(
+        wallet_name=wallet_name,
+        hotkey_name=hotkey_name,
+        subtensor_network=subtensor_network,
+        subtensor_address=subtensor_address,
+        netuid=netuid,
+        env=env,
+        postgres_user=postgres_user,
+        postgres_password=postgres_password,
+        postgres_db=postgres_db,
+        postgres_host=postgres_host,
+        postgres_port=postgres_port,
+        s3_compatible_endpoint=s3_compatible_endpoint,
+        s3_compatible_access_key=s3_compatible_access_key,
+        s3_compatible_secret_key=s3_compatible_secret_key,
+        s3_bucket_name=s3_bucket_name,
+        s3_region=s3_region,
+        frontend_api_key=frontend_api_key,
+        validator_port=validator_port,
+        gpu_ids=gpu_ids,
+        gpu_server=None,
+        set_metagraph_weights=parse_bool_input(
+            "Set metagraph weights when updated gets really high to not dereg?",
+            default=False,
+        ),
+        refresh_nodes=(parse_bool_input("Refresh nodes?", default=True) if dev else True),
+        localhost=parse_bool_input("Use localhost?", default=True) if dev else False,
+    )
     return vars(config)
 
 
@@ -109,10 +165,8 @@ if __name__ == "__main__":
 
     else:
         env = "dev" if args.dev else "prod"
-        config = generate_config(dev=args.dev)
         name = "vali"
+        config = generate_config(dev=args.dev)
 
     write_config_to_file(config, name)
     print(f"Configuration has been written to .{name}.env")
-    if not args.miner:
-        print("Please make sure to keep your database credentials secure.")

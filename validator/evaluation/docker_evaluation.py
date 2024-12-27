@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import os
@@ -7,6 +8,7 @@ from typing import Union
 
 import docker
 from fiber.logging_utils import get_logger
+from pydantic import TypeAdapter
 
 from core import constants as cst
 from core.docker_utils import stream_logs
@@ -20,13 +22,39 @@ from core.models.utility_models import FileFormat
 logger = get_logger(__name__)
 
 
+async def get_evaluation_results(container):
+    archive_data = await asyncio.to_thread(container.get_archive, cst.CONTAINER_EVAL_RESULTS_PATH)
+    tar_stream = archive_data[0]
+
+    file_like_object = io.BytesIO()
+    for chunk in tar_stream:
+        file_like_object.write(chunk)
+    file_like_object.seek(0)
+
+    with tarfile.open(fileobj=file_like_object) as tar:
+        members = tar.getnames()
+        logger.debug(f"Tar archive members: {members}")
+        eval_results_file = None
+        for member_info in tar.getmembers():
+            if member_info.name.endswith("evaluation_results.json"):
+                eval_results_file = tar.extractfile(member_info)
+                break
+
+        if eval_results_file is None:
+            raise Exception("Evaluation results file not found in tar archive")
+
+        eval_results_content = eval_results_file.read().decode("utf-8")
+        return json.loads(eval_results_content)
+
+
 async def run_evaluation_docker(
     dataset: str,
-    model: str,
+    models: list[str],
     original_model: str,
     dataset_type: Union[DatasetType, CustomDatasetType],
     file_format: FileFormat,
-) -> EvaluationResult:
+    gpu_ids: list[int],
+) -> dict[str, Union[EvaluationResult, Exception]]:
     client = docker.from_env()
 
     if isinstance(dataset_type, DatasetType):
@@ -38,75 +66,71 @@ async def run_evaluation_docker(
 
     environment = {
         "DATASET": dataset,
-        "MODEL": model,
+        "MODELS": ",".join(models),
         "ORIGINAL_MODEL": original_model,
         "DATASET_TYPE": dataset_type_str,
         "FILE_FORMAT": file_format.value,
     }
 
     dataset_dir = os.path.dirname(os.path.abspath(dataset))
-    volume_bindings = {}
-    volume_bindings[dataset_dir] = {
-        "bind": "/workspace/input_data",
-        "mode": "ro",
+    volume_bindings = {
+        dataset_dir: {
+            "bind": "/workspace/input_data",
+            "mode": "ro",
+        }
     }
 
+    async def cleanup_resources():
+        try:
+            await asyncio.to_thread(client.containers.prune)
+            await asyncio.to_thread(client.images.prune, filters={"dangling": True})
+            await asyncio.to_thread(client.volumes.prune)
+            logger.debug("Completed Docker resource cleanup")
+        except Exception as e:
+            logger.error(f"Cleanup failed: {str(e)}")
+
     try:
-        container = client.containers.run(
+        container = await asyncio.to_thread(
+            client.containers.run,
             cst.VALIDATOR_DOCKER_IMAGE,
             environment=environment,
             volumes=volume_bindings,
             runtime="nvidia",
-            device_requests=[docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])],
+            device_requests=[docker.types.DeviceRequest(capabilities=[["gpu"]], device_ids=[str(gid) for gid in gpu_ids])],
             detach=True,
         )
-        # NOTE: replace with asyncio.to_thread
-
-        log_thread = threading.Thread(target=stream_logs, args=(container,))
-        log_thread.start()
-
-        result = container.wait()
-
-        log_thread.join()
+        log_task = asyncio.create_task(asyncio.to_thread(stream_logs, container))
+        result = await asyncio.to_thread(container.wait)
+        log_task.cancel()
 
         if result["StatusCode"] != 0:
             raise Exception(f"Container exited with status {result['StatusCode']}")
 
-        # Confession, this is a bit of an llm hack, I had issues pulling from the path directly and
-        # llm said this was a better solution and faster ... it works so llm knows best
-        # TODO: come back to this and make it more readable / actually understand it
-        tar_stream, _ = container.get_archive(cst.CONTAINER_EVAL_RESULTS_PATH)
+        eval_results_dict = await get_evaluation_results(container)
 
-        file_like_object = io.BytesIO()
-        for chunk in tar_stream:
-            file_like_object.write(chunk)
-        file_like_object.seek(0)
+        processed_results = {}
+        for repo, result in eval_results_dict.items():
+            if isinstance(result, str) and not isinstance(result, dict):
+                processed_results[repo] = Exception(result)
+            else:
+                processed_results[repo] = TypeAdapter(EvaluationResult).validate_python(result)
 
-        with tarfile.open(fileobj=file_like_object) as tar:
-            members = tar.getnames()
-            logger.debug(f"Tar archive members: {members}")
+        return processed_results
 
-            eval_results_file = None
-            for member_info in tar.getmembers():
-                if member_info.name.endswith("evaluation_results.json"):
-                    eval_results_file = tar.extractfile(member_info)
-                    break
-
-            if eval_results_file is None:
-                raise Exception("Evaluation results file not found in tar archive")
-
-            eval_results_content = eval_results_file.read().decode("utf-8")
-            eval_results = json.loads(eval_results_content)
-
-        container.remove()
-        return EvaluationResult(**eval_results)
     except Exception as e:
         logger.error(f"Failed to retrieve evaluation results: {str(e)}")
         raise Exception(f"Failed to retrieve evaluation results: {str(e)}")
+
     finally:
+        try:
+            await asyncio.to_thread(container.remove, force=True)
+            await cleanup_resources()
+        except Exception as e:
+            logger.info(f"A problem with cleaning up {e}")
         client.close()
 
 
+# TODO: CLEAN this up
 async def run_evaluation_docker_diffusion(
     test_split_path: str, base_model_repo: str, base_model_filename: str, lora_repo_list: str, lora_filename_list: str
 ) -> EvaluationResultDiffusion:

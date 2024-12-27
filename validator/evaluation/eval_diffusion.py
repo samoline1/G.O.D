@@ -6,11 +6,11 @@ from typing import List
 from typing import Tuple
 
 from fiber.logging_utils import get_logger
+from validtor.core.models import Img2ImgPayload
+
 from utils import base64_to_image
 from utils import calculate_l2_loss
 from utils import download_from_huggingface
-from validtor.core.models import Img2ImgPayload
-
 from validator.core import constants as cst
 from validator.utils import comfy_api_gate as api_gate
 
@@ -23,6 +23,7 @@ def load_comfy_workflows():
         lora_template = json.load(file)
 
     return lora_template
+
 
 def edit_workflow(payload: Dict, edit_elements: Img2ImgPayload, text_guided: bool) -> Dict:
     payload["Checkpoint_loader"]["inputs"]["ckpt_name"] = edit_elements.ckpt_name

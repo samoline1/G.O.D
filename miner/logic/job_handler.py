@@ -14,6 +14,7 @@ from core import constants as cst
 from core.config.config_handler import create_dataset_entry
 from core.config.config_handler import save_config
 from core.config.config_handler import save_config_toml
+from core.config.config_handler import update_flash_attention
 from core.config.config_handler import update_model_info
 from core.dataset.prepare_dataset import prepare_diffusion_dataset
 from core.docker_utils import stream_logs
@@ -75,6 +76,7 @@ def _load_and_modify_config(
     dataset_entry = create_dataset_entry(dataset, dataset_type, file_format)
     config["datasets"].append(dataset_entry)
 
+    config = update_flash_attention(config, model)
     config = update_model_info(config, model, task_id)
     config["mlflow_experiment_name"] = dataset
 
@@ -249,4 +251,10 @@ def start_tuning_container(job: TextJob):
             logger.info(f"Successfully made repository {repo} public")
 
         if "container" in locals():
-            container.remove(force=True)
+            try:
+                logger.info("Cleaning up HuggingFace cache...")
+                container.exec_run("rm -rf /root/.cache/huggingface/hub/*", user="root")
+            except Exception as e:
+                logger.warning(f"Failed to clean HuggingFace cache: {e}")
+            finally:
+                container.remove(force=True)

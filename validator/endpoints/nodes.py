@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from fastapi import Body
 from fastapi import Depends
+from fiber.chain.models import Node
 from fiber.logging_utils import get_logger
-from fiber.networking.models import NodeWithFernet as Node
 
 from validator.core.config import Config
 from validator.core.dependencies import get_config
@@ -12,8 +12,8 @@ from validator.db import sql
 logger = get_logger(__name__)
 
 
-# NOTE: this is only for dev purposes.
-# It's very useful and we can keep it , but only enable if
+# This is only for dev purposes.
+# It's very useful and we can keep it, but only enable if
 # the env is not prod
 async def add_node(
     coldkey: str = Body(..., embed=True),

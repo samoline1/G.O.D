@@ -1,7 +1,6 @@
 import os
 from datetime import datetime
 from datetime import timedelta
-from functools import partial
 
 import yaml
 from fastapi import Depends
@@ -12,18 +11,16 @@ from fiber.miner.core.configuration import Config
 from fiber.miner.dependencies import blacklist_low_stake
 from fiber.miner.dependencies import get_config
 from fiber.miner.dependencies import verify_request
-from fiber.miner.security.encryption import decrypt_general_payload
 from pydantic import ValidationError
 
 import core.constants as cst
-from core.models.payload_models import MinerTaskRequst
+from core.models.payload_models import MinerTaskRequest
 from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequestDiffusion
 from core.models.payload_models import TrainRequestText
 from core.models.payload_models import TrainResponse
 from core.models.utility_models import DiffusionJob
 from core.models.utility_models import FileFormat
-from core.models.utility_models import TextJob
 from core.utils import download_s3_file
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
@@ -32,37 +29,36 @@ from miner.logic.job_handler import create_job
 
 logger = get_logger(__name__)
 
-finish_time = None
+current_job_finish_time = None
 
 
 async def tune_model(
-    decrypted_payload: TrainRequestText = Depends(partial(decrypt_general_payload, TrainRequestText)),
+    train_request: TrainRequestText,
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
-    global finish_time
+    global current_job_finish_time
     logger.info("Starting model tuning.")
 
-    finish_time = datetime.now() + timedelta(hours=decrypted_payload.hours_to_complete)
-    logger.info(f"Job received is {decrypted_payload}")
+    current_job_finish_time = datetime.now() + timedelta(hours=train_request.hours_to_complete)
+    logger.info(f"Job received is {train_request}")
 
     try:
-        logger.info(decrypted_payload.file_format)
-        if decrypted_payload.file_format != FileFormat.HF:
-            if decrypted_payload.file_format == FileFormat.S3:
-                decrypted_payload.dataset = await download_s3_file(decrypted_payload.dataset)
-                logger.info(decrypted_payload.dataset)
-                decrypted_payload.file_format = FileFormat.JSON
+        logger.info(train_request.file_format)
+        if train_request.file_format != FileFormat.HF:
+            if train_request.file_format == FileFormat.S3:
+                train_request.dataset = await download_s3_file(train_request.dataset)
+                logger.info(train_request.dataset)
+                train_request.file_format = FileFormat.JSON
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
-        job_class=TextJob,
-        job_id=str(decrypted_payload.task_id),
-        dataset=decrypted_payload.dataset,
-        model=decrypted_payload.model,
-        dataset_type=decrypted_payload.dataset_type,
-        file_format=decrypted_payload.file_format,
+        job_id=str(train_request.task_id),
+        dataset=train_request.dataset,
+        model=train_request.model,
+        dataset_type=train_request.dataset_type,
+        file_format=train_request.file_format,
     )
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)
@@ -124,22 +120,27 @@ async def get_latest_model_submission(
 
 
 async def task_offer(
-    decrypted_payload: MinerTaskRequst = Depends(partial(decrypt_general_payload, MinerTaskRequst)),
+    request: MinerTaskRequest,
     config: Config = Depends(get_config),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ) -> MinerTaskResponse:
     try:
-        global finish_time
+        logger.info("An offer has come through")
+        # You will want to optimise this as a miner
+        global current_job_finish_time
         current_time = datetime.now()
-
-        if finish_time is None or current_time + timedelta(hours=1) > finish_time:
-            if decrypted_payload.hours_to_complete < 100:
+        if "llama" not in request.model.lower():
+            return MinerTaskResponse(message="I'm not yet optimised and only accept llama-type jobs", accepted=False)
+        if current_job_finish_time is None or current_time + timedelta(hours=1) > current_job_finish_time:
+            if request.hours_to_complete < 13:
+                logger.info("Accepting the offer - ty snr")
                 return MinerTaskResponse(message="Yes", accepted=True)
             else:
+                logger.info("Rejecting offer")
                 return MinerTaskResponse(message="I only accept small jobs", accepted=False)
         else:
             return MinerTaskResponse(
-                message=f"Currently busy with another job until {finish_time.isoformat()}",
+                message=f"Currently busy with another job until {current_job_finish_time.isoformat()}",
                 accepted=False,
             )
 

@@ -20,7 +20,6 @@ async def download_s3_file(file_url: str, save_path: str = None) -> str:
             if response.status == 200:
                 with open(local_file_path, "wb") as f:
                     f.write(await response.read())
-                print(f"File downloaded successfully: {local_file_path}")
             else:
                 raise Exception(f"Failed to download file: {response.status}")
 

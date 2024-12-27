@@ -2,7 +2,7 @@ import asyncio
 
 from fiber.logging_utils import get_logger
 
-from validator.synth.synth import generate_synthetic_dataset
+from validator.synth.synth import generate_augmented_dataset
 from validator.synth.synth import load_and_sample_dataset
 
 
@@ -14,7 +14,7 @@ async def main():
     columns_to_sample = ["instruction", "input", "output"]
 
     sampled_data = load_and_sample_dataset(dataset_name, columns_to_sample)
-    synthetic_dataset = await generate_synthetic_dataset(sampled_data)
+    synthetic_dataset = await generate_augmented_dataset(sampled_data)
 
     logger.info(f"Number of synthetic samples generated: {len(synthetic_dataset)}")
 

@@ -4,55 +4,29 @@ migrating the old nodes to history in the process
 """
 
 import asyncio
-import traceback
 from datetime import datetime
 from datetime import timedelta
 
-import httpx
-from cryptography.fernet import Fernet
 from fiber.chain import fetch_nodes
+from fiber.chain.models import Node
 from fiber.logging_utils import get_logger
-from fiber.networking.models import NodeWithFernet as Node
-from fiber.validator import client
-from fiber.validator import handshake
 
 from validator.core.config import Config
-from validator.db.sql.nodes import add_node
 from validator.db.sql.nodes import get_all_nodes
 from validator.db.sql.nodes import get_last_updated_time_for_nodes
-from validator.db.sql.nodes import insert_symmetric_keys_for_nodes
+from validator.db.sql.nodes import insert_nodes
 from validator.db.sql.nodes import migrate_nodes_to_history
 
 
 logger = get_logger(__name__)
 
 
-def _format_exception(e: Exception) -> str:
-    """Format an exception with its traceback for logging."""
-    return f"Exception Type: {type(e).__name__}\n Message: {str(e)}\nTraceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
+async def _fetch_nodes_from_substrate(config: Config) -> list[Node]:
+    # It won't cause issues with substrate, as it creates a new connection.
+    return await asyncio.to_thread(fetch_nodes.get_nodes_for_netuid, config.substrate, config.netuid)
 
 
-async def get_and_store_nodes(config: Config) -> list[Node]:
-    if await is_recent_update(config):
-        nodes = await get_all_nodes(config.psql_db)
-        return await perform_handshakes(nodes, config)
-
-    raw_nodes = await fetch_nodes_from_substrate(config)
-    nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
-    nodes = await perform_handshakes(nodes, config)
-    logger.info(f"Here are the nodes we have shaked hands with {nodes}")
-    for node in nodes:
-        print(f"I should be storing {node.node_id}")
-    logger.info("DOING MIGRATION")
-    await migrate_nodes_to_history(config.psql_db)
-    logger.info("STORING")
-    await store_nodes(config, nodes)
-
-    logger.info(f"Stored {len(nodes)} nodes.")
-    return nodes
-
-
-async def is_recent_update(config: Config) -> bool:
+async def _is_recent_update(config: Config) -> bool:
     async with await config.psql_db.connection() as connection:
         last_updated_time = await get_last_updated_time_for_nodes(connection)
         if last_updated_time is not None and datetime.now() - last_updated_time.replace(tzinfo=None) < timedelta(minutes=30):
@@ -63,74 +37,29 @@ async def is_recent_update(config: Config) -> bool:
         return False
 
 
-async def fetch_nodes_from_substrate(config: Config) -> list[Node]:
-    # NOTE: Will this cause issues if this method closes the connection
-    # on substrate interface, but we use the same substrate interface object elsewhere?
-    return await asyncio.to_thread(fetch_nodes.get_nodes_for_netuid, config.substrate, config.netuid)
+async def _get_and_store_nodes(config: Config) -> list[Node]:
+    if await _is_recent_update(config):
+        nodes = await get_all_nodes(config.psql_db)
 
-
-async def store_nodes(config: Config, nodes: list[Node]):
-    for i in range(0, len(nodes), 5):  # I found that when I make it more it froze - not sure why @tt know?
-        logger.info(f"Batch {i} stored")
-        batch = nodes[i : i + 5]
-        await asyncio.gather(*(add_node(node, config.psql_db) for node in batch))
-
-
-async def _handshake(config: Config, node: Node, async_client: httpx.AsyncClient) -> Node:
-    node_copy = node.model_copy()
-    server_address = client.construct_server_address(
-        node=node,
-        replace_with_docker_localhost=False,
-        replace_with_localhost=False,
-    )
-
-    try:
-        symmetric_key, symmetric_key_uid = await handshake.perform_handshake(
-            async_client, server_address, config.keypair, node.hotkey
-        )
-    except Exception as e:
-        error_details = _format_exception(e)
-
-        if isinstance(e, (httpx.HTTPStatusError, httpx.RequestError, httpx.ConnectError)):
-            if hasattr(e, "response"):
-                logger.debug(f"Response content: {e.response.text}.\n Error details: {error_details}")
-
-        return node_copy
-
-    fernet = Fernet(symmetric_key)
-    node_copy.fernet = fernet
-    node_copy.symmetric_key_uuid = symmetric_key_uid
-    return node_copy
-
-
-async def perform_handshakes(nodes: list[Node], config: Config) -> list[Node]:
-    tasks = []
-    shaked_nodes: list[Node] = []
-    for node in nodes:
-        logger.info(f"We found a node lets say hi {node.node_id}")
-        if node.fernet is None or node.symmetric_key_uuid is None:
-            try:
-                tasks.append(_handshake(config, node, config.httpx_client))
-            except Exception:
-                logger.info("Could not shake with {node.node_id}")
-                continue
-        if len(tasks) > 50:
-            shaked_nodes.extend(await asyncio.gather(*tasks))
-            tasks = []
-
-    if tasks:
-        shaked_nodes.extend(await asyncio.gather(*tasks))
-
-    nodes_where_handshake_worked = [
-        node for node in shaked_nodes if node.fernet is not None and node.symmetric_key_uuid is not None
-    ]
-    if len(nodes_where_handshake_worked) == 0:
-        logger.info("❌ Failed to perform handshakes with any nodes!")
-        return []
-    logger.info(f"✅ performed handshakes successfully with {len(nodes_where_handshake_worked)} nodes!")
+    raw_nodes = await _fetch_nodes_from_substrate(config)
+    nodes = [Node(**node.model_dump(mode="json")) for node in raw_nodes]
 
     async with await config.psql_db.connection() as connection:
-        await insert_symmetric_keys_for_nodes(connection, nodes_where_handshake_worked)
-    logger.info("We have successfully inserted symmetric keys for nodes")
+        await migrate_nodes_to_history(connection)
+        await insert_nodes(connection, nodes)
 
-    return shaked_nodes
+    logger.info(f"Stored {len(nodes)} nodes.")
+    return nodes
+
+
+async def refresh_nodes_periodically(config: Config) -> None:
+    while True:
+        try:
+            logger.info("Attempting to refresh nodes with the metagraph")
+            # 1 minute timeout
+            await asyncio.wait_for(_get_and_store_nodes(config), timeout=5 * 60)
+            await asyncio.sleep(60 * 15)  # 15 minutes
+            logger.info("Node refresh cycle complete! Waiting 15 minutes before next refresh...")
+        except asyncio.TimeoutError:
+            logger.error("Node refresh timed out after 5 minutes... :( Please look into this!!")
+            await asyncio.sleep(60)

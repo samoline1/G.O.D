@@ -16,6 +16,7 @@ class BaseConfig:
 @dataclass
 class MinerConfig(BaseConfig):
     wandb_token: str
+    repo_id: str
     huggingface_token: str
     min_stake_threshold: str
     is_validator: bool = False
@@ -28,12 +29,17 @@ class ValidatorConfig(BaseConfig):
     postgres_db: str
     postgres_host: str
     postgres_port: str
-    minio_endpoint: str
-    minio_access_key: str
-    minio_secret_key: str
+    s3_compatible_endpoint: str
+    s3_compatible_access_key: str
+    s3_compatible_secret_key: str
+    s3_bucket_name: str
+    frontend_api_key: str
+    validator_port: str
     set_metagraph_weights: bool
+    validator_port: str
+    gpu_ids: str
     gpu_server: Optional[str] = None
-    open_ai_key: Optional[str] = None
-    api_key: Optional[str] = None
     localhost: bool = False
     env_file: str = ".vali.env"
+    hf_datasets_trust_remote_code = True
+    s3_region: str = "us-east-1"

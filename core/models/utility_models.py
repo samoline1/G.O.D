@@ -1,5 +1,6 @@
 import uuid
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -34,12 +35,34 @@ class TaskStatus(str, Enum):
     READY = "ready"
     SUCCESS = "success"
     LOOKING_FOR_NODES = "looking_for_nodes"
+    DELAYED = "delayed"
     EVALUATING = "evaluating"
+    PREEVALUATION = "preevaluation"
     TRAINING = "training"
     FAILURE = "failure"
     FAILURE_FINDING_NODES = "failure_finding_nodes"
     PREP_TASK_FAILURE = "prep_task_failure"
     NODE_TRAINING_FAILURE = "node_training_failure"
+
+
+class WinningSubmission(BaseModel):
+    hotkey: str
+    score: float
+    model_repo: str
+
+    # Turn off protected namespace for model
+    model_config = {"protected_namespaces": ()}
+
+
+class MinerTaskResult(BaseModel):
+    hotkey: str
+    quality_score: float
+
+
+# NOTE: Confusing name with the class above
+class TaskMinerResult(BaseModel):
+    task_id: UUID
+    quality_score: float
 
 
 class CustomDatasetType(BaseModel):
@@ -87,5 +110,13 @@ class Message(BaseModel):
 
 
 class Prompts(BaseModel):
-    synth_data_creation_sys: str
-    synth_data_creation_prompt: str
+    # synthetic data generation prompts
+    # in-context learning prompts
+    in_context_learning_generation_sys: str
+    in_context_learning_generation_user: str
+    # correctness-focused prompts (step 1/2)
+    output_field_reformulation_sys: str
+    output_field_reformulation_user: str
+    # correctness-focused prompts (step 2/2)
+    input_field_generation_sys: str
+    input_field_generation_user: str

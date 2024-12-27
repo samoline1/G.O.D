@@ -37,7 +37,6 @@ CREATE TABLE IF NOT EXISTS nodes (
     port INTEGER NOT NULL,
     symmetric_key TEXT,
     symmetric_key_uuid TEXT,
-    network FLOAT NOT NULL,
     trust FLOAT,
     vtrust FLOAT,
     stake FLOAT NOT NULL,
@@ -90,7 +89,6 @@ CREATE TABLE IF NOT EXISTS nodes_history (
     ip_type INTEGER NOT NULL,
     port INTEGER NOT NULL,
     protocol INTEGER NOT NULL DEFAULT 4,
-    network TEXT NOT NULL,
     our_validator BOOLEAN NOT NULL DEFAULT FALSE,
     expired_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'UTC'),
     PRIMARY KEY (id, hotkey, netuid)

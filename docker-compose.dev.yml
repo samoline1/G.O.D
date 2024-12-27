@@ -1,7 +1,4 @@
 services:
-  postgresql:
-    ports:
-      - "127.0.0.1:5432:5432"
 
   redis:
     ports:
@@ -27,3 +24,5 @@ services:
       ADMINER_PLUGINS: tables-filter tinymce
     depends_on:
       - postgresql
+    networks:
+      - postgres_network

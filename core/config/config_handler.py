@@ -5,6 +5,7 @@ import yaml
 from fiber.logging_utils import get_logger
 from transformers import AutoTokenizer
 
+import core.constants as cst
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
@@ -38,19 +39,23 @@ def create_dataset_entry(
     return dataset_entry
 
 
+def update_flash_attention(config: dict, model: str):
+    # You might want to make this model-dependent
+    config["flash_attention"] = False
+    return config
+
+
 def update_model_info(config: dict, model: str, job_id: str = ""):
     logger.info("WE ARE UPDATING THE MODEL INFO")
     tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
     if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
         config["special_tokens"] = {"pad_token": tokenizer.eos_token}
 
-    if not config.get("hub_repo"):
-        raise ValueError("hub_repo is not set in the config.")
-
     config["base_model"] = model
     config["wandb_runid"] = job_id
     config["wandb_name"] = job_id
-    config["hub_model_id"] = f"{config.get('hub_repo')}/{job_id.split('-')[0]}"
+    config["hub_model_id"] = f"{cst.REPO_ID}/{job_id}"
+
     return config
 
 
@@ -66,7 +71,10 @@ def save_config_toml(config: dict, config_path: str):
 
 def _process_custom_dataset_fields(custom_type_dict: dict) -> dict:
     if not custom_type_dict.get("field_output"):
-        return {"type": "completion", "field": custom_type_dict.get("field_instruction")}
+        return {
+            "type": "completion",
+            "field": custom_type_dict.get("field_instruction"),
+        }
 
     processed_dict = custom_type_dict.copy()
     processed_dict.setdefault("no_input_format", "{instruction}")

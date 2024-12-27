@@ -1,21 +1,34 @@
 ## For dev without docker:
 
+0. Clone the repo
+```bash
+git clone https://github.com/rayonlabs/G.O.D.git
+cd G.O.D
+```
+
 1. Run bootstrap.sh
 ```bash
 sudo -E bash bootstrap.sh
+source $HOME/.bashrc
+source $HOME/.venv/bin/activate
 ```
 
-2. Optional if you need a venv
+2. Install dependencies
 ```bash
-python -m venv .venv || python3 -m venv .venv
-```
-
-3. Install dependencies
-```bash
-source .venv/bin/activate
 find . -path "./venv" -prune -o -path "./.venv" -prune -o -name "requirements.txt" -exec pip install -r {} \;
 ./install_axolotl.sh
 pip install "git+https://github.com/rayonlabs/fiber.git@1.0.0#egg=fiber[full]"
-task dev_setup
-task control_node_dev  # For example
+
+```
+
+3. Setup dev env
+
+```bash
+task setup
+```
+
+4.  Run validator in dev mode
+
+```bash
+task validator
 ```

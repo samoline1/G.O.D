@@ -143,8 +143,6 @@ if [ ! -d "$VENV_PATH" ]; then
     chown -R $SUDO_USER:$SUDO_USER $VENV_PATH $HOME/.bashrc
     echo_ "Python venv created"
     source $VENV_PATH/bin/activate
-    pip install bittensor==7.4.0
-    pip install python-dotenv==1.0.1
 else
     echo_ "Python venv already exists at $VENV_PATH"
 fi
@@ -202,6 +200,7 @@ echo_ "checking for task"
 if ! [[ $(which task) ]]; then
   echo_ "task was not found, installing..."
   sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+  export PATH="$HOME/.local/bin:$PATH"
   echo_ "task installed successfully"
 fi
 
@@ -212,7 +211,6 @@ if [[ NO_LAUNCH -eq 1 ]]; then
 else
   if [[ WITH_AUTOUPDATES -eq 1 ]]; then
     source $HOME/.venv/bin/activate
-    sudo -E ./validator_autoupdater.sh
   else
     docker compose --env-file .vali.env -f docker-compose.yml up -d --build
   fi
