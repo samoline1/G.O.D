@@ -72,7 +72,8 @@ class AsyncMinioClient:
         func = self.client.stat_object
         args = (bucket_name, object_name)
         logger.info("Getting stats for object")
-        stats = await self.loop.run_in_executor(self.executor, func, *args)
+        loop = asyncio.get_event_loop()
+        stats = await loop.run_in_executor(self.executor, func, *args)
         return stats
 
     async def ensure_bucket_exists(self, bucket_name):
