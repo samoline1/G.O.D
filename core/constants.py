@@ -16,11 +16,21 @@ except (TypeError, ValueError):
 
 MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
+MINER_DOCKER_IMAGE_DIFFUSION = "diagonalge/diffusion_miner:latest"
+VALIDATOR_DOCKER_IMAGE_DIFFUSION = "diagonalge/tuning_validator_diffusion:latest"
 
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
+CONTAINER_EVAL_RESULTS_PATH_DIFFUSION = "/aplp/evaluation_results_diffusion.json"
 
 CONFIG_DIR = "./core/config/"
 OUTPUT_DIR = "./core/outputs/"
+
+DIFFUSION_DATASET_DIR = "./core/dataset/images"
+DIFFUSION_DEFAULT_REPEATS = 10
+DIFFUSION_DEFAULT_INSTANCE_PROMPT = "lora"
+DIFFUSION_DEFAULT_CLASS_PROMPT = "style"
+
+CONFIG_TEMPLATE_PATH_DIFFUSION = CONFIG_DIR + "base_diffusion.toml"
 
 CONFIG_TEMPLATE_PATH = CONFIG_DIR + "base.yml"
 
