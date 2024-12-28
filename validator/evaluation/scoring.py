@@ -287,10 +287,14 @@ async def _evaluate_submissions(
 ) -> dict[str, tuple[EvaluationResult, EvaluationResult] | Exception]:
     """Evaluate same task submissions within same docker container.
     Docker evaluations with an exception will return the Exception for the repo."""
+    unique_repos = list(set(submission_repos))
+    if len(unique_repos) != len(submission_repos):
+        logger.warning(f"Found duplicate repos. Deduplicating {len(submission_repos)} repos to {len(unique_repos)} unique repos")
+
     evaluation_params = {
         "file_format": FileFormat.JSON,
         "original_model": task.model_id,
-        "models": submission_repos,
+        "models": unique_repos,
         "dataset_type": dataset_type,
         "gpu_ids": gpu_ids,
     }
@@ -305,7 +309,7 @@ async def _evaluate_submissions(
     results: dict[str, tuple[EvaluationResult, EvaluationResult] | Exception] = {}
 
     finetuned_repos = []
-    for repo in submission_repos:
+    for repo in unique_repos:
         if isinstance(synth_eval_results.get(repo), Exception):
             results[repo] = synth_eval_results[repo]
             continue
@@ -333,7 +337,7 @@ async def _evaluate_submissions(
             else:
                 results[repo] = (synth_eval_results[repo], test_eval_results[repo])
 
-    for repo in submission_repos:
+    for repo in unique_repos:
         if repo not in results:
             results[repo] = Exception("Evaluation failed to complete")
 
