@@ -1,3 +1,4 @@
+import asyncio
 import re
 from datetime import datetime
 from datetime import timedelta
@@ -313,7 +314,7 @@ async def _evaluate_submissions(
         if not synth_result.is_finetune:
             results[repo] = (
                 EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0),
-                EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0),
+                EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0)
             )
         else:
             finetuned_repos.append(repo)
@@ -321,7 +322,9 @@ async def _evaluate_submissions(
     if finetuned_repos:
         test_data_filepath = await download_s3_file(task.test_data)
         test_eval_results = await run_evaluation_docker(
-            dataset=test_data_filepath, models=finetuned_repos, **{k: v for k, v in evaluation_params.items() if k != "models"}
+            dataset=test_data_filepath,
+            models=finetuned_repos,
+            **{k: v for k, v in evaluation_params.items() if k != 'models'}
         )
 
         for repo in finetuned_repos:
@@ -442,8 +445,13 @@ def zero_duplicate_scores(task_results: list[MinerResults], keep_submission: dic
     return task_results
 
 
+
 async def process_miners_pool(
-    miners: list[Node], task: RawTask, dataset_type: CustomDatasetType, config: Config, gpu_ids: list[int]
+    miners: list[Node],
+    task: RawTask,
+    dataset_type: CustomDatasetType,
+    config: Config,
+    gpu_ids: list[int]
 ) -> list[MinerResults]:
     """Process same task miners"""
     assert task.task_id is not None, "We should have a task id when processing miners"
@@ -455,12 +463,19 @@ async def process_miners_pool(
             miner_repos[miner.hotkey] = repo
         logger.info(f"Found repo {repo} for miner {miner.hotkey}")
 
-    results = [_create_failed_miner_result(miner.hotkey) for miner in miners if miner.hotkey not in miner_repos]
+    results = [
+        _create_failed_miner_result(miner.hotkey)
+        for miner in miners
+        if miner.hotkey not in miner_repos
+    ]
 
     if miner_repos:
         try:
             eval_results = await _evaluate_submissions(
-                task=task, submission_repos=list(miner_repos.values()), dataset_type=dataset_type, gpu_ids=gpu_ids
+                task=task,
+                submission_repos=list(miner_repos.values()),
+                dataset_type=dataset_type,
+                gpu_ids=gpu_ids
             )
 
             for miner in miners:
@@ -484,21 +499,22 @@ async def process_miners_pool(
                     updated_on=datetime.now(),
                 )
 
-                results.append(
-                    MinerResults(
-                        hotkey=miner.hotkey,
-                        test_loss=float(test_result.eval_loss),
-                        synth_loss=float(synth_result.eval_loss),
-                        is_finetune=test_result.is_finetune,
-                        submission=submission,
-                    )
-                )
+                results.append(MinerResults(
+                    hotkey=miner.hotkey,
+                    test_loss=float(test_result.eval_loss),
+                    synth_loss=float(synth_result.eval_loss),
+                    is_finetune=test_result.is_finetune,
+                    submission=submission,
+                ))
 
         except Exception as e:
             logger.error(f"Error during batch evaluation: {e}")
-            results.extend(
-                [_create_failed_miner_result(miner.hotkey) for miner in miners if miner.hotkey not in [r.hotkey for r in results]]
-            )
+            results.extend([
+                _create_failed_miner_result(miner.hotkey)
+                for miner in miners
+                if miner.hotkey not in [r.hotkey for r in results]
+            ])
+
 
     return results
 
