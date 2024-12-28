@@ -92,6 +92,7 @@ def _process_evaluation_batches(
 ) -> tuple[list[float], int]:
     batch_losses = []
     num_batches = 0
+    consecutive_nans = 0
 
     language_model.eval()
     with torch.no_grad():
@@ -99,6 +100,15 @@ def _process_evaluation_batches(
             logger.info(f"Processing batch {batch_idx + 1}")
             batch_loss = _compute_batch_loss(language_model, batch, device)
             logger.info(f"Batch {batch_idx + 1} loss: {batch_loss}")
+
+            if torch.isnan(torch.tensor(batch_loss)):
+                consecutive_nans += 1
+                if consecutive_nans >= 5:
+                    logger.warning("Stopping evaluation early: 5 consecutive NaN losses detected")
+                    return [float('nan')], 1
+            else:
+                consecutive_nans = 0
+
             batch_losses.append(batch_loss)
             num_batches += 1
 
