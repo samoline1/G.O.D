@@ -291,10 +291,25 @@ async def _evaluate_submissions(
     if len(unique_repos) != len(submission_repos):
         logger.warning(f"Found duplicate repos. Deduplicating {len(submission_repos)} repos to {len(unique_repos)} unique repos")
 
+    results: dict[str, tuple[EvaluationResult, EvaluationResult] | Exception] = {}
+    repos_to_evaluate = []
+    for repo in unique_repos:
+        if repo == task.model_id:
+            logger.warning(f"Repository {repo} matches original model ID - marking as non-finetuned")
+            results[repo] = (
+                EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0),
+                EvaluationResult(is_finetune=False, eval_loss=0.0, perplexity=0.0)
+            )
+        else:
+            repos_to_evaluate.append(repo)
+
+    if not repos_to_evaluate:
+        return results
+
     evaluation_params = {
         "file_format": FileFormat.JSON,
         "original_model": task.model_id,
-        "models": unique_repos,
+        "models": repos_to_evaluate,
         "dataset_type": dataset_type,
         "gpu_ids": gpu_ids,
     }
@@ -306,10 +321,8 @@ async def _evaluate_submissions(
     synthetic_data_filepath = await download_s3_file(task.synthetic_data)
     synth_eval_results = await run_evaluation_docker(dataset=synthetic_data_filepath, **evaluation_params)
 
-    results: dict[str, tuple[EvaluationResult, EvaluationResult] | Exception] = {}
-
     finetuned_repos = []
-    for repo in unique_repos:
+    for repo in repos_to_evaluate:
         if isinstance(synth_eval_results.get(repo), Exception):
             results[repo] = synth_eval_results[repo]
             continue
