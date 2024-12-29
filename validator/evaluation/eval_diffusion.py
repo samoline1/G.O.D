@@ -129,7 +129,7 @@ def main():
         os.remove(lora_metadata["local_model_path"])
 
     eval_losses = {"eval_losses": results}
-    output_file = "/aplp/evaluation_results_diffusion.json"
+    output_file = "/aplp/evaluation_results.json"
     output_dir = os.path.dirname(output_file)
 
     # Create directory if it doesn't exist

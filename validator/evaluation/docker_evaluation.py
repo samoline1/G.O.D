@@ -152,53 +152,44 @@ async def run_evaluation_docker_diffusion(
         "LORA_MODEL_FILENAMES": lora_filename_list,
     }
 
+    async def cleanup_resources():
+        try:
+            await asyncio.to_thread(client.containers.prune)
+            await asyncio.to_thread(client.images.prune, filters={"dangling": True})
+            await asyncio.to_thread(client.volumes.prune)
+            logger.debug("Completed Docker resource cleanup")
+        except Exception as e:
+            logger.error(f"Cleanup failed: {str(e)}")
+
     try:
-        container = client.containers.run(
+        container = await asyncio.to_thread(
+            client.containers.run,
             cst.VALIDATOR_DOCKER_IMAGE_DIFFUSION,
             environment=environment,
             volumes=volume_bindings,
             runtime="nvidia",
-            device_requests=[docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])],
+            device_requests=[docker.types.DeviceRequest(capabilities=[["gpu"]], device_ids=[str(gid) for gid in gpu_ids])],
             detach=True,
         )
-
-        log_thread = threading.Thread(target=stream_logs, args=(container,))
-        log_thread.start()
-
-        result = container.wait()
-
-        log_thread.join()
+        log_task = asyncio.create_task(asyncio.to_thread(stream_logs, container))
+        result = await asyncio.to_thread(container.wait)
+        log_task.cancel()
 
         if result["StatusCode"] != 0:
             raise Exception(f"Container exited with status {result['StatusCode']}")
 
-        tar_stream, _ = container.get_archive(cst.CONTAINER_EVAL_RESULTS_PATH_DIFFUSION)
+        eval_results_dict = await get_evaluation_results(container)
 
-        file_like_object = io.BytesIO()
-        for chunk in tar_stream:
-            file_like_object.write(chunk)
-        file_like_object.seek(0)
+        return processed_results
 
-        with tarfile.open(fileobj=file_like_object) as tar:
-            members = tar.getnames()
-            logger.debug(f"Tar archive members: {members}")
-
-            eval_results_file = None
-            for member_info in tar.getmembers():
-                if member_info.name.endswith("evaluation_results_diffusion.json"):
-                    eval_results_file = tar.extractfile(member_info)
-                    break
-
-            if eval_results_file is None:
-                raise Exception("Evaluation results file not found in tar archive")
-
-            eval_results_content = eval_results_file.read().decode("utf-8")
-            eval_results = json.loads(eval_results_content)
-
-        container.remove()
-        return EvaluationResultDiffusion(**eval_results)
     except Exception as e:
         logger.error(f"Failed to retrieve evaluation results: {str(e)}")
         raise Exception(f"Failed to retrieve evaluation results: {str(e)}")
+
     finally:
+        try:
+            await asyncio.to_thread(container.remove, force=True)
+            await cleanup_resources()
+        except Exception as e:
+            logger.info(f"A problem with cleaning up {e}")
         client.close()

@@ -67,28 +67,30 @@ async def tune_model(
 
 
 async def tune_model_diffusion(
-    decrypted_payload: TrainRequestDiffusion,
+    train_request: TrainRequestDiffusion,
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     global finish_time
     logger.info("Starting model tuning.")
 
-    finish_time = datetime.now() + timedelta(hours=decrypted_payload.hours_to_complete)
-    logger.info(f"Job received is {decrypted_payload}")
+    finish_time = datetime.now() + timedelta(hours=train_request.hours_to_complete)
+    logger.info(f"Job received is {train_request}")
     try:
-        decrypted_payload.dataset_zip = await download_s3_file(
-            decrypted_payload.dataset_zip, f"{cst.DIFFUSION_DATASET_DIR}/{decrypted_payload.task_id}.zip"
+        train_request.dataset_zip = await download_s3_file(
+            train_request.dataset_zip, f"{cst.DIFFUSION_DATASET_DIR}/{train_request.task_id}.zip"
         )
-        logger.info(decrypted_payload.dataset_zip)
+        logger.info(train_request.dataset_zip)
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     job = create_job(
         job_class=DiffusionJob,
-        job_id=str(decrypted_payload.task_id),
-        dataset_zip=decrypted_payload.dataset_zip,
-        model=decrypted_payload.model,
+        job_id=str(train_request.task_id),
+        dataset_zip=train_request.dataset_zip,
+        model=train_request.model,
+        hf_repo=train_request.hf_repo,
+        hf_folder=train_request.hf_folder
     )
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)
