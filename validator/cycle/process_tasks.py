@@ -35,9 +35,11 @@ async def _get_total_dataset_size(repo_name: str, file_format: FileFormat) -> in
         stats = await async_minio_client.get_stats(bucket_name, object_name)
         size = stats.size
     else:
+        loop = asyncio.get_running_loop()
+        dataset_infos = await loop.run_in_executor(None, get_dataset_infos, repo_name)
         size = sum(
             info.dataset_size
-            for info in get_dataset_infos(repo_name).values()
+            for info in dataset_infos.values()
             if info.dataset_size
         )
     return int(size)
