@@ -16,7 +16,7 @@ from core.config.config_handler import save_config
 from core.config.config_handler import save_config_toml
 from core.config.config_handler import update_flash_attention
 from core.config.config_handler import update_model_info
-from core.dataset.prepare_dataset import prepare_diffusion_dataset
+from core.dataset.prepare_diffusion_dataset import prepare_dataset
 from core.docker_utils import stream_logs
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
@@ -125,7 +125,7 @@ def start_tuning_container_diffusion(job: DiffusionJob):
 
     logger.info(config)
 
-    prepare_diffusion_dataset(
+    prepare_dataset(
         training_images_zip_path=job.dataset_zip,
         training_images_repeat=cst.DIFFUSION_DEFAULT_REPEATS,
         instance_prompt=cst.DIFFUSION_DEFAULT_INSTANCE_PROMPT,

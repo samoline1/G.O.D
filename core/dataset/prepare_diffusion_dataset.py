@@ -5,7 +5,7 @@ import zipfile
 from core import constants as cst
 
 
-def prepare_diffusion_dataset(
+def prepare_dataset(
     training_images_zip_path: str,
     training_images_repeat: int,
     instance_prompt: str,
