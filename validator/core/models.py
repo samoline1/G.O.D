@@ -2,8 +2,6 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import Optional
 from uuid import UUID
 from uuid import uuid4
 
@@ -221,9 +219,9 @@ class Img2ImgPayload(BaseModel):
     steps: int
     cfg: float
     denoise: float
-    comfy_template: Dict
-    prompt: Optional[str] = None
-    base_image: Optional[str] = None
+    comfy_template: dict
+    prompt: str | None
+    base_image: str | None
 
 
 class NetworkStats(BaseModel):

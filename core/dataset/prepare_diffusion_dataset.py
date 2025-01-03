@@ -51,5 +51,8 @@ def prepare_diffusion_dataset(
     if not os.path.exists(os.path.join(output_dir, "model")):
         os.makedirs(os.path.join(output_dir, "model"))
 
-    shutil.rmtree(extraction_dir)
-    os.remove(training_images_zip_path)
+    if os.path.exists(extraction_dir):
+        shutil.rmtree(extraction_dir)
+
+    if os.path.exists(training_images_zip_path):
+        os.remove(training_images_zip_path)

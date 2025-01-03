@@ -20,7 +20,6 @@ VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
 VALIDATOR_DOCKER_IMAGE_DIFFUSION = "diagonalge/tuning_validator_diffusion:latest"
 
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
-CONTAINER_EVAL_RESULTS_PATH_DIFFUSION = "/aplp/evaluation_results_diffusion.json"
 
 CONFIG_DIR = "./core/config/"
 OUTPUT_DIR = "./core/outputs/"

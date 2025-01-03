@@ -1,7 +1,7 @@
 {
   "Checkpoint_loader": {
     "inputs": {
-      "ckpt_name": ""
+      "ckpt_name": "{{ckpt_name}}"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -11,7 +11,7 @@
   "Sampler": {
     "inputs": {
       "seed": 908820999791964,
-      "steps": 20,
+      "steps": "{{steps}}",
       "cfg": 4,
       "sampler_name": "dpmpp_sde_gpu",
       "scheduler": "karras",

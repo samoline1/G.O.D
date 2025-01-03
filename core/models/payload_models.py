@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Dict
 from uuid import UUID
 
 from fiber.logging_utils import get_logger
@@ -84,8 +83,13 @@ class EvaluationResult(BaseModel):
     perplexity: float
 
 
+class DiffusionLosses(BaseModel):
+    text_guided_losses: List[float]
+    no_text_losses: List[float]
+
+
 class EvaluationResultDiffusion(BaseModel):
-    eval_losses: Dict
+    eval_losses: dict[str, DiffusionLosses]
 
 
 class MinerTaskResponse(BaseModel):

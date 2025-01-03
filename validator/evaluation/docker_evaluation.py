@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 
 
 async def get_evaluation_results(container):
-    archive_data = await asyncio.to_thread(container.get_archive, cst.CONTAINER_EVAL_RESULTS_PATH_DIFFUSION)
+    archive_data = await asyncio.to_thread(container.get_archive, cst.CONTAINER_EVAL_RESULTS_PATH)
     tar_stream = archive_data[0]
 
     file_like_object = io.BytesIO()
@@ -36,7 +36,7 @@ async def get_evaluation_results(container):
         logger.debug(f"Tar archive members: {members}")
         eval_results_file = None
         for member_info in tar.getmembers():
-            if member_info.name.endswith(("evaluation_results_diffusion.json")):
+            if member_info.name.endswith(("evaluation_results.json")):
                 eval_results_file = tar.extractfile(member_info)
                 break
 

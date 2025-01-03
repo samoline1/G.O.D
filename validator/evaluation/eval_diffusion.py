@@ -6,11 +6,11 @@ from typing import List
 from typing import Tuple
 
 from fiber.logging_utils import get_logger
-from validtor.core.models import Img2ImgPayload
+from validator.core.models import Img2ImgPayload
 
-from utils import base64_to_image
-from utils import calculate_l2_loss
-from utils import download_from_huggingface
+from validator.evaluation.utils import base64_to_image
+from validator.evaluation.utils import calculate_l2_loss
+from validator.evaluation.utils import download_from_huggingface
 from validator.core import constants as cst
 from validator.utils import comfy_api_gate as api_gate
 
@@ -126,7 +126,8 @@ def main():
         filename = lora_metadata["hf_filename"]
 
         results[f"{repo}/{filename}"] = loss_data
-        os.remove(lora_metadata["local_model_path"])
+        if os.path.exists(lora_metadata["local_model_path"]):
+            os.remove(lora_metadata["local_model_path"])
 
     eval_losses = {"eval_losses": results}
     output_file = "/aplp/evaluation_results.json"

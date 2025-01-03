@@ -85,7 +85,7 @@ def base64_to_image(base64_string: str) -> Image.Image:
     return image
 
 
-def download_from_huggingface(repo_id: str, filename: str, local_dir: str = None) -> str:
+def download_from_huggingface(repo_id: str, filename: str, local_dir: str) -> str:
     # Use a temp folder to ensure correct file placement
     try:
         local_filename = os.path.basename(filename)
