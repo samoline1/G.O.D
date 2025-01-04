@@ -1,9 +1,8 @@
 import base64
 import json
 import os
-from typing import Dict
 from typing import List
-from typing import Tuple
+from typing import Any, Union
 
 from fiber.logging_utils import get_logger
 from validator.core.models import Img2ImgPayload
@@ -25,35 +24,40 @@ def load_comfy_workflows():
     return lora_template
 
 
-def edit_workflow(payload: Dict, edit_elements: Img2ImgPayload, text_guided: bool) -> Dict:
-    payload["Checkpoint_loader"]["inputs"]["ckpt_name"] = edit_elements.ckpt_name
-    payload["Sampler"]["inputs"]["steps"] = edit_elements.steps
-    payload["Sampler"]["inputs"]["cfg"] = edit_elements.cfg
-    payload["Sampler"]["inputs"]["denoise"] = edit_elements.denoise
-    payload["Image_loader"]["inputs"]["image"] = edit_elements.base_image
-    payload["Lora_loader"]["inputs"]["lora_name"] = edit_elements.lora_name
-    if text_guided:
-        payload["Prompt"]["inputs"]["text"] = edit_elements.prompt
-    else:
-        payload["Prompt"]["inputs"]["text"] = ""
+def replace_workflow_values(
+    template: dict[str, Any] | list | str,
+    replacements: dict[str, Any]
+) -> dict[str, Any] | list | str:
 
-    return payload
+    if isinstance(template, dict):
+        return {k: replace_workflow_values(v, replacements) for k, v in template.items()}
+    elif isinstance(template, list):
+        return [replace_workflow_values(i, replacements) for i in template]
+    elif isinstance(template, str):
+        return replacements.get(template, "")
+    return template
 
 
-def inference(image_base64: str, params: Dict, use_prompt: bool = False, prompt: str = None) -> Tuple[float, float]:
-    if use_prompt and prompt:
-        params.prompt = prompt
-
+def inference(image_base64: str, params: Img2ImgPayload, use_prompt: bool = False) -> tuple[float, float]:
     params.base_image = image_base64
+    
+    workflow_replacements = {
+        f"{{{{{field}}}}}": value if value is not None else ""
+        for field, value in params.dict(exclude={"comfy_template"}).items()
+    }
 
-    lora_payload = edit_workflow(params.comfy_template, params, text_guided=use_prompt)
+    if not use_prompt:
+        workflow_replacements["prompt"] = ""
+
+    lora_payload = replace_workflow_values(params.comfy_template, workflow_replacements)
+    logger.info(lora_payload)
     lora_gen = api_gate.generate(lora_payload)[0]
     lora_gen_loss = calculate_l2_loss(base64_to_image(image_base64), lora_gen)
 
     return lora_gen_loss
 
 
-def eval_loop(dataset_path: str, params: Img2ImgPayload) -> Dict[str, List]:
+def eval_loop(dataset_path: str, params: Img2ImgPayload) -> dict[str, List]:
     lora_losses_text_guided = []
     lora_losses_no_text = []
 
