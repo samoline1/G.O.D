@@ -12,10 +12,10 @@
     "inputs": {
       "seed": 908820999791964,
       "steps": "{{steps}}",
-      "cfg": 4,
+      "cfg": "{{cfg}}",
       "sampler_name": "dpmpp_sde_gpu",
       "scheduler": "karras",
-      "denoise": 0.8,
+      "denoise": "{{denoise}}",
       "model": [
         "Lora_loader",
         0
@@ -40,7 +40,7 @@
   },
   "Prompt": {
     "inputs": {
-      "text": "",
+      "text": "{{prompt}}",
       "clip": [
         "Lora_loader",
         1
