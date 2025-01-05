@@ -135,25 +135,34 @@ async def run_evaluation_docker_diffusion(
     test_split_path: str,
     base_model_repo: str,
     base_model_filename: str,
-    lora_repo_list: str,
-    lora_filename_list: str
+    lora_repos: dict[str, Union[str, dict[str, list]]]
 ) -> EvaluationResultDiffusion:
-    client = docker.from_env()
 
     dataset_dir = os.path.abspath(test_split_path)
     container_dataset_path = "/workspace/input_data"
+    container_eval_data_path = "/workspace/diffusion_eval_data.json"
+    diffusion_eval_data_path = "validator/evaluation/diffusion_eval_data.json"
+    diffusion_eval_data = {
+        "test_split_path": container_dataset_path,
+        "base_model_repo": base_model_repo,
+        "base_model_filename": base_model_filename,
+        "lora_repos": lora_repos
+    }
+    
+    with open(diffusion_eval_data_path, "w") as file:
+        json.dump(diffusion_eval_data, file)
+
+    client = docker.from_env()
+
+    
     volume_bindings = {}
     volume_bindings[dataset_dir] = {
         "bind": container_dataset_path,
-        "mode": "ro",
+        "mode": "ro"
     }
-
-    environment = {
-        "TEST_DATASET_PATH": container_dataset_path,
-        "BASE_MODEL_REPO": base_model_repo,
-        "BASE_MODEL_FILENAME": base_model_filename,
-        "TRAINED_LORA_MODEL_REPOS": lora_repo_list,
-        "LORA_MODEL_FILENAMES": lora_filename_list,
+    volume_bindings[os.path.abspath(diffusion_eval_data_path)] = {
+        "bind": container_eval_data_path,
+        "mode": "ro"
     }
 
     async def cleanup_resources():
@@ -169,7 +178,6 @@ async def run_evaluation_docker_diffusion(
         container = await asyncio.to_thread(
             client.containers.run,
             cst.VALIDATOR_DOCKER_IMAGE_DIFFUSION,
-            environment=environment,
             volumes=volume_bindings,
             runtime="nvidia",
             device_requests=[docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])],
@@ -183,6 +191,8 @@ async def run_evaluation_docker_diffusion(
             raise Exception(f"Container exited with status {result['StatusCode']}")
 
         eval_results_dict = await get_evaluation_results(container)
+
+        os.remove(diffusion_eval_data_path)
 
         return eval_results_dict
 

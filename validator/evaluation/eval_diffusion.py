@@ -3,6 +3,7 @@ import json
 import os
 from typing import List
 from typing import Any, Union
+import re
 
 from fiber.logging_utils import get_logger
 from validator.core.models import Img2ImgPayload
@@ -24,33 +25,28 @@ def load_comfy_workflows():
     return lora_template
 
 
-def replace_workflow_values(
-    template: dict[str, Any] | list | str,
-    replacements: dict[str, Any]
-) -> dict[str, Any] | list | str:
+def edit_workflow(payload: dict, edit_elements: Img2ImgPayload, text_guided: bool) -> dict:
+    payload["Checkpoint_loader"]["inputs"]["ckpt_name"] = edit_elements.ckpt_name
+    payload["Sampler"]["inputs"]["steps"] = edit_elements.steps
+    payload["Sampler"]["inputs"]["cfg"] = edit_elements.cfg
+    payload["Sampler"]["inputs"]["denoise"] = edit_elements.denoise
+    payload["Image_loader"]["inputs"]["image"] = edit_elements.base_image
+    payload["Lora_loader"]["inputs"]["lora_name"] = edit_elements.lora_name
+    if text_guided:
+        payload["Prompt"]["inputs"]["text"] = edit_elements.prompt
+    else:
+        payload["Prompt"]["inputs"]["text"] = ""
 
-    if isinstance(template, dict):
-        return {k: replace_workflow_values(v, replacements) for k, v in template.items()}
-    elif isinstance(template, list):
-        return [replace_workflow_values(i, replacements) for i in template]
-    elif isinstance(template, str):
-        return replacements.get(template, "")
-    return template
+    return payload
 
 
-def inference(image_base64: str, params: Img2ImgPayload, use_prompt: bool = False) -> tuple[float, float]:
+def inference(image_base64: str, params: Img2ImgPayload, use_prompt: bool = False, prompt: str = None) -> tuple[float, float]:
+    if use_prompt and prompt:
+        params.prompt = prompt
+
     params.base_image = image_base64
-    
-    workflow_replacements = {
-        f"{{{{{field}}}}}": value if value is not None else ""
-        for field, value in params.dict(exclude={"comfy_template"}).items()
-    }
 
-    if not use_prompt:
-        workflow_replacements["prompt"] = ""
-
-    lora_payload = replace_workflow_values(params.comfy_template, workflow_replacements)
-    logger.info(lora_payload)
+    lora_payload = edit_workflow(params.comfy_template, params, text_guided=use_prompt)
     lora_gen = api_gate.generate(lora_payload)[0]
     lora_gen_loss = calculate_l2_loss(base64_to_image(image_base64), lora_gen)
 
@@ -76,7 +72,9 @@ def eval_loop(dataset_path: str, params: Img2ImgPayload) -> dict[str, List]:
                 with open(txt_path, "r", encoding="utf-8") as text_file:
                     prompt = text_file.read()
 
-            lora_gen_loss_text = inference(image_base64, params, use_prompt=True, prompt=prompt)
+            params.prompt = prompt
+
+            lora_gen_loss_text = inference(image_base64, params, use_prompt=True)
 
             logger.info(f"Text guided loss for {file_name} on lora model: {lora_gen_loss_text}")
 
@@ -91,11 +89,14 @@ def eval_loop(dataset_path: str, params: Img2ImgPayload) -> dict[str, List]:
 
 
 def main():
-    test_dataset_path = os.getenv("TEST_DATASET_PATH")
-    trained_lora_model_repos = os.getenv("TRAINED_LORA_MODEL_REPOS").split(",")
-    base_model_repo = os.getenv("BASE_MODEL_REPO")
-    base_model_filename = os.getenv("BASE_MODEL_FILENAME")
-    lora_model_filenames = os.getenv("LORA_MODEL_FILENAMES").split(",")
+    diffusion_eval_data_path = "/workspace/diffusion_eval_data.json"
+    with open(diffusion_eval_data_path, "r") as file:
+        diffusion_eval_data = json.load(file)
+
+    test_dataset_path = diffusion_eval_data["test_split_path"]
+    base_model_repo = diffusion_eval_data["base_model_repo"]
+    base_model_filename = diffusion_eval_data["base_model_filename"]
+    trained_lora_model_repos = list(diffusion_eval_data["lora_repos"].keys())
 
     # Base model download
     logger.info("Downloading base model")
@@ -104,10 +105,11 @@ def main():
 
     loras_to_evaluate = {}
 
-    for lora_repo, lora_filename in zip(trained_lora_model_repos, lora_model_filenames):
-        lora_metadata = {"hf_filename": lora_filename, "hf_repo": lora_repo}
-        lora_metadata["local_model_path"] = download_from_huggingface(lora_repo, lora_filename, cst.LORAS_SAVE_PATH)
-        loras_to_evaluate[f"{lora_repo}/{lora_filename}"] = lora_metadata
+    for repo_id in trained_lora_model_repos:
+        for lora_filename in diffusion_eval_data["lora_repos"][repo_id]:
+            lora_metadata = {"hf_filename": lora_filename, "hf_repo": repo_id}
+            lora_metadata["local_model_path"] = download_from_huggingface(repo_id, lora_filename, cst.LORAS_SAVE_PATH)
+            loras_to_evaluate[f"{repo_id}/{lora_filename}"] = lora_metadata
 
     lora_comfy_template = load_comfy_workflows()
     api_gate.connect()

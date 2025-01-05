@@ -84,8 +84,8 @@ class EvaluationResult(BaseModel):
 
 
 class DiffusionLosses(BaseModel):
-    text_guided_losses: List[float]
-    no_text_losses: List[float]
+    text_guided_losses: list[float]
+    no_text_losses: list[float]
 
 
 class EvaluationResultDiffusion(BaseModel):

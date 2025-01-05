@@ -220,8 +220,8 @@ class Img2ImgPayload(BaseModel):
     cfg: float
     denoise: float
     comfy_template: dict
-    prompt: str | None
-    base_image: str | None
+    prompt: str | None = None
+    base_image: str | None = None
 
 
 class NetworkStats(BaseModel):

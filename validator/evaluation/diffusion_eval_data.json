@@ -1,0 +1,1 @@
+{"test_split_path": "/workspace/input_data", "base_model_repo": "SG161222/RealVisXL_V4.0", "base_model_filename": "RealVisXL_V4.0.safetensors", "lora_repos": {"diagonalge/animelora": ["test/kohyatest.safetensors", "kohyatest-000018.safetensors"]}}
