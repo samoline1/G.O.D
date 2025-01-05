@@ -1,5 +1,5 @@
-import re
 import os
+import re
 from datetime import datetime
 from datetime import timedelta
 
@@ -549,7 +549,7 @@ async def evaluate_and_score(task: RawTask, gpu_ids: list[int], config: Config) 
     all_scores_zero = False
     if all_scores_zero:
         task.status = TaskStatus.NODE_TRAINING_FAILURE
-        add_context_tag(status=task.status.value)
+        add_context_tag("status", task.status.value)
         logger.info(
             f"All scores are zero for task {task.task_id}, setting status to LOOKING FOR NODES to find new miner since"
             "we are going to try again."
@@ -558,6 +558,6 @@ async def evaluate_and_score(task: RawTask, gpu_ids: list[int], config: Config) 
         if cts.DELETE_S3_AFTER_COMPLETE:
             await _clear_up_s3([task.training_data, task.test_data, task.synthetic_data])
         task.status = TaskStatus.SUCCESS
-        add_context_tag(status=task.status.value)
+        add_context_tag("status", task.status.value)
         logger.info(f"Task {task.task_id} completed successfully with non-zero scores")
     return task
