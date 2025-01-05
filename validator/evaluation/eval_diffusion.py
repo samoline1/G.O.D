@@ -1,15 +1,18 @@
 import base64
 import json
 import os
-from typing import List
 from typing import Any, Union
 import re
+from PIL import Image
+import numpy as np
 
 from fiber.logging_utils import get_logger
 from validator.core.models import Img2ImgPayload
 
 from validator.evaluation.utils import base64_to_image
-from validator.evaluation.utils import calculate_l2_loss
+from validator.evaluation.utils import list_supported_images
+from validator.evaluation.utils import read_image_as_base64
+from validator.evaluation.utils import read_prompt_file
 from validator.evaluation.utils import download_from_huggingface
 from validator.core import constants as cst
 from validator.utils import comfy_api_gate as api_gate
@@ -23,6 +26,15 @@ def load_comfy_workflows():
         lora_template = json.load(file)
 
     return lora_template
+
+
+def calculate_l2_loss(test_image: Image.Image, generated_image: Image.Image) -> float:
+    test_image = np.array(test_image.convert("RGB")) / 255.0
+    generated_image = np.array(generated_image.convert("RGB")) / 255.0
+    if test_image.shape != generated_image.shape:
+        raise ValueError("Images must have the same dimensions to calculate L2 loss.")
+    l2_loss = np.mean((test_image - generated_image) ** 2)
+    return l2_loss
 
 
 def edit_workflow(payload: dict, edit_elements: Img2ImgPayload, text_guided: bool) -> dict:
@@ -53,37 +65,26 @@ def inference(image_base64: str, params: Img2ImgPayload, use_prompt: bool = Fals
     return lora_gen_loss
 
 
-def eval_loop(dataset_path: str, params: Img2ImgPayload) -> dict[str, List]:
+def eval_loop(dataset_path: str, params: Img2ImgPayload) -> dict[str, list]:
     lora_losses_text_guided = []
     lora_losses_no_text = []
 
-    for file_name in os.listdir(dataset_path):
-        if file_name.lower().endswith(cst.SUPPORTED_FILE_EXTENSIONS):
-            logger.info(f"Calculating losses for {file_name}")
-            base_name = os.path.splitext(file_name)[0]
-            png_path = os.path.join(dataset_path, file_name)
-            txt_path = os.path.join(dataset_path, f"{base_name}.txt")
+    test_images_list = list_supported_images(dataset_path, cst.SUPPORTED_FILE_EXTENSIONS)
 
-            with open(png_path, "rb") as image_file:
-                image_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+    for file_name in test_images_list:
+        logger.info(f"Calculating losses for {file_name}")
 
-            prompt = None
-            if os.path.exists(txt_path):
-                with open(txt_path, "r", encoding="utf-8") as text_file:
-                    prompt = text_file.read()
+        base_name = os.path.splitext(file_name)[0]
+        png_path = os.path.join(dataset_path, file_name)
+        txt_path = os.path.join(dataset_path, f"{base_name}.txt")
 
-            params.prompt = prompt
+        image_base64 = read_image_as_base64(png_path)
+        prompt = read_prompt_file(txt_path)
 
-            lora_gen_loss_text = inference(image_base64, params, use_prompt=True)
+        params.prompt = prompt
 
-            logger.info(f"Text guided loss for {file_name} on lora model: {lora_gen_loss_text}")
-
-            lora_gen_loss_no_text = inference(image_base64, params, use_prompt=False)
-
-            logger.info(f"No text loss for {file_name} on lora model: {lora_gen_loss_no_text}")
-
-            lora_losses_text_guided.append(lora_gen_loss_text)
-            lora_losses_no_text.append(lora_gen_loss_no_text)
+        lora_losses_text_guided.append(inference(image_base64, params, use_prompt=True))
+        lora_losses_no_text.append(inference(image_base64, params, use_prompt=False))
 
     return {"text_guided_losses": lora_losses_text_guided, "no_text_losses": lora_losses_no_text}
 
