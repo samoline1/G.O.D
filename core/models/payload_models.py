@@ -43,19 +43,6 @@ class TrainResponse(BaseModel):
     task_id: UUID
 
 
-class JobStatusPayload(BaseModel):
-    task_id: UUID
-
-
-class JobStatusResponse(BaseModel):
-    task_id: UUID
-    status: JobStatus
-
-
-class EvaluationRequest(TrainRequest):
-    original_model: str
-
-
 class EvaluationResult(BaseModel):
     is_finetune: bool
     eval_loss: float
@@ -71,18 +58,6 @@ class DatasetColumnsResponse(BaseModel):
     field_instruction: str
     field_input: str | None = None
     field_output: str | None = None
-
-
-class SubmitTaskSubmissionRequest(BaseModel):
-    task_id: str
-    node_id: int
-    repo: str
-
-
-class SubmissionResponse(BaseModel):
-    success: bool
-    message: str
-    submission_id: str | None = None
 
 
 class NewTaskRequest(BaseModel):
@@ -110,10 +85,6 @@ class NewTaskResponse(BaseModel):
     task_id: UUID | None = Field(..., description="The ID of the task")
     created_at: datetime = Field(..., description="The creation time of the task")
     account_id: UUID | None = Field(..., description="The account ID who owns the task")
-
-
-class GetTasksRequest(BaseModel):
-    fingerprint: str
 
 
 class TaskResultResponse(BaseModel):
@@ -156,12 +127,6 @@ class TaskDetails(BaseModel):
 
     # Turn off protected namespace for model
     model_config = {"protected_namespaces": ()}
-
-
-class TaskListResponse(BaseModel):
-    success: bool
-    task_id: UUID
-    status: TaskStatus
 
 
 class LeaderboardRow(BaseModel):
