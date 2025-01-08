@@ -382,7 +382,12 @@ async def _update_scores(task: RawTask, task_results: list[MinerResults], psql_d
                 continue
 
             await set_task_node_quality_score(
-                task_id=task.task_id, hotkey=result.hotkey, quality_score=float(result.score), psql_db=psql_db
+                task_id=task.task_id,
+                hotkey=result.hotkey,
+                quality_score=float(result.score),
+                test_loss=result.test_loss,
+                synth_loss=result.synth_loss,
+                psql_db=psql_db
             )
 
             if result.submission:
