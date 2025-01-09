@@ -84,12 +84,8 @@ def _load_and_modify_config(
 
 
 def _load_and_modify_config_diffusion(
-    config_path: str,
-    model: str,
-    hf_repo_to_upload: str,
-    hf_folder_name_in_repo:str,
-    task_id: str
-    ) -> dict:
+    config_path: str, model: str, hf_repo_to_upload: str, hf_folder_name_in_repo: str, task_id: str
+) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
     """

@@ -6,6 +6,7 @@ from uuid import UUID
 from uuid import uuid4
 
 from pydantic import BaseModel
+from pydantic import Enum
 from pydantic import Field
 
 
@@ -60,6 +61,11 @@ class ModelData(BaseModel):
     model_config = {"protected_namespaces": ()}
 
 
+class TaskType(Enum):
+    TEXTTASK = "text_task"
+    IMAGETASK = "image_task"
+
+
 class RawTask(BaseModel):
     is_organic: bool
     task_id: UUID | None = None
@@ -79,9 +85,11 @@ class RawTask(BaseModel):
     started_at: datetime | None = None
     termination_at: datetime | None = None
     completed_at: datetime | None = None
+    task_type: TaskType
 
     # Turn off protected namespace for model
     model_config = {"protected_namespaces": ()}
+
 
 class TextTask(RawTask):
     ds_id: str
@@ -93,6 +101,7 @@ class TextTask(RawTask):
     no_input_format: str | None = None
     system_format: None = None  # NOTE: Needs updating to be optional once we accept it
     synthetic_data: str | None = None
+
 
 class ImageTask(RawTask):
     ds_url: str

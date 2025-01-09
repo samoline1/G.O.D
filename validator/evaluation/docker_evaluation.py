@@ -3,7 +3,6 @@ import io
 import json
 import os
 import tarfile
-import threading
 from typing import Union
 
 import docker
@@ -132,12 +131,8 @@ async def run_evaluation_docker(
 
 # TODO: CLEAN this up
 async def run_evaluation_docker_diffusion(
-    test_split_path: str,
-    base_model_repo: str,
-    base_model_filename: str,
-    lora_repos: dict[str, Union[str, dict[str, list]]]
+    test_split_path: str, base_model_repo: str, base_model_filename: str, lora_repos: dict[str, Union[str, dict[str, list]]]
 ) -> EvaluationResultDiffusion:
-
     dataset_dir = os.path.abspath(test_split_path)
     container_dataset_path = "/workspace/input_data"
     container_eval_data_path = "/workspace/diffusion_eval_data.json"
@@ -146,24 +141,17 @@ async def run_evaluation_docker_diffusion(
         "test_split_path": container_dataset_path,
         "base_model_repo": base_model_repo,
         "base_model_filename": base_model_filename,
-        "lora_repos": lora_repos
+        "lora_repos": lora_repos,
     }
-    
+
     with open(diffusion_eval_data_path, "w") as file:
         json.dump(diffusion_eval_data, file)
 
     client = docker.from_env()
 
-    
     volume_bindings = {}
-    volume_bindings[dataset_dir] = {
-        "bind": container_dataset_path,
-        "mode": "ro"
-    }
-    volume_bindings[os.path.abspath(diffusion_eval_data_path)] = {
-        "bind": container_eval_data_path,
-        "mode": "ro"
-    }
+    volume_bindings[dataset_dir] = {"bind": container_dataset_path, "mode": "ro"}
+    volume_bindings[os.path.abspath(diffusion_eval_data_path)] = {"bind": container_eval_data_path, "mode": "ro"}
 
     async def cleanup_resources():
         try:

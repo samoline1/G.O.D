@@ -90,7 +90,7 @@ async def tune_model_diffusion(
         dataset_zip=train_request.dataset_zip,
         model=train_request.model,
         hf_repo=train_request.hf_repo,
-        hf_folder=train_request.hf_folder
+        hf_folder=train_request.hf_folder,
     )
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)

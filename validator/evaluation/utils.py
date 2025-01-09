@@ -4,7 +4,6 @@ import shutil
 import tempfile
 from io import BytesIO
 
-import numpy as np
 from datasets import get_dataset_config_names
 from fiber.logging_utils import get_logger
 from huggingface_hub import hf_hub_download
@@ -63,6 +62,7 @@ def model_is_a_finetune(original_repo: str, finetuned_model: AutoModelForCausalL
     )
     return architecture_same and (base_model_match or has_lora_modules)
 
+
 def get_default_dataset_config(dataset_name: str) -> str | None:
     try:
         logger.info(dataset_name)
@@ -76,11 +76,13 @@ def get_default_dataset_config(dataset_name: str) -> str | None:
     else:
         return None
 
+
 def base64_to_image(base64_string: str) -> Image.Image:
     image_data = base64.b64decode(base64_string)
     image_stream = BytesIO(image_data)
     image = Image.open(image_stream)
     return image
+
 
 def download_from_huggingface(repo_id: str, filename: str, local_dir: str) -> str:
     # Use a temp folder to ensure correct file placement
@@ -98,15 +100,15 @@ def download_from_huggingface(repo_id: str, filename: str, local_dir: str) -> st
     except Exception as e:
         logger.error(f"Error downloading file: {e}")
 
+
 def list_supported_images(dataset_path: str, extensions: tuple) -> list[str]:
-    return [
-        file_name for file_name in os.listdir(dataset_path)
-        if file_name.lower().endswith(extensions)
-    ]
+    return [file_name for file_name in os.listdir(dataset_path) if file_name.lower().endswith(extensions)]
+
 
 def read_image_as_base64(image_path: str) -> str:
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
+
 
 def read_prompt_file(text_file_path: str) -> str:
     if os.path.exists(text_file_path):
