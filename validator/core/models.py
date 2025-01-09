@@ -64,20 +64,11 @@ class RawTask(BaseModel):
     is_organic: bool
     task_id: UUID | None = None
     model_id: str
-    ds_id: str
     status: str
     account_id: UUID
     times_delayed: int = 0
     hours_to_complete: int
-    field_system: str | None = None
-    field_instruction: str
-    field_input: str | None = None
-    field_output: str | None = None
-    format: str | None = None
-    no_input_format: str | None = None
-    system_format: None = None  # NOTE: Needs updating to be optional once we accept it
     test_data: str | None = None
-    synthetic_data: str | None = None
     training_data: str | None = None
     assigned_miners: list[int] | None = None
     miner_scores: list[float] | None = None
@@ -91,6 +82,20 @@ class RawTask(BaseModel):
 
     # Turn off protected namespace for model
     model_config = {"protected_namespaces": ()}
+
+class TextTask(RawTask):
+    ds_id: str
+    field_system: str | None = None
+    field_instruction: str
+    field_input: str | None = None
+    field_output: str | None = None
+    format: str | None = None
+    no_input_format: str | None = None
+    system_format: None = None  # NOTE: Needs updating to be optional once we accept it
+    synthetic_data: str | None = None
+
+class ImageTask(RawTask):
+    ds_url: str
 
 
 # NOTE: As time goes on we will expand this class to be more of a 'submmited task'?
