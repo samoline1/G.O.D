@@ -7,37 +7,45 @@ import tempfile
 def cleanup_temp_files():
     temp_dir = tempfile.gettempdir()
     for filename in os.listdir(temp_dir):
-        if filename.endswith('.json') and (
-            any(prefix in filename for prefix in ['train_data_', 'test_data_', 'synth_data_']) or
-            any(suffix in filename for suffix in ['_test_data.json', '_train_data.json', '_synth_data.json'])
+        if filename.endswith(".json") and (
+            any(prefix in filename for prefix in ["train_data_", "test_data_", "synth_data_"])
+            or any(suffix in filename for suffix in ["_test_data.json", "_train_data.json", "_synth_data.json"])
         ):
             try:
                 os.remove(os.path.join(temp_dir, filename))
             except OSError:
                 pass
 
+
 def delete_dataset_from_cache(dataset_name):
     """
     Delete dataset and associated lock files from HuggingFace cache.
+    Case-insensitive matching for dataset names.
     """
-    dataset_name = dataset_name.replace("/", "___")
+    dataset_name = dataset_name.lower().replace("/", "___")
     cache_dir = os.path.expanduser("~/.cache/huggingface/datasets")
-    dataset_path = os.path.join(cache_dir, dataset_name)
-    lock_pattern = os.path.join(cache_dir, f"*cache_huggingface_datasets_{dataset_name}*.lock")
+
+    all_datasets = os.listdir(cache_dir) if os.path.exists(cache_dir) else []
+    matching_datasets = [d for d in all_datasets if d.lower() == dataset_name]
 
     deleted = False
 
-    if os.path.exists(dataset_path):
+    for dataset_dir in matching_datasets:
+        dataset_path = os.path.join(cache_dir, dataset_dir)
         try:
             shutil.rmtree(dataset_path)
-            print(f"Deleted dataset directory: {dataset_name}")
+            print(f"Deleted dataset directory: {dataset_dir}")
             deleted = True
         except Exception as e:
-            print(f"Error deleting dataset directory '{dataset_name}': {str(e)}")
+            print(f"Error deleting dataset directory '{dataset_dir}': {str(e)}")
 
     try:
-        lock_files = glob.glob(lock_pattern)
-        for lock_file in lock_files:
+        all_lock_files = glob.glob(os.path.join(cache_dir, "*.lock"))
+        matching_locks = [
+            f for f in all_lock_files if f"cache_huggingface_datasets_{dataset_name}" in os.path.basename(f).lower()
+        ]
+
+        for lock_file in matching_locks:
             try:
                 os.remove(lock_file)
                 print(f"Deleted lock file: {os.path.basename(lock_file)}")
