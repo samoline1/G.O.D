@@ -6,7 +6,7 @@ from uuid import UUID
 from uuid import uuid4
 
 from pydantic import BaseModel
-from pydantic import Enum
+from enum import Enum
 from pydantic import Field
 
 
