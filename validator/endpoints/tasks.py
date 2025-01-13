@@ -116,9 +116,6 @@ async def create_task_with_fixed_datasets(
         is_organic=True,
         no_input_format=request.no_input_format,
         status=TaskStatus.LOOKING_FOR_NODES,
-        training_data=request.training_data,
-        synthetic_data=request.synthetic_data,
-        test_data=request.test_data,
         created_at=current_time,
         termination_at=end_timestamp,
         hours_to_complete=request.hours_to_complete,
@@ -126,6 +123,9 @@ async def create_task_with_fixed_datasets(
     )
 
     task = await task_sql.add_task(task, config.psql_db)
+    task.training_data = request.training_data
+    task.synthetic_data = request.synthetic_data
+    task.test_data = request.test_data
     await task_sql.update_task(task, config.psql_db)
 
     logger.info(task.task_id)
