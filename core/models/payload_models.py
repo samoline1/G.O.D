@@ -84,6 +84,7 @@ class NewTaskRequest(BaseModel):
 
 
 class NewTaskWithFixedDatasetsRequest(NewTaskRequest):
+    ds_repo: str | None = Field(None, description="Optional: The original repository of the dataset")
     training_data: str = Field(..., description="The prepared training dataset")
     synthetic_data: str = Field(..., description="The prepared synthetic dataset")
     test_data: str = Field(..., description="The prepared test dataset")

@@ -105,7 +105,7 @@ async def create_task_with_fixed_datasets(
 
     task = RawTask(
         model_id=request.model_repo,
-        ds_id=request.ds_repo,
+        ds_id=request.ds_repo or request.training_data,
         file_format=request.file_format,
         field_system=request.field_system,
         field_instruction=request.field_instruction,
