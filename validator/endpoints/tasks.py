@@ -126,6 +126,7 @@ async def create_task_with_fixed_datasets(
     )
 
     task = await task_sql.add_task(task, config.psql_db)
+    await task_sql.update_task(task, config.psql_db)
 
     logger.info(task.task_id)
     return NewTaskResponse(success=True, task_id=task.task_id, created_at=task.created_at, account_id=task.account_id)
