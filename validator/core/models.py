@@ -69,7 +69,6 @@ class TaskType(Enum):
 class RawTask(BaseModel):
     is_organic: bool
     task_id: UUID | None = None
-    model_id: str
     status: str
     account_id: UUID
     times_delayed: int = 0
@@ -92,6 +91,7 @@ class RawTask(BaseModel):
 
 
 class TextTask(RawTask):
+    model_id: str
     ds_id: str
     field_system: str | None = None
     field_instruction: str
@@ -104,6 +104,8 @@ class TextTask(RawTask):
 
 
 class ImageTask(RawTask):
+    model_id: str
+    model_filename: str
     ds_url: str
 
 

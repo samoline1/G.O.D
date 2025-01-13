@@ -7,7 +7,8 @@ BEGIN
 END $$;
 
 CREATE TABLE IF NOT EXISTS text_tasks (
-    task_id UUID PRIMARY KEY,
+    task_id UUID PRIMARY KEY REFERENCES tasks (task_id) ON DELETE CASCADE,
+    model_id TEXT NOT NULL,
     ds_id TEXT,
     field_system TEXT,
     field_instruction TEXT NOT NULL,
@@ -20,23 +21,27 @@ CREATE TABLE IF NOT EXISTS text_tasks (
 );
 
 CREATE TABLE IF NOT EXISTS image_tasks (
-    task_id UUID PRIMARY KEY,
-    ds_url TEXT NOT NULL
+    task_id UUID PRIMARY KEY REFERENCES tasks (task_id) ON DELETE CASCADE,
+    model_id TEXT NOT NULL,
+    ds_url TEXT NOT NULL,
+    model_filename TEXT
 );
+
+
+CREATE INDEX IF NOT EXISTS idx_text_task_id ON text_tasks (task_id);
+
+CREATE INDEX IF NOT EXISTS idx_image_task_id ON image_tasks (task_id);
 
 ALTER TABLE tasks ADD COLUMN task_type tasktype;
 
-UPDATE tasks SET task_type = 'TextTask' WHERE task_id IN (SELECT task_id FROM text_tasks);
-
-UPDATE tasks SET task_type = 'ImageTask' WHERE task_id IN (SELECT task_id FROM image_tasks);
-
 ALTER TABLE tasks ALTER COLUMN task_type SET NOT NULL;
 
-INSERT INTO text_tasks (task_id, ds_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format)
-SELECT task_id, ds_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format FROM tasks;
+INSERT INTO text_tasks (task_id, model_id, ds_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format)
+SELECT task_id, model_id, ds_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format FROM tasks;
 
 ALTER TABLE tasks
 DROP COLUMN ds_id,
+DROP COLUMN model_id,
 DROP COLUMN field_system,
 DROP COLUMN field_instruction,
 DROP COLUMN field_input,
@@ -46,10 +51,16 @@ DROP COLUMN format,
 DROP COLUMN no_input_format,
 DROP COLUMN system_format;
 
+UPDATE tasks SET task_type = 'TextTask' WHERE task_id IN (SELECT task_id FROM text_tasks);
+
 
 -- migrate:down
+DROP INDEX IF EXISTS idx_text_task_id;
+DROP INDEX IF EXISTS idx_image_task_id;
+
 ALTER TABLE tasks
 ADD COLUMN ds_id TEXT,
+ADD COLUMN model_id TEXT NOT NULL,
 ADD COLUMN field_system TEXT,
 ADD COLUMN field_instruction TEXT NOT NULL,
 ADD COLUMN field_input TEXT,
@@ -61,6 +72,7 @@ ADD COLUMN system_format TEXT;
 
 UPDATE tasks
 SET ds_id = t.ds_id,
+    model_id = t.model_id,
     field_system = t.field_system,
     field_instruction = t.field_instruction,
     field_input = t.field_input,
@@ -72,12 +84,10 @@ SET ds_id = t.ds_id,
 FROM text_tasks t
 WHERE tasks.task_id = t.task_id;
 
-DROP TABLE text_tasks;
+DROP TABLE IF EXISTS text_tasks;
+DROP TABLE IF EXISTS image_tasks;
 
-DROP TABLE image_tasks;
-
-ALTER TABLE tasks
-DROP COLUMN task_type;
+ALTER TABLE tasks DROP COLUMN task_type;
 
 DO $$
 BEGIN
@@ -85,4 +95,3 @@ BEGIN
         DROP TYPE tasktype;
     END IF;
 END $$;
-
