@@ -15,6 +15,7 @@ from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import NewTaskWithFixedDatasetsRequest
 from core.models.payload_models import TaskDetails
 from core.models.payload_models import TaskResultResponse
+from core.models.utility_models import FileFormat
 from core.models.utility_models import MinerTaskResult
 from core.models.utility_models import TaskMinerResult
 from core.models.utility_models import TaskStatus
@@ -106,7 +107,7 @@ async def create_task_with_fixed_datasets(
     task = RawTask(
         model_id=request.model_repo,
         ds_id=request.ds_repo or request.training_data,
-        file_format=request.file_format,
+        file_format=request.file_format if request.ds_repo else FileFormat.S3,
         field_system=request.field_system,
         field_instruction=request.field_instruction,
         field_input=request.field_input,
