@@ -12,6 +12,8 @@ from fiber.logging_utils import get_logger
 from core.models.payload_models import AllOfNodeResults
 from core.models.payload_models import LeaderboardRow
 from core.models.payload_models import NewTaskRequest
+from core.models.payload_models import NewTaskRequestText
+from core.models.payload_models import NewTaskRequestImage
 from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import TaskDetails
 from core.models.payload_models import TaskResultResponse
@@ -24,6 +26,9 @@ from validator.core.dependencies import get_api_key
 from validator.core.dependencies import get_config
 from validator.core.models import NetworkStats
 from validator.core.models import RawTask
+from validator.core.models import TextTask
+from validator.core.models import ImageTask
+from validator.core.models import TaskType
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
 from validator.db.sql import tasks as task_sql
 from validator.db.sql.nodes import get_all_nodes
@@ -32,7 +37,8 @@ from validator.db.sql.nodes import get_all_nodes
 logger = get_logger(__name__)
 
 
-TASKS_CREATE_ENDPOINT = "/v1/tasks/create"
+TASKS_CREATE_ENDPOINT_TEXT = "/v1/tasks/create_text"
+TASKS_CREATE_ENDPOINT_IMAGE = "/v1/tasks/create_image"
 GET_TASKS_BY_ACCOUNT_ENDPOINT = "/v1/tasks/account/{account_id}"
 GET_TASK_DETAILS_ENDPOINT = "/v1/tasks/{task_id}"
 GET_TASKS_RESULTS_ENDPOINT = "/v1/tasks/breakdown/{task_id}"
@@ -56,8 +62,8 @@ async def delete_task(
     return Response(success=True)
 
 
-async def create_task(
-    request: NewTaskRequest,
+async def create_task_text(
+    request: NewTaskRequestText,
     config: Config = Depends(get_config),
 ) -> NewTaskResponse:
     current_time = datetime.utcnow()
@@ -69,7 +75,7 @@ async def create_task(
     #        logger.info("We already have some queued organic jobs, we can't a accept any more")
     #        return NewTaskResponse(success=False, task_id=None)
 
-    task = RawTask(
+    task = TextTask(
         model_id=request.model_repo,
         ds_id=request.ds_repo,
         field_system=request.field_system,
@@ -83,7 +89,37 @@ async def create_task(
         created_at=current_time,
         termination_at=end_timestamp,
         hours_to_complete=request.hours_to_complete,
-        account_id=request.account_id,
+        account_id=request.account_id
+    )
+
+    task = await task_sql.add_task(task, config.psql_db)
+
+    logger.info(task.task_id)
+    return NewTaskResponse(success=True, task_id=task.task_id, created_at=task.created_at, account_id=task.account_id)
+
+async def create_task_image(
+    request: NewTaskRequestImage,
+    config: Config = Depends(get_config),
+) -> NewTaskResponse:
+    current_time = datetime.utcnow()
+    end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
+
+    # if there are any queued jobs that are organic we can't accept any more to avoid overloading the network
+    #    queued_tasks = await task_sql.get_tasks_with_status(TaskStatus.DELAYED, config.psql_db, include_not_ready_tasks=True)
+    #    if len(queued_tasks) > 0:
+    #        logger.info("We already have some queued organic jobs, we can't a accept any more")
+    #        return NewTaskResponse(success=False, task_id=None)
+
+    task = ImageTask(
+        model_id=request.model_repo,
+        model_filename=request.model_filename,
+        ds_url=request.ds_url,
+        is_organic=True,
+        status=TaskStatus.PENDING,
+        created_at=current_time,
+        termination_at=end_timestamp,
+        hours_to_complete=request.hours_to_complete,
+        account_id=request.account_id
     )
 
     task = await task_sql.add_task(task, config.psql_db)
@@ -251,7 +287,8 @@ async def get_completed_organic_tasks(
 
 def factory_router() -> APIRouter:
     router = APIRouter(tags=["Gradients On Demand"], dependencies=[Depends(get_api_key)])
-    router.add_api_route(TASKS_CREATE_ENDPOINT, create_task, methods=["POST"])
+    router.add_api_route(TASKS_CREATE_ENDPOINT_TEXT, create_task_text, methods=["POST"])
+    router.add_api_route(TASKS_CREATE_ENDPOINT_IMAGE, create_task_image, methods=["POST"])
     router.add_api_route(GET_TASK_DETAILS_ENDPOINT, get_task_details, methods=["GET"])
     router.add_api_route(DELETE_TASK_ENDPOINT, delete_task, methods=["DELETE"])
     router.add_api_route(GET_TASKS_RESULTS_ENDPOINT, get_miner_breakdown, methods=["GET"])

@@ -1,6 +1,7 @@
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Union
 from uuid import UUID
 
 from asyncpg.connection import Connection
@@ -12,43 +13,90 @@ from core.constants import NETUID
 from core.models.utility_models import TaskStatus
 from validator.core.models import NetworkStats
 from validator.core.models import RawTask
+from validator.core.models import TextTask
+from validator.core.models import ImageTask
+from validator.core.models import TaskType
 from validator.core.models import Task
 from validator.db.database import PSQLDB
 
 
 logger = get_logger(__name__)
 
-
-async def add_task(task: RawTask, psql_db: PSQLDB) -> RawTask:
+async def add_task(task: Union[TextTask, ImageTask], psql_db: PSQLDB) -> RawTask:
     """Add a new task"""
     async with await psql_db.connection() as connection:
         connection: Connection
-        query = f"""
-            INSERT INTO {cst.TASKS_TABLE}
-            ({cst.ACCOUNT_ID}, {cst.MODEL_ID}, {cst.DS_ID}, {cst.FIELD_SYSTEM},
-            {cst.FIELD_INSTRUCTION}, {cst.FIELD_INPUT}, {cst.STATUS},
-             {cst.HOURS_TO_COMPLETE}, {cst.FIELD_OUTPUT}, {cst.FORMAT},
-             {cst.NO_INPUT_FORMAT}, {cst.IS_ORGANIC}, {cst.CREATED_AT})
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            RETURNING *
-        """
-        task = await connection.fetchrow(
-            query,
-            task.account_id,
-            task.model_id,
-            task.ds_id,
-            task.field_system,
-            task.field_instruction,
-            task.field_input,
-            task.status,
-            task.hours_to_complete,
-            task.field_output,
-            task.format,
-            task.no_input_format,
-            task.is_organic,
-            task.created_at,
-        )
-    return RawTask(**task)
+        async with connection.transaction():
+            # Insert into the main tasks table
+            query_tasks = f"""
+                INSERT INTO {cst.TASKS_TABLE}
+                ({cst.ACCOUNT_ID}, {cst.STATUS}, {cst.IS_ORGANIC}, {cst.TIMES_DELAYED},
+                {cst.HOURS_TO_COMPLETE}, {cst.TEST_DATA}, {cst.TRAINING_DATA},
+                {cst.CREATED_AT}, {cst.NEXT_DELAY_AT}, {cst.UPDATED_AT}, {cst.STARTED_AT},
+                {cst.TERMINATION_AT}, {cst.COMPLETED_AT}, {cst.TASK_TYPE})
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                RETURNING *
+            """
+            task_record = await connection.fetchrow(
+                query_tasks,
+                task.account_id,
+                task.status,
+                task.is_organic,
+                task.times_delayed,
+                task.hours_to_complete,
+                task.test_data,
+                task.training_data,
+                task.created_at,
+                task.next_delay_at,
+                task.updated_at,
+                task.started_at,
+                task.termination_at,
+                task.completed_at,
+                task.task_type.value,
+            )
+
+            if task.task_type == TaskType.TEXTTASK:
+                specific_task = TextTask(**task.dict())
+                
+                query_text_tasks = f"""
+                    INSERT INTO {cst.TEXT_TASKS_TABLE}
+                    ({cst.TASK_ID}, {cst.MODEL_ID}, {cst.DS_ID}, {cst.FIELD_SYSTEM},
+                    {cst.FIELD_INSTRUCTION}, {cst.FIELD_INPUT}, {cst.FIELD_OUTPUT},
+                    {cst.FORMAT}, {cst.NO_INPUT_FORMAT}, {cst.SYNTHETIC_DATA})
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                """
+                await connection.execute(
+                    query_text_tasks,
+                    task_record["task_id"],
+                    specific_task.model_id,
+                    specific_task.ds_id,
+                    specific_task.field_system,
+                    specific_task.field_instruction,
+                    specific_task.field_input,
+                    specific_task.field_output,
+                    specific_task.format,
+                    specific_task.no_input_format,
+                    specific_task.synthetic_data,
+                )
+            elif task.task_type == TaskType.IMAGETASK:
+                specific_task = ImageTask(**task.dict())
+
+                query_image_tasks = f"""
+                    INSERT INTO {cst.IMAGE_TASKS_TABLE}
+                    ({cst.TASK_ID}, {cst.MODEL_ID}, {cst.MODEL_FILENAME}, {cst.DS_URL})
+                    VALUES ($1, $2, $3, $4)
+                """
+                await connection.execute(
+                    query_image_tasks,
+                    task_record["task_id"],
+                    specific_task.model_id,
+                    specific_task.model_filename,
+                    specific_task.ds_url,
+                )
+            else:
+                raise ValueError(f"Unsupported task type: {task.task_type}")
+
+    return RawTask(**task_record)
 
 
 async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:

@@ -117,7 +117,9 @@ class SubmissionResponse(BaseModel):
 
 class NewTaskRequest(BaseModel):
     account_id: UUID
+    hours_to_complete: int = Field(..., description="The number of hours to complete the task", examples=[1])
 
+class NewTaskRequestText(NewTaskRequest):
     field_instruction: str = Field(..., description="The column name for the instruction", examples=["instruction"])
     field_input: str | None = Field(None, description="The column name for the input", examples=["input"])
     field_output: str | None = Field(None, description="The column name for the output", examples=["output"])
@@ -125,15 +127,16 @@ class NewTaskRequest(BaseModel):
 
     ds_repo: str = Field(..., description="The repository for the dataset", examples=["yahma/alpaca-cleaned"])
     model_repo: str = Field(..., description="The repository for the model", examples=["Qwen/Qwen2.5-Coder-32B-Instruct"])
-
-    hours_to_complete: int = Field(..., description="The number of hours to complete the task", examples=[1])
-
     format: None = None
     no_input_format: None = None
 
     # Turn off protected namespace for model
     model_config = {"protected_namespaces": ()}
 
+class NewTaskRequestImage(NewTaskRequest):
+    ds_url: str = Field(..., description="The S3 URL for the dataset")
+    model_repo: str = Field(..., description="The repository for the model")
+    model_filename: str = Field(..., description="The filename for the model safetensors file in the repo")
 
 class NewTaskResponse(BaseModel):
     success: bool = Field(..., description="Whether the task was created successfully")

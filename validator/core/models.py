@@ -62,8 +62,8 @@ class ModelData(BaseModel):
 
 
 class TaskType(Enum):
-    TEXTTASK = "text_task"
-    IMAGETASK = "image_task"
+    TEXTTASK = "TextTask"
+    IMAGETASK = "ImageTask"
 
 
 class RawTask(BaseModel):
