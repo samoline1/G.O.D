@@ -90,7 +90,7 @@ class RawTask(BaseModel):
     model_config = {"protected_namespaces": ()}
 
 
-class TextTask(RawTask):
+class TextRawTask(RawTask):
     model_id: str
     ds_id: str
     field_system: str | None = None
@@ -103,17 +103,22 @@ class TextTask(RawTask):
     synthetic_data: str | None = None
 
 
-class ImageTask(RawTask):
+class ImageRawTask(RawTask):
     model_id: str
     model_filename: str
     ds_url: str
 
 
-# NOTE: As time goes on we will expand this class to be more of a 'submmited task'?
+# NOTE: As time goes on we will expand this class to be more of a 'submitted task'?
 # Might wanna rename this some more
 class Task(RawTask):
     trained_model_repository: str | None = None
 
+class TextTask(TextRawTask):
+    trained_model_repository: str | None = None
+
+class ImageTask(ImageRawTask):
+    trained_model_repository: str | None = None   
 
 class PeriodScore(BaseModel):
     quality_score: float

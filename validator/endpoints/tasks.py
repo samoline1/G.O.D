@@ -1,6 +1,7 @@
 from datetime import datetime
 from datetime import timedelta
 from uuid import UUID
+from typing import Union
 
 from fastapi import APIRouter
 from fastapi import Depends
@@ -16,6 +17,8 @@ from core.models.payload_models import NewTaskRequestText
 from core.models.payload_models import NewTaskRequestImage
 from core.models.payload_models import NewTaskResponse
 from core.models.payload_models import TaskDetails
+from core.models.payload_models import TextTaskDetails
+from core.models.payload_models import ImageTaskDetails
 from core.models.payload_models import TaskResultResponse
 from core.models.utility_models import MinerTaskResult
 from core.models.utility_models import TaskMinerResult
@@ -59,7 +62,7 @@ async def delete_task(
         raise HTTPException(status_code=404, detail="Task not found.")
 
     await task_sql.delete_task(task_id, config.psql_db)
-    return Response(success=True)
+    return Response(content="Success")
 
 
 async def create_task_text(
@@ -89,7 +92,8 @@ async def create_task_text(
         created_at=current_time,
         termination_at=end_timestamp,
         hours_to_complete=request.hours_to_complete,
-        account_id=request.account_id
+        account_id=request.account_id,
+        task_type=TaskType.TEXTTASK
     )
 
     task = await task_sql.add_task(task, config.psql_db)
@@ -119,7 +123,8 @@ async def create_task_image(
         created_at=current_time,
         termination_at=end_timestamp,
         hours_to_complete=request.hours_to_complete,
-        account_id=request.account_id
+        account_id=request.account_id,
+        task_type=TaskType.IMAGETASK
     )
 
     task = await task_sql.add_task(task, config.psql_db)
@@ -182,30 +187,47 @@ async def get_task_details_by_account(
 async def get_task_details(
     task_id: UUID,
     config: Config = Depends(get_config),
-) -> TaskDetails:
+) -> Union[TextTaskDetails, ImageTaskDetails]:
     task = await task_sql.get_task_by_id(task_id, config.psql_db)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
 
-    return TaskDetails(
-        id=task_id,
-        account_id=task.account_id,
-        status=task.status,
-        base_model_repository=task.model_id,
-        ds_repo=task.ds_id,
-        field_input=task.field_input,
-        field_system=task.field_system,
-        field_instruction=task.field_instruction,
-        field_output=task.field_output,
-        format=task.format,
-        no_input_format=task.no_input_format,
-        system_format=task.system_format,
-        created_at=task.created_at,
-        started_at=task.started_at,
-        finished_at=task.termination_at,
-        hours_to_complete=task.hours_to_complete,
-        trained_model_repository=task.trained_model_repository,
-    )
+    if task.task_type.value == TaskType.TEXTTASK.value:
+        return TextTaskDetails(
+            id=task_id,
+            account_id=task.account_id,
+            status=task.status,
+            base_model_repository=task.model_id,
+            ds_repo=task.ds_id,
+            field_input=task.field_input,
+            field_system=task.field_system,
+            field_instruction=task.field_instruction,
+            field_output=task.field_output,
+            format=task.format,
+            no_input_format=task.no_input_format,
+            system_format=task.system_format,
+            created_at=task.created_at,
+            started_at=task.started_at,
+            finished_at=task.termination_at,
+            hours_to_complete=task.hours_to_complete,
+            trained_model_repository=task.trained_model_repository,
+            task_type=task.task_type
+        )
+    else:
+        return ImageTaskDetails(
+            id=task_id,
+            account_id=task.account_id,
+            status=task.status,
+            base_model_repository=task.model_id,
+            ds_url=task.ds_url,
+            model_filename=task.model_filename,
+            created_at=task.created_at,
+            started_at=task.started_at,
+            finished_at=task.termination_at,
+            hours_to_complete=task.hours_to_complete,
+            trained_model_repository=task.trained_model_repository,
+            task_type=task.task_type
+        )
 
 
 async def get_miner_breakdown(

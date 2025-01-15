@@ -164,6 +164,13 @@ class TaskDetails(BaseModel):
     id: UUID
     account_id: UUID
     status: TaskStatus
+    started_at: datetime | None
+    finished_at: datetime | None
+    created_at: datetime
+    hours_to_complete: int
+    trained_model_repository: str | None
+
+class TextTaskDetails(TaskDetails):
     base_model_repository: str
     ds_repo: str
 
@@ -181,15 +188,13 @@ class TaskDetails(BaseModel):
     )
     system_format: None = Field(None, description="How to format the `system (prompt)`", examples=["{system}"])
 
-    started_at: datetime | None
-    finished_at: datetime | None
-    created_at: datetime
-    hours_to_complete: int
-    trained_model_repository: str | None
-
     # Turn off protected namespace for model
     model_config = {"protected_namespaces": ()}
 
+class ImageTaskDetails(TaskDetails):
+    ds_url: str = Field(..., description="The S3 URL for the dataset")
+    base_model_repository: str = Field(..., description="The repository for the model")
+    model_filename: str = Field(..., description="The filename for the model safetensors file in the repo")
 
 class TaskListResponse(BaseModel):
     success: bool

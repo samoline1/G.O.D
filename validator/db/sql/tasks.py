@@ -13,21 +13,22 @@ from core.constants import NETUID
 from core.models.utility_models import TaskStatus
 from validator.core.models import NetworkStats
 from validator.core.models import RawTask
-from validator.core.models import TextTask
-from validator.core.models import ImageTask
+from validator.core.models import TextRawTask
+from validator.core.models import ImageRawTask
 from validator.core.models import TaskType
 from validator.core.models import Task
+from validator.core.models import TextTask
+from validator.core.models import ImageTask
 from validator.db.database import PSQLDB
 
 
 logger = get_logger(__name__)
 
-async def add_task(task: Union[TextTask, ImageTask], psql_db: PSQLDB) -> RawTask:
+async def add_task(task: Union[TextRawTask, ImageRawTask], psql_db: PSQLDB) -> Union[TextRawTask, ImageRawTask]:
     """Add a new task"""
     async with await psql_db.connection() as connection:
         connection: Connection
         async with connection.transaction():
-            # Insert into the main tasks table
             query_tasks = f"""
                 INSERT INTO {cst.TASKS_TABLE}
                 ({cst.ACCOUNT_ID}, {cst.STATUS}, {cst.IS_ORGANIC}, {cst.TIMES_DELAYED},
@@ -55,8 +56,8 @@ async def add_task(task: Union[TextTask, ImageTask], psql_db: PSQLDB) -> RawTask
                 task.task_type.value,
             )
 
-            if task.task_type == TaskType.TEXTTASK:
-                specific_task = TextTask(**task.dict())
+            if task.task_type.value == TaskType.TEXTTASK.value:
+                specific_task = TextRawTask(**task.dict())
                 
                 query_text_tasks = f"""
                     INSERT INTO {cst.TEXT_TASKS_TABLE}
@@ -78,8 +79,8 @@ async def add_task(task: Union[TextTask, ImageTask], psql_db: PSQLDB) -> RawTask
                     specific_task.no_input_format,
                     specific_task.synthetic_data,
                 )
-            elif task.task_type == TaskType.IMAGETASK:
-                specific_task = ImageTask(**task.dict())
+            elif task.task_type.value == TaskType.IMAGETASK.value:
+                specific_task = ImageRawTask(**task.dict())
 
                 query_image_tasks = f"""
                     INSERT INTO {cst.IMAGE_TASKS_TABLE}
@@ -95,8 +96,8 @@ async def add_task(task: Union[TextTask, ImageTask], psql_db: PSQLDB) -> RawTask
                 )
             else:
                 raise ValueError(f"Unsupported task type: {task.task_type}")
-
-    return RawTask(**task_record)
+        
+        return RawTask(**task_record)
 
 
 async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node]:
@@ -308,17 +309,51 @@ async def get_miners_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Node]:
         return [Node(**dict(row)) for row in rows]
 
 
-async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[RawTask]:
-    """Get a task by ID"""
+async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Union[TextRawTask, ImageRawTask]]:
+    """Get a full task by ID"""
     async with await psql_db.connection() as connection:
         connection: Connection
-        query = f"""
+
+        base_query = f"""
             SELECT * FROM {cst.TASKS_TABLE} WHERE {cst.TASK_ID} = $1
         """
-        row = await connection.fetchrow(query, task_id)
-        if row:
-            return RawTask(**dict(row))
-        return None
+        base_row = await connection.fetchrow(base_query, task_id)
+        
+        if not base_row:
+            return None
+
+        task_type = base_row[cst.TASK_TYPE]
+        
+        if task_type == TaskType.TEXTTASK.value:
+            specific_query = f"""
+                SELECT t.*, tt.model_id, tt.ds_id, tt.field_system,
+                       tt.field_instruction, tt.field_input, tt.field_output,
+                       tt.format, tt.no_input_format, tt.synthetic_data
+                FROM {cst.TASKS_TABLE} t
+                LEFT JOIN {cst.TEXT_TASKS_TABLE} tt ON t.{cst.TASK_ID} = tt.{cst.TASK_ID}
+                WHERE t.{cst.TASK_ID} = $1
+            """
+        elif task_type == TaskType.IMAGETASK.value:
+            specific_query = f"""
+                SELECT t.*, it.model_id, it.model_filename, it.ds_url
+                FROM {cst.TASKS_TABLE} t
+                LEFT JOIN {cst.IMAGE_TASKS_TABLE} it ON t.{cst.TASK_ID} = it.{cst.TASK_ID}
+                WHERE t.{cst.TASK_ID} = $1
+            """
+        else:
+            raise ValueError(f"Unsupported task type: {task_type}")
+
+        full_row = await connection.fetchrow(specific_query, task_id)
+
+        if not full_row:
+            return None
+
+        full_task_data = dict(full_row)
+        if task_type == TaskType.TEXTTASK.value:
+            return TextRawTask(**full_task_data)
+        elif task_type == TaskType.IMAGETASK.value:
+            return ImageRawTask(**full_task_data)
+
 
 
 async def get_winning_submissions_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Dict]:
@@ -339,35 +374,82 @@ async def get_winning_submissions_for_task(task_id: UUID, psql_db: PSQLDB) -> Li
         return [dict(row) for row in rows]
 
 
-async def get_task_by_id(task_id: UUID, psql_db: PSQLDB) -> Task:
-    """Get a task by ID along with its winning submissions"""
+async def get_task_by_id(task_id: UUID, psql_db: PSQLDB) -> Union[TextTask, ImageTask]:
+    """Get a task by ID along with its winning submissions and task-specific details"""
     async with await psql_db.connection() as connection:
         connection: Connection
-        query = f"""
-            WITH victorious_repo AS (
-                SELECT submissions.task_id, submissions.repo
-                FROM {cst.SUBMISSIONS_TABLE} submissions
-                JOIN {cst.TASK_NODES_TABLE} task_nodes
-                ON submissions.task_id = task_nodes.task_id
-                AND submissions.hotkey = task_nodes.hotkey
-                AND submissions.netuid = task_nodes.netuid
-                WHERE submissions.task_id = $1
-                AND task_nodes.quality_score IS NOT NULL
-                ORDER BY task_nodes.quality_score DESC
-                LIMIT 1
-            )
-            SELECT
-                tasks.*,
-                victorious_repo.repo as trained_model_repository
-            FROM {cst.TASKS_TABLE} tasks
-            LEFT JOIN victorious_repo ON tasks.task_id = victorious_repo.task_id
-            WHERE tasks.{cst.TASK_ID} = $1
+
+        base_query = f"""
+            SELECT * FROM {cst.TASKS_TABLE} WHERE {cst.TASK_ID} = $1
         """
-        row = await connection.fetchrow(query, task_id)
+        base_row = await connection.fetchrow(base_query, task_id)
+        
+        if not base_row:
+            return None
+
+        task_type = base_row[cst.TASK_TYPE]
+
+        if task_type == TaskType.TEXTTASK.value:
+            specific_query = f"""
+                WITH victorious_repo AS (
+                    SELECT submissions.task_id, submissions.repo
+                    FROM {cst.SUBMISSIONS_TABLE} submissions
+                    JOIN {cst.TASK_NODES_TABLE} task_nodes
+                    ON submissions.task_id = task_nodes.task_id
+                    AND submissions.hotkey = task_nodes.hotkey
+                    AND submissions.netuid = task_nodes.netuid
+                    WHERE submissions.task_id = $1
+                    AND task_nodes.quality_score IS NOT NULL
+                    ORDER BY task_nodes.quality_score DESC
+                    LIMIT 1
+                )
+                SELECT
+                    tasks.*,
+                    tt.model_id, tt.ds_id, tt.field_system,
+                    tt.field_instruction, tt.field_input, tt.field_output,
+                    tt.format, tt.no_input_format, tt.synthetic_data,
+                    victorious_repo.repo as trained_model_repository
+                FROM {cst.TASKS_TABLE} tasks
+                LEFT JOIN {cst.TEXT_TASKS_TABLE} tt ON tasks.{cst.TASK_ID} = tt.{cst.TASK_ID}
+                LEFT JOIN victorious_repo ON tasks.task_id = victorious_repo.task_id
+                WHERE tasks.{cst.TASK_ID} = $1
+            """
+        elif task_type == TaskType.IMAGETASK.value:
+            specific_query = f"""
+                WITH victorious_repo AS (
+                    SELECT submissions.task_id, submissions.repo
+                    FROM {cst.SUBMISSIONS_TABLE} submissions
+                    JOIN {cst.TASK_NODES_TABLE} task_nodes
+                    ON submissions.task_id = task_nodes.task_id
+                    AND submissions.hotkey = task_nodes.hotkey
+                    AND submissions.netuid = task_nodes.netuid
+                    WHERE submissions.task_id = $1
+                    AND task_nodes.quality_score IS NOT NULL
+                    ORDER BY task_nodes.quality_score DESC
+                    LIMIT 1
+                )
+                SELECT
+                    tasks.*,
+                    it.model_id, it.model_filename, it.ds_url,
+                    victorious_repo.repo as trained_model_repository
+                FROM {cst.TASKS_TABLE} tasks
+                LEFT JOIN {cst.IMAGE_TASKS_TABLE} it ON tasks.{cst.TASK_ID} = it.{cst.TASK_ID}
+                LEFT JOIN victorious_repo ON tasks.task_id = victorious_repo.task_id
+                WHERE tasks.{cst.TASK_ID} = $1
+            """
+        else:
+            raise ValueError(f"Unsupported task type: {task_type}")
+
+        row = await connection.fetchrow(specific_query, task_id)
         if not row:
             return None
 
-        return Task(**dict(row))
+        full_task_data = dict(row)
+        if task_type == TaskType.TEXTTASK.value:
+            return TextTask(**full_task_data)
+        elif task_type == TaskType.IMAGETASK.value:
+            return ImageTask(**full_task_data)
+
 
 
 async def get_tasks(psql_db: PSQLDB, limit: int = 100, offset: int = 0) -> List[Task]:
