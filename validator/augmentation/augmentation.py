@@ -134,7 +134,7 @@ async def generate_from_output(row: dict, output_field: str, prompts: Prompts, k
     return generated_inputs
 
 
-async def generate_augmented_dataset(sampled_data: List[dict], column_to_reformulate: str | None, keypair: Keypair) -> List[dict]:
+async def generate_augmented_text_dataset(sampled_data: List[dict], column_to_reformulate: str | None, keypair: Keypair) -> List[dict]:
     prompts = load_prompts()
     logger.info("Creating an augmented dataset...")  # Task id would be nice here
     synthetic_dataset = []

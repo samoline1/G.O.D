@@ -13,7 +13,7 @@ from core.models.payload_models import EvaluationResult
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
-from core.models.utility_models import get_task_config
+from core.models.task_config_models import get_task_config
 from core.utils import download_s3_file
 from validator.core.config import Config
 from validator.core.models import ImageRawTask

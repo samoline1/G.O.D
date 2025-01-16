@@ -78,7 +78,7 @@ async def create_task_text(
 
     task = TextTask(
         model_id=request.model_repo,
-        ds_id=request.ds_repo,
+        ds=request.ds_repo,
         field_system=request.field_system,
         field_instruction=request.field_instruction,
         field_input=request.field_input,
@@ -116,7 +116,7 @@ async def create_task_image(
     task = ImageTask(
         model_id=request.model_repo,
         model_filename=request.model_filename,
-        ds_url=request.ds_url,
+        ds=request.ds_url,
         is_organic=True,
         status=TaskStatus.PENDING,
         created_at=current_time,
@@ -197,7 +197,7 @@ async def get_task_details(
             account_id=task.account_id,
             status=task.status,
             base_model_repository=task.model_id,
-            ds_repo=task.ds_id,
+            ds_repo=task.ds,
             field_input=task.field_input,
             field_system=task.field_system,
             field_instruction=task.field_instruction,
@@ -218,7 +218,7 @@ async def get_task_details(
             account_id=task.account_id,
             status=task.status,
             base_model_repository=task.model_id,
-            ds_url=task.ds_url,
+            ds_url=task.ds,
             model_filename=task.model_filename,
             created_at=task.created_at,
             started_at=task.started_at,

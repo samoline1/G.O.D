@@ -8,10 +8,8 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS text_tasks (
     task_id UUID PRIMARY KEY REFERENCES tasks (task_id) ON DELETE CASCADE,
-    model_id TEXT NOT NULL,
-    ds_id TEXT,
     field_system TEXT,
-    field_instruction TEXT NOT NULL,
+    field_instruction TEXT,
     field_input TEXT,
     field_output TEXT,
     synthetic_data TEXT,
@@ -22,26 +20,22 @@ CREATE TABLE IF NOT EXISTS text_tasks (
 
 CREATE TABLE IF NOT EXISTS image_tasks (
     task_id UUID PRIMARY KEY REFERENCES tasks (task_id) ON DELETE CASCADE,
-    model_id TEXT NOT NULL,
-    ds_url TEXT NOT NULL,
     model_filename TEXT
 );
-
 
 CREATE INDEX IF NOT EXISTS idx_text_task_id ON text_tasks (task_id);
 
 CREATE INDEX IF NOT EXISTS idx_image_task_id ON image_tasks (task_id);
 
 ALTER TABLE tasks ADD COLUMN task_type tasktype;
+ALTER TABLE tasks RENAME COLUMN ds_id TO ds;
 
 ALTER TABLE tasks ALTER COLUMN task_type SET NOT NULL;
 
-INSERT INTO text_tasks (task_id, model_id, ds_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format)
-SELECT task_id, model_id, ds_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format FROM tasks;
+INSERT INTO text_tasks (task_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format)
+SELECT task_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format FROM tasks;
 
 ALTER TABLE tasks
-DROP COLUMN ds_id,
-DROP COLUMN model_id,
 DROP COLUMN field_system,
 DROP COLUMN field_instruction,
 DROP COLUMN field_input,
@@ -55,37 +49,24 @@ UPDATE tasks SET task_type = 'TextTask' WHERE task_id IN (SELECT task_id FROM te
 
 
 -- migrate:down
+DROP TABLE IF EXISTS text_tasks;
+DROP TABLE IF EXISTS image_tasks;
+
 DROP INDEX IF EXISTS idx_text_task_id;
 DROP INDEX IF EXISTS idx_image_task_id;
 
 ALTER TABLE tasks
-ADD COLUMN ds_id TEXT,
-ADD COLUMN model_id TEXT NOT NULL,
+RENAME COLUMN ds TO ds_id;
+
+ALTER TABLE tasks
 ADD COLUMN field_system TEXT,
-ADD COLUMN field_instruction TEXT NOT NULL,
+ADD COLUMN field_instruction TEXT,
 ADD COLUMN field_input TEXT,
 ADD COLUMN field_output TEXT,
 ADD COLUMN synthetic_data TEXT,
 ADD COLUMN format TEXT,
 ADD COLUMN no_input_format TEXT,
 ADD COLUMN system_format TEXT;
-
-UPDATE tasks
-SET ds_id = t.ds_id,
-    model_id = t.model_id,
-    field_system = t.field_system,
-    field_instruction = t.field_instruction,
-    field_input = t.field_input,
-    field_output = t.field_output,
-    synthetic_data = t.synthetic_data,
-    format = t.format,
-    no_input_format = t.no_input_format,
-    system_format = t.system_format
-FROM text_tasks t
-WHERE tasks.task_id = t.task_id;
-
-DROP TABLE IF EXISTS text_tasks;
-DROP TABLE IF EXISTS image_tasks;
 
 ALTER TABLE tasks DROP COLUMN task_type;
 

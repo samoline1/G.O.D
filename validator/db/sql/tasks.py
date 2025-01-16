@@ -25,23 +25,25 @@ from validator.db.database import PSQLDB
 logger = get_logger(__name__)
 
 
-async def add_task(task: Union[TextRawTask, ImageRawTask], psql_db: PSQLDB) -> Union[TextRawTask, ImageRawTask]:
+async def add_task(task: Union[TextRawTask, ImageRawTask], psql_db: PSQLDB) -> RawTask:
     """Add a new task"""
     async with await psql_db.connection() as connection:
         connection: Connection
         async with connection.transaction():
             query_tasks = f"""
                 INSERT INTO {cst.TASKS_TABLE}
-                ({cst.ACCOUNT_ID}, {cst.STATUS}, {cst.IS_ORGANIC}, {cst.TIMES_DELAYED},
-                {cst.HOURS_TO_COMPLETE}, {cst.TEST_DATA}, {cst.TRAINING_DATA},
+                ({cst.ACCOUNT_ID}, {cst.MODEL_ID}, {cst.DS}, {cst.STATUS}, {cst.IS_ORGANIC},
+                {cst.TIMES_DELAYED}, {cst.HOURS_TO_COMPLETE}, {cst.TEST_DATA}, {cst.TRAINING_DATA},
                 {cst.CREATED_AT}, {cst.NEXT_DELAY_AT}, {cst.UPDATED_AT}, {cst.STARTED_AT},
                 {cst.TERMINATION_AT}, {cst.COMPLETED_AT}, {cst.TASK_TYPE})
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                 RETURNING *
             """
             task_record = await connection.fetchrow(
                 query_tasks,
                 task.account_id,
+                task.model_id,
+                task.ds,
                 task.status,
                 task.is_organic,
                 task.times_delayed,
@@ -62,16 +64,14 @@ async def add_task(task: Union[TextRawTask, ImageRawTask], psql_db: PSQLDB) -> U
 
                 query_text_tasks = f"""
                     INSERT INTO {cst.TEXT_TASKS_TABLE}
-                    ({cst.TASK_ID}, {cst.MODEL_ID}, {cst.DS_ID}, {cst.FIELD_SYSTEM},
-                    {cst.FIELD_INSTRUCTION}, {cst.FIELD_INPUT}, {cst.FIELD_OUTPUT},
-                    {cst.FORMAT}, {cst.NO_INPUT_FORMAT}, {cst.SYNTHETIC_DATA})
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    ({cst.TASK_ID}, {cst.FIELD_SYSTEM}, {cst.FIELD_INSTRUCTION},
+                    {cst.FIELD_INPUT}, {cst.FIELD_OUTPUT}, {cst.FORMAT},
+                    {cst.NO_INPUT_FORMAT}, {cst.SYNTHETIC_DATA})
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """
                 await connection.execute(
                     query_text_tasks,
                     task_record["task_id"],
-                    specific_task.model_id,
-                    specific_task.ds,
                     specific_task.field_system,
                     specific_task.field_instruction,
                     specific_task.field_input,
@@ -85,19 +85,17 @@ async def add_task(task: Union[TextRawTask, ImageRawTask], psql_db: PSQLDB) -> U
 
                 query_image_tasks = f"""
                     INSERT INTO {cst.IMAGE_TASKS_TABLE}
-                    ({cst.TASK_ID}, {cst.MODEL_ID}, {cst.MODEL_FILENAME}, {cst.DS_URL})
-                    VALUES ($1, $2, $3, $4)
+                    ({cst.TASK_ID}, {cst.MODEL_FILENAME})
+                    VALUES ($1, $2)
                 """
                 await connection.execute(
                     query_image_tasks,
                     task_record["task_id"],
-                    specific_task.model_id,
-                    specific_task.model_filename,
-                    specific_task.ds_url,
+                    specific_task.model_filename
                 )
             else:
                 raise ValueError(f"Unsupported task type: {task.task_type}")
-
+                          
         return RawTask(**task_record)
 
 
@@ -140,7 +138,7 @@ async def get_tasks_with_status(
             task_type = row[cst.TASK_TYPE]
             if task_type == TaskType.TEXTTASK.value:
                 specific_query = f"""
-                    SELECT t.*, tt.model_id, tt.ds_id, tt.field_system,
+                    SELECT t.*, tt.field_system,
                            tt.field_instruction, tt.field_input, tt.field_output,
                            tt.format, tt.no_input_format, tt.synthetic_data
                     FROM {cst.TASKS_TABLE} t
@@ -149,7 +147,7 @@ async def get_tasks_with_status(
                 """
             elif task_type == TaskType.IMAGETASK.value:
                 specific_query = f"""
-                    SELECT t.*, it.model_id, it.model_filename, it.ds_url
+                    SELECT t.*, it.model_filename
                     FROM {cst.TASKS_TABLE} t
                     LEFT JOIN {cst.IMAGE_TASKS_TABLE} it ON t.{cst.TASK_ID} = it.{cst.TASK_ID}
                     WHERE t.{cst.TASK_ID} = $1
@@ -181,7 +179,7 @@ async def assign_node_to_task(task_id: str, node: Node, psql_db: PSQLDB) -> None
         await connection.execute(query, task_id, node.hotkey, NETUID)
 
 
-async def update_task(updated_task: RawTask, psql_db: PSQLDB) -> RawTask:
+async def update_task(updated_task: Union[TextRawTask, ImageRawTask], psql_db: PSQLDB) -> Union[TextRawTask, ImageRawTask]:
     existing_task = await get_task(updated_task.task_id, psql_db)
     if not existing_task:
         raise ValueError(f"Task {updated_task.task_id} not found in the database?")
@@ -194,9 +192,10 @@ async def update_task(updated_task: RawTask, psql_db: PSQLDB) -> RawTask:
     async with await psql_db.connection() as connection:
         connection: Connection
         async with connection.transaction():
-            if updates:
-                set_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(updates.keys())])
-                values = list(updates.values())
+            base_updates = {k: v for k, v in updates.items() if k in [cst.STATUS, cst.IS_ORGANIC, cst.TIMES_DELAYED, cst.HOURS_TO_COMPLETE]}
+            if base_updates:
+                set_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(base_updates.keys())])
+                values = list(base_updates.values())
                 query = f"""
                     UPDATE {cst.TASKS_TABLE}
                     SET {set_clause}, {cst.UPDATED_AT} = CURRENT_TIMESTAMP
@@ -211,6 +210,31 @@ async def update_task(updated_task: RawTask, psql_db: PSQLDB) -> RawTask:
                 """
                 await connection.execute(query, updated_task.task_id)
 
+            # Add specific updates based on task type
+            if updated_task.task_type == TaskType.TEXTTASK:
+                specific_updates = {k: v for k, v in updates.items() if k in [cst.FIELD_SYSTEM, cst.FIELD_INSTRUCTION, cst.FIELD_INPUT, cst.FIELD_OUTPUT, cst.FORMAT, cst.NO_INPUT_FORMAT, cst.SYNTHETIC_DATA]}
+                if specific_updates:
+                    specific_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(specific_updates.keys())])
+                    specific_values = list(specific_updates.values())
+                    query = f"""
+                        UPDATE {cst.TEXT_TASKS_TABLE}
+                        SET {specific_clause}
+                        WHERE {cst.TASK_ID} = $1
+                    """
+                    await connection.execute(query, updated_task.task_id, *specific_values)
+            elif updated_task.task_type == TaskType.IMAGETASK:
+                specific_updates = {k: v for k, v in updates.items() if k in [cst.MODEL_FILENAME]}
+                if specific_updates:
+                    specific_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(specific_updates.keys())])
+                    specific_values = list(specific_updates.values())
+                    query = f"""
+                        UPDATE {cst.IMAGE_TASKS_TABLE}
+                        SET {specific_clause}
+                        WHERE {cst.TASK_ID} = $1
+                    """
+                    await connection.execute(query, updated_task.task_id, *specific_values)
+
+            # Update assigned miners if provided
             if updated_task.assigned_miners is not None:
                 await connection.execute(
                     f"DELETE FROM {cst.TASK_NODES_TABLE} WHERE {cst.TASK_ID} = $1 AND {cst.NETUID} = $2",
@@ -228,6 +252,7 @@ async def update_task(updated_task: RawTask, psql_db: PSQLDB) -> RawTask:
                     await connection.execute(query, updated_task.task_id, updated_task.assigned_miners, NETUID)
 
     return await get_task(updated_task.task_id, psql_db)
+
 
 
 async def get_test_set_for_task(task_id: str, psql_db: PSQLDB):
@@ -359,7 +384,7 @@ async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Union[TextRawTask
 
         if task_type == TaskType.TEXTTASK.value:
             specific_query = f"""
-                SELECT t.*, tt.model_id, tt.ds_id, tt.field_system,
+                SELECT t.*, tt.field_system,
                        tt.field_instruction, tt.field_input, tt.field_output,
                        tt.format, tt.no_input_format, tt.synthetic_data
                 FROM {cst.TASKS_TABLE} t
@@ -368,7 +393,7 @@ async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Union[TextRawTask
             """
         elif task_type == TaskType.IMAGETASK.value:
             specific_query = f"""
-                SELECT t.*, it.model_id, it.model_filename, it.ds_url
+                SELECT t.*, it.model_filename
                 FROM {cst.TASKS_TABLE} t
                 LEFT JOIN {cst.IMAGE_TASKS_TABLE} it ON t.{cst.TASK_ID} = it.{cst.TASK_ID}
                 WHERE t.{cst.TASK_ID} = $1
@@ -437,7 +462,7 @@ async def get_task_by_id(task_id: UUID, psql_db: PSQLDB) -> Union[TextTask, Imag
                 )
                 SELECT
                     tasks.*,
-                    tt.model_id, tt.ds_id, tt.field_system,
+                    tt.field_system,
                     tt.field_instruction, tt.field_input, tt.field_output,
                     tt.format, tt.no_input_format, tt.synthetic_data,
                     victorious_repo.repo as trained_model_repository
@@ -462,7 +487,7 @@ async def get_task_by_id(task_id: UUID, psql_db: PSQLDB) -> Union[TextTask, Imag
                 )
                 SELECT
                     tasks.*,
-                    it.model_id, it.model_filename, it.ds_url,
+                    it.model_filename,
                     victorious_repo.repo as trained_model_repository
                 FROM {cst.TASKS_TABLE} tasks
                 LEFT JOIN {cst.IMAGE_TASKS_TABLE} it ON tasks.{cst.TASK_ID} = it.{cst.TASK_ID}

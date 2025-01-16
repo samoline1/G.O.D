@@ -113,7 +113,6 @@ def start_tuning_container_diffusion(job: DiffusionJob):
     logger.info("STARTING THE DIFFUSION TUNING CONTAINER")
     logger.info("=" * 80)
 
-    config_filename = "base_diffusion"
     config_path = os.path.join(cst.CONFIG_DIR, f"{job.job_id}.toml")
 
     config = _load_and_modify_config_diffusion(config_path, job.model, job.hf_repo, job.hf_folder, job.job_id)
