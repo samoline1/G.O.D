@@ -72,3 +72,4 @@ TASK_NODE_QUALITY_SCORE = "quality_score"
 
 # Common Column Names (shared between tables)
 QUALITY_SCORE = "quality_score"  # Used in both submissions and task_nodes
+

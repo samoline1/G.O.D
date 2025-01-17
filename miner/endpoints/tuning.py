@@ -14,7 +14,7 @@ from fiber.miner.dependencies import verify_request
 from pydantic import ValidationError
 
 import core.constants as cst
-from core.models.payload_models import MinerTaskRequest
+from core.models.payload_models import MinerTaskOffer
 from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequestDiffusion
 from core.models.payload_models import TrainRequestText
@@ -122,7 +122,7 @@ async def get_latest_model_submission(
 
 
 async def task_offer(
-    request: MinerTaskRequest,
+    request: MinerTaskOffer,
     config: Config = Depends(get_config),
     worker_config: WorkerConfig = Depends(get_worker_config),
 ) -> MinerTaskResponse:

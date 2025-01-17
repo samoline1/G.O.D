@@ -17,7 +17,6 @@ from validator.core.models import ImageRawTask
 from validator.core.models import RawTask
 from validator.core.models import TextRawTask
 from validator.evaluation.scoring import evaluate_and_score
-from validator.tasks.task_prep import prepare_text_task
 from validator.utils.call_endpoint import process_non_stream_fiber
 from validator.utils.logging import TaskContext
 from validator.utils.logging import create_extra_log

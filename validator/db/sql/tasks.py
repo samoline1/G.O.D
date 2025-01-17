@@ -25,7 +25,7 @@ from validator.db.database import PSQLDB
 logger = get_logger(__name__)
 
 
-async def add_task(task: Union[TextRawTask, ImageRawTask], psql_db: PSQLDB) -> RawTask:
+async def add_task(task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> RawTask:
     """Add a new task"""
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -119,7 +119,7 @@ async def get_nodes_assigned_to_task(task_id: str, psql_db: PSQLDB) -> List[Node
 
 async def get_tasks_with_status(
     status: TaskStatus, psql_db: PSQLDB, include_not_ready_tasks=False
-) -> List[Union[TextRawTask, ImageRawTask]]:
+) -> List[TextRawTask | ImageRawTask]:
     delay_timestamp_clause = (
         "" if include_not_ready_tasks else f"AND ({cst.NEXT_DELAY_AT} IS NULL OR {cst.NEXT_DELAY_AT} <= NOW())"
     )
@@ -179,7 +179,7 @@ async def assign_node_to_task(task_id: str, node: Node, psql_db: PSQLDB) -> None
         await connection.execute(query, task_id, node.hotkey, NETUID)
 
 
-async def update_task(updated_task: Union[TextRawTask, ImageRawTask], psql_db: PSQLDB) -> Union[TextRawTask, ImageRawTask]:
+async def update_task(updated_task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> TextRawTask | ImageRawTask:
     existing_task = await get_task(updated_task.task_id, psql_db)
     if not existing_task:
         raise ValueError(f"Task {updated_task.task_id} not found in the database?")
@@ -192,7 +192,7 @@ async def update_task(updated_task: Union[TextRawTask, ImageRawTask], psql_db: P
     async with await psql_db.connection() as connection:
         connection: Connection
         async with connection.transaction():
-            base_updates = {k: v for k, v in updates.items() if k in [cst.STATUS, cst.IS_ORGANIC, cst.TIMES_DELAYED, cst.HOURS_TO_COMPLETE]}
+            base_updates = {k: v for k, v in updates.items() if k in [cst.TASK_ID, cst.ACCOUNT_ID, cst.MODEL_ID, cst.DS, cst.STATUS, cst.HOURS_TO_COMPLETE, cst.TEST_DATA, cst.TRAINING_DATA, cst.MINER_SCORES, cst.CREATED_AT, cst.NEXT_DELAY_AT, cst.UPDATED_AT, cst.STARTED_AT, cst.COMPLETED_AT, cst.TERMINATION_AT, cst.IS_ORGANIC, cst.TIMES_DELAYED, cst.ASSIGNED_MINERS, cst.TASK_TYPE]}
             if base_updates:
                 set_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(base_updates.keys())])
                 values = list(base_updates.values())
@@ -210,7 +210,6 @@ async def update_task(updated_task: Union[TextRawTask, ImageRawTask], psql_db: P
                 """
                 await connection.execute(query, updated_task.task_id)
 
-            # Add specific updates based on task type
             if updated_task.task_type == TaskType.TEXTTASK:
                 specific_updates = {k: v for k, v in updates.items() if k in [cst.FIELD_SYSTEM, cst.FIELD_INSTRUCTION, cst.FIELD_INPUT, cst.FIELD_OUTPUT, cst.FORMAT, cst.NO_INPUT_FORMAT, cst.SYNTHETIC_DATA]}
                 if specific_updates:
@@ -234,7 +233,6 @@ async def update_task(updated_task: Union[TextRawTask, ImageRawTask], psql_db: P
                     """
                     await connection.execute(query, updated_task.task_id, *specific_values)
 
-            # Update assigned miners if provided
             if updated_task.assigned_miners is not None:
                 await connection.execute(
                     f"DELETE FROM {cst.TASK_NODES_TABLE} WHERE {cst.TASK_ID} = $1 AND {cst.NETUID} = $2",
@@ -367,7 +365,7 @@ async def get_miners_for_task(task_id: UUID, psql_db: PSQLDB) -> List[Node]:
         return [Node(**dict(row)) for row in rows]
 
 
-async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[Union[TextRawTask, ImageRawTask]]:
+async def get_task(task_id: UUID, psql_db: PSQLDB) -> Optional[TextRawTask | ImageRawTask]:
     """Get a full task by ID"""
     async with await psql_db.connection() as connection:
         connection: Connection

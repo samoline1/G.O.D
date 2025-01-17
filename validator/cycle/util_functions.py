@@ -1,4 +1,9 @@
+from urllib.parse import urlparse, unquote
+import re
+
 from validator.tasks.task_prep import prepare_text_task
+from validator.tasks.task_prep import prepare_image_task
+from core.utils import download_s3_file
 from core.models.utility_models import TaskStatus
 from datasets import get_dataset_infos
 from fiber import Keypair
@@ -12,23 +17,35 @@ from validator.utils.logging import create_extra_log
 from validator.utils.logging import logger
 
 
+def get_image_dataset_length_from_url(url: str) -> int:
+    parsed_url = urlparse(url)
+    filename = unquote(parsed_url.path.split("/")[-1])
+    match = re.search(r"ds_(\d+)_", filename)
+    if match:
+        return int(match.group(1))
+    return None
+
+
 def get_total_text_dataset_size(repo_name: str) -> int:
     return int(sum(info.dataset_size for info in get_dataset_infos(repo_name).values() if info.dataset_size))
 
+# Using a naming convention of ds_{dataset_length}_{name}_{uuid}.zip while uploading the dataset
+# This helps us fetch the dataset length without actually downloading the dataset before its needed
+def get_total_image_dataset_size(dataset_url: str) -> int:
+    return get_image_dataset_length_from_url(dataset_url)
 
-# TODO - how best to implement this - should we not save this when we create the task and have it as an attribute?
-def get_total_image_dataset_size(repo_name: str) -> int:
-    return 100
 
-
-async def run_image_task_prep(task: ImageRawTask, keypair: Keypair) -> ImageRawTask:
+async def run_image_task_prep(task: ImageRawTask) -> ImageRawTask:
+    raw_dataset_zip_path = await download_s3_file(task.ds)
+    test_url, train_url = await prepare_image_task(raw_dataset_zip_path)
+    task.training_data = train_url
+    task.test_data = test_url
     task.status = TaskStatus.LOOKING_FOR_NODES
-
-
-#    raw_data = await download_s3_file(task.ds)
-# implement me as you have in your testing in terms of how you would expect this
-# after you've downloaded, just need to split it and then reupload as a train and test
-
+    logger.info(
+        "Data creation is complete - now time to find some miners",
+        extra=create_extra_log(status=task.status),
+    )
+    return task
 
 async def run_text_task_prep(task: TextRawTask, keypair: Keypair) -> TextRawTask:
     columns_to_sample = [
