@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 
+import uuid
 import docker
 import toml
 import yaml
@@ -81,7 +82,7 @@ def _load_and_modify_config(
     return config
 
 
-def _load_and_modify_config_diffusion(model: str, task_id: str) -> dict:
+def _load_and_modify_config_diffusion(model: str, task_id: str, expected_repo_name: str | None = None) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
     """
@@ -92,7 +93,7 @@ def _load_and_modify_config_diffusion(model: str, task_id: str) -> dict:
     config["pretrained_model_name_or_path"] = model
     config["train_data_dir"] = f"/dataset/images/{task_id}/img/"
     config["huggingface_token"] = cst.HUGGINGFACE_TOKEN
-    config["huggingface_repo_id"] = os.getenv("REPO_ID")
+    config["huggingface_repo_id"] = f"{cst.HUGGINGFACE_USERNAME}/{expected_repo_name or str(uuid.uuid4())}"
     return config
 
 
@@ -130,7 +131,7 @@ def start_tuning_container_diffusion(job: DiffusionJob):
 
     config_path = os.path.join(cst.CONFIG_DIR, f"{job.job_id}.toml")
 
-    config = _load_and_modify_config_diffusion(job.model, job.job_id)
+    config = _load_and_modify_config_diffusion(job.model, job.job_id, job.expected_repo_name)
     save_config_toml(config, config_path)
 
     logger.info(config)

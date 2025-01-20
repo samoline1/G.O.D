@@ -17,10 +17,8 @@ from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.models import ImageRawTask
-from validator.core.models import RawTask
 from validator.core.models import TextRawTask
 from validator.evaluation.scoring import evaluate_and_score
-from validator.tasks.task_prep import prepare_task
 from validator.utils.cache_clear import clean_all_hf_datasets_cache
 from validator.utils.call_endpoint import process_non_stream_fiber
 from validator.utils.logging import LogContext
@@ -30,34 +28,6 @@ from validator.utils.minio import async_minio_client
 
 
 logger = get_logger(__name__)
-
-
-async def _get_total_dataset_size(repo_name: str, file_format: FileFormat) -> int:
-    if file_format == FileFormat.S3:
-        bucket_name, object_name = async_minio_client.parse_s3_url(repo_name)
-        stats = await async_minio_client.get_stats(bucket_name, object_name)
-        size = stats.size
-    else:
-        loop = asyncio.get_running_loop()
-        dataset_infos = await loop.run_in_executor(None, get_dataset_infos, repo_name)
-        size = sum(info.dataset_size for info in dataset_infos.values() if info.dataset_size)
-    return int(size)
-
-
-async def _run_task_prep(task: RawTask, keypair: Keypair) -> RawTask:
-    columns_to_sample = [
-        i for i in [task.field_system, task.field_instruction, task.field_input, task.field_output] if i is not None
-    ]
-    test_data, synth_data, train_data = await prepare_task(
-        dataset_name=task.ds_id, file_format=task.file_format, columns_to_sample=columns_to_sample, keypair=keypair
-    )
-    task.training_data = train_data
-    task.status = TaskStatus.LOOKING_FOR_NODES
-    add_context_tag("status", task.status.value)
-    task.synthetic_data = synth_data
-    task.test_data = test_data
-    logger.info("Data creation is complete - now time to find some miners")
-    return task
 
 
 # TODO: Improve by batching these up

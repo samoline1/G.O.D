@@ -17,7 +17,7 @@ from pydantic import ValidationError
 import core.constants as cst
 from core.models.payload_models import MinerTaskOffer
 from core.models.payload_models import MinerTaskResponse
-from core.models.payload_models import TrainRequestDiffusion
+from core.models.payload_models import TrainRequestImage
 from core.models.payload_models import TrainRequestText
 from core.models.payload_models import TrainResponse
 from core.models.utility_models import FileFormat
@@ -69,7 +69,7 @@ async def tune_model_text(
 
 
 async def tune_model_diffusion(
-    train_request: TrainRequestDiffusion,
+    train_request: TrainRequestImage,
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
     global finish_time

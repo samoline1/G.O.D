@@ -42,7 +42,7 @@ class TrainRequestText(TrainRequest):
     file_format: FileFormat
 
 
-class TrainRequestDiffusion(TrainRequest):
+class TrainRequestImage(TrainRequest):
     dataset_zip: str = Field(
         ...,
         description="Link to dataset zip file",

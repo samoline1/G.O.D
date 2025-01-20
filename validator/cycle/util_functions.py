@@ -9,7 +9,7 @@ from datasets import get_dataset_infos
 from fiber import Keypair
 from validator.core.models import ImageRawTask
 from validator.core.models import TextRawTask
-from core.models.payload_models import TrainRequestDiffusion
+from core.models.payload_models import TrainRequestImage
 from core.models.payload_models import TrainRequestText
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
@@ -85,9 +85,8 @@ def prepare_text_task_request(task: TextRawTask) -> TrainRequestText:
     return task_request_body
 
 
-# probs better to be Image not Diffusion for consistency
-def prepare_image_task_request(task: ImageRawTask) -> TrainRequestDiffusion:
-    return TrainRequestDiffusion(
+def prepare_image_task_request(task: ImageRawTask) -> TrainRequestImage:
+    return TrainRequestImage(
         model=task.model_id,
         task_id=task.task_id,
         hours_to_complete=task.hours_to_complete,
