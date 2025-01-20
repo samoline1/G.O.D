@@ -1,7 +1,8 @@
 from typing import Any
 
-from fiber.logging_utils import get_logger
 from substrateinterface import SubstrateInterface
+
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)

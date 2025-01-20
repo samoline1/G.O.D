@@ -1,7 +1,5 @@
 import os
 from dataclasses import dataclass
-from typing import Type
-from typing import Union
 
 import docker
 import toml
@@ -22,7 +20,6 @@ from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import DiffusionJob
 from core.models.utility_models import FileFormat
-from core.models.utility_models import Job
 from core.models.utility_models import TextJob
 
 
@@ -63,6 +60,7 @@ def _load_and_modify_config(
     dataset_type: DatasetType | CustomDatasetType,
     file_format: FileFormat,
     task_id: str,
+    expected_repo_name: str | None,
 ) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
@@ -77,15 +75,13 @@ def _load_and_modify_config(
     config["datasets"].append(dataset_entry)
 
     config = update_flash_attention(config, model)
-    config = update_model_info(config, model, task_id)
+    config = update_model_info(config, model, task_id, expected_repo_name)
     config["mlflow_experiment_name"] = dataset
 
     return config
 
 
-def _load_and_modify_config_diffusion(
-    model: str, task_id: str
-) -> dict:
+def _load_and_modify_config_diffusion(model: str, task_id: str) -> dict:
     """
     Loads the config template and modifies it to create a new job config.
     """
@@ -100,11 +96,31 @@ def _load_and_modify_config_diffusion(
     return config
 
 
-def create_job(
-    job_class: Type[Union[TextJob, DiffusionJob]],
-    **kwargs,
-) -> Job:
-    return job_class(**kwargs)
+def create_job_diffusion(
+    job_id: str,
+    model: str,
+    dataset_zip: str,
+    expected_repo_name: str | None,
+):
+    return DiffusionJob(job_id=job_id, model=model, dataset_zip=dataset_zip, expected_repo_name=expected_repo_name)
+
+
+def create_job_text(
+    job_id: str,
+    dataset: str,
+    model: str,
+    dataset_type: DatasetType | CustomDatasetType,
+    file_format: FileFormat,
+    expected_repo_name: str | None,
+):
+    return TextJob(
+        job_id=job_id,
+        dataset=dataset,
+        model=model,
+        dataset_type=dataset_type,
+        file_format=file_format,
+        expected_repo_name=expected_repo_name,
+    )
 
 
 def start_tuning_container_diffusion(job: DiffusionJob):
@@ -185,7 +201,14 @@ def start_tuning_container(job: TextJob):
     config_filename = f"{job.job_id}.yml"
     config_path = os.path.join(cst.CONFIG_DIR, config_filename)
 
-    config = _load_and_modify_config(job.dataset, job.model, job.dataset_type, job.file_format, job.job_id)
+    config = _load_and_modify_config(
+        job.dataset,
+        job.model,
+        job.dataset_type,
+        job.file_format,
+        job.job_id,
+        job.expected_repo_name,
+    )
     save_config(config, config_path)
 
     logger.info(config)
@@ -254,9 +277,7 @@ def start_tuning_container(job: TextJob):
 
         if "container" in locals():
             try:
-                logger.info("Cleaning up HuggingFace cache...")
-                container.exec_run("rm -rf /root/.cache/huggingface/hub/*", user="root")
-            except Exception as e:
-                logger.warning(f"Failed to clean HuggingFace cache: {e}")
-            finally:
                 container.remove(force=True)
+                logger.info("Container removed")
+            except Exception as e:
+                logger.warning(f"Failed to remove container: {e}")

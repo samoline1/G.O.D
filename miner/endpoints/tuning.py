@@ -2,8 +2,8 @@ import os
 from datetime import datetime
 from datetime import timedelta
 
-import yaml
 import toml
+import yaml
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
@@ -20,12 +20,12 @@ from core.models.payload_models import MinerTaskResponse
 from core.models.payload_models import TrainRequestDiffusion
 from core.models.payload_models import TrainRequestText
 from core.models.payload_models import TrainResponse
-from core.models.utility_models import DiffusionJob
 from core.models.utility_models import FileFormat
 from core.utils import download_s3_file
 from miner.config import WorkerConfig
 from miner.dependencies import get_worker_config
-from miner.logic.job_handler import create_job
+from miner.logic.job_handler import create_job_diffusion
+from miner.logic.job_handler import create_job_text
 
 
 logger = get_logger(__name__)
@@ -33,7 +33,7 @@ logger = get_logger(__name__)
 current_job_finish_time = None
 
 
-async def tune_model(
+async def tune_model_text(
     train_request: TrainRequestText,
     worker_config: WorkerConfig = Depends(get_worker_config),
 ):
@@ -54,12 +54,13 @@ async def tune_model(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    job = create_job(
+    job = create_job_text(
         job_id=str(train_request.task_id),
         dataset=train_request.dataset,
         model=train_request.model,
         dataset_type=train_request.dataset_type,
         file_format=train_request.file_format,
+        expected_repo_name=train_request.expected_repo_name,
     )
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)
@@ -85,11 +86,11 @@ async def tune_model_diffusion(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    job = create_job(
-        job_class=DiffusionJob,
+    job = create_job_diffusion(
         job_id=str(train_request.task_id),
         dataset_zip=train_request.dataset_zip,
-        model=train_request.model
+        model=train_request.model,
+        expected_repo_name=train_request.expected_repo_name,
     )
     logger.info(f"Created job {job}")
     worker_config.trainer.enqueue_job(job)
@@ -99,11 +100,9 @@ async def tune_model_diffusion(
 
 # I think we need to be v careful that it's validators that are asking for this,
 # is there a way to ensure we only reply to validators?
-async def get_latest_model_submission(
-    task_id: str
-) -> str:
+async def get_latest_model_submission(task_id: str) -> str:
     try:
-        # Temporary work around in order to not change the vali alot
+        # Temporary work around in order to not change the vali a lot
         # Could send the task type from vali instead of matching file names
         config_filename = f"{task_id}.yml"
         config_path = os.path.join(cst.CONFIG_DIR, config_filename)
@@ -184,19 +183,19 @@ def factory_router() -> APIRouter:
         dependencies=[Depends(blacklist_low_stake)],
     )
     router.add_api_route(
-        "/start_training/",
-        tune_model,
+        "/start_training/",  # TODO: change to /start_training_text or similar
+        tune_model_text,
         tags=["Subnet"],
         methods=["POST"],
         response_model=TrainResponse,
         dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
     )
     router.add_api_route(
-        "/start_training_diffusion/", 
+        "/start_training_diffusion/",
         tune_model_diffusion,
         tags=["Subnet"],
         methods=["POST"],
         response_model=TrainResponse,
-        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)]
+        dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
     )
     return router

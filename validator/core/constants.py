@@ -31,7 +31,7 @@ SUBMISSION_ENDPOINT = "/get_latest_model_submission/"
 
 # TODO update when live
 DEV_CONTENT_BASE_URL = "https://dev.content.gradients.io"
-PROD_CONTENT_BASE_URL = "https://dev.content.gradients.io"
+PROD_CONTENT_BASE_URL = "https://content.gradients.io"
 
 
 # 241 is testnet
@@ -47,7 +47,7 @@ GET_ALL_MODELS_ID = "model_id"
 
 
 HOW_MANY_TASKS_ALLOWED_AT_ONCE = 15
-NUMBER_OF_MINUTES_BETWEEN_SYNTH_TASK_CHECK = 15
+NUMBER_OF_MINUTES_BETWEEN_SYNTH_TASK_CHECK = 10
 
 
 # data stuff
@@ -59,8 +59,10 @@ ADDITIONAL_SYNTH_DATA_PERCENTAGE = 1.0  # same size as training set
 IMAGE_TRAIN_SPLIT_ZIP_NAME = "train_data.zip"
 IMAGE_TEST_SPLIT_ZIP_NAME = "test_data.zip"
 TEMP_PATH_FOR_IMAGES = "/tmp/validator/temp_images"
+MAX_FILE_SIZE_BYTES = 2147483646  # pyarrow max json load size
 
 # synth stuff
+NUM_SYNTH_RETRIES = 3
 SYNTH_GEN_BATCH_SIZE = 10
 SYNTH_MODEL_TEMPERATURE = 0.4
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
@@ -81,10 +83,10 @@ OUTPUT_REFORMULATION_PROBABILITY = 0.5
 MINIMUM_MINER_POOL = 1
 
 
-MIN_IDEAL_NUM_MINERS_IN_POOL = 7
-MAX_IDEAL_NUM_MINERS_IN_POOL = 14
+MIN_IDEAL_NUM_MINERS_IN_POOL = 9
+MAX_IDEAL_NUM_MINERS_IN_POOL = 18
 MIN_TEXT_COMPETITION_HOURS = 1
-MAX_TEXT_COMPETITION_HOURS = 5
+MAX_TEXT_COMPETITION_HOURS = 8
 MIN_IMAGE_COMPETITION_HOURS = 1
 MAX_IMAGE_COMPETITION_HOURS = 2
 TASK_TIME_DELAY = 15  # number of minutes we wait to retry an organic request
@@ -95,11 +97,12 @@ MAX_DELAY_TIMES = 6
 # scoring stuff
 SOFTMAX_TEMPERATURE = 0.5
 TEST_SCORE_WEIGHTING = 0.7  # synth will be (1 - this)
-TARGET_SCORE_RATIO = 1.05
+TARGET_SCORE_RATIO = 1.3
 MIN_TASK_SCORE = 0.0  # very tiny punishment while miners find their feet
 MAX_TASK_SCORE = 1.6
 TASK_SCORE_THRESHOLD = 0.9
-REWEIGHTING_EXP = 0.6  # how much of a drop off from leader
+REWEIGHTING_EXP = 0.5  # how much of a drop off from leader
+
 SCORING_WINDOW = 7  # number of days over which we score
 
 # processing stuff
@@ -122,7 +125,7 @@ DIFFUSION_HF_DEFAULT_FOLDER = "checkpoint"
 DIFFUSION_HF_DEFAULT_CKPT_NAME = "last.safetensors"
 
 
-MAX_CONCURRENT_JOBS = 4
+MAX_CONCURRENT_JOBS = 16
 
 
 LOGPATH = "/root/G.O.D/validator/logs"

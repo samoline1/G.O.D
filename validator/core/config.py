@@ -15,9 +15,10 @@ load_dotenv()
 
 from fiber.chain import chain_utils
 from fiber.chain import interface
-from fiber.logging_utils import get_logger
 from substrateinterface import Keypair
 from substrateinterface import SubstrateInterface
+
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)

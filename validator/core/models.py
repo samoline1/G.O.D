@@ -9,6 +9,8 @@ from uuid import uuid4
 from pydantic import BaseModel
 from pydantic import Field
 
+from core.models.utility_models import FileFormat
+
 
 class TokenizerConfig(BaseModel):
     bos_token: str | None = None
@@ -79,6 +81,7 @@ class RawTask(BaseModel):
     training_data: str | None = None
     assigned_miners: list[int] | None = None
     miner_scores: list[float] | None = None
+    training_repo_backup: str | None = None
 
     created_at: datetime
     next_delay_at: datetime | None = None
@@ -101,6 +104,7 @@ class TextRawTask(RawTask):
     no_input_format: str | None = None
     system_format: None = None  # NOTE: Needs updating to be optional once we accept it
     synthetic_data: str | None = None
+    file_format: FileFormat = FileFormat.HF
     task_type: TaskType = TaskType.TEXTTASK
 
 
@@ -173,6 +177,7 @@ class MinerResults(BaseModel):
     is_finetune: bool
     score: float | None = 0.0
     submission: Submission | None = None
+    score_reason: str | None = None
 
 
 class QualityMetrics(BaseModel):

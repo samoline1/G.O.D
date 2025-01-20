@@ -102,18 +102,6 @@ class DatasetColumnsResponse(BaseModel):
     field_output: str | None = None
 
 
-class SubmitTaskSubmissionRequest(BaseModel):
-    task_id: str
-    node_id: int
-    repo: str
-
-
-class SubmissionResponse(BaseModel):
-    success: bool
-    message: str
-    submission_id: str | None = None
-
-
 class NewTaskRequest(BaseModel):
     account_id: UUID
     hours_to_complete: int = Field(..., description="The number of hours to complete the task", examples=[1])
@@ -126,6 +114,9 @@ class NewTaskRequestText(NewTaskRequest):
     field_system: str | None = Field(None, description="The column name for the system (prompt)", examples=["system"])
 
     ds_repo: str = Field(..., description="The repository for the dataset", examples=["yahma/alpaca-cleaned"])
+    file_format: FileFormat = Field(
+        FileFormat.HF, description="The format of the dataset", examples=[FileFormat.HF, FileFormat.S3]
+    )
     model_repo: str = Field(..., description="The repository for the model", examples=["Qwen/Qwen2.5-Coder-32B-Instruct"])
     format: None = None
     no_input_format: None = None
@@ -140,15 +131,18 @@ class NewTaskRequestImage(NewTaskRequest):
     model_filename: str = Field(..., description="The filename for the model safetensors file in the repo")
 
 
+class NewTaskWithFixedDatasetsRequest(NewTaskRequest):
+    ds_repo: str | None = Field(None, description="Optional: The original repository of the dataset")
+    training_data: str = Field(..., description="The prepared training dataset")
+    synthetic_data: str = Field(..., description="The prepared synthetic dataset")
+    test_data: str = Field(..., description="The prepared test dataset")
+
+
 class NewTaskResponse(BaseModel):
     success: bool = Field(..., description="Whether the task was created successfully")
     task_id: UUID | None = Field(..., description="The ID of the task")
     created_at: datetime = Field(..., description="The creation time of the task")
     account_id: UUID | None = Field(..., description="The account ID who owns the task")
-
-
-class GetTasksRequest(BaseModel):
-    fingerprint: str
 
 
 class TaskResultResponse(BaseModel):

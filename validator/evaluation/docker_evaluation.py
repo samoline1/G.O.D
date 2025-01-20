@@ -7,19 +7,21 @@ import tarfile
 from typing import Union
 
 import docker
-from fiber.logging_utils import get_logger
+from docker.models.containers import Container
 from pydantic import TypeAdapter
 
 from core import constants as cst
 from core.docker_utils import stream_logs
-from core.utils import download_s3_file
-from core.models.payload_models import EvaluationResultText
 from core.models.payload_models import EvaluationResultDiffusion
+from core.models.payload_models import EvaluationResultText
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
+from core.utils import download_s3_file
 from validator.tasks.task_prep import unzip_to_temp_path
-
+from validator.utils.logging import get_all_context_tags
+from validator.utils.logging import get_logger
+from validator.utils.logging import stream_container_logs
 
 
 logger = get_logger(__name__)
@@ -57,7 +59,7 @@ async def run_evaluation_docker(
     dataset_type: Union[DatasetType, CustomDatasetType],
     file_format: FileFormat,
     gpu_ids: list[int],
-) -> dict[str, Union[EvaluationResultText, Exception]]:
+) -> dict[str, EvaluationResultText | Exception]:
     client = docker.from_env()
 
     if isinstance(dataset_type, DatasetType):
@@ -67,15 +69,19 @@ async def run_evaluation_docker(
     else:
         raise ValueError("Invalid dataset_type provided.")
 
+    dataset_filename = os.path.basename(dataset)
+    dataset_dir = os.path.dirname(os.path.abspath(dataset))
+
     environment = {
-        "DATASET": dataset,
+        "DATASET": f"/workspace/input_data/{dataset_filename}",  # Now uses the mounted path
         "MODELS": ",".join(models),
         "ORIGINAL_MODEL": original_model,
         "DATASET_TYPE": dataset_type_str,
         "FILE_FORMAT": file_format.value,
+        "JOB_ID": "dummy",
     }
+    logger.info(f"Here are the models {models}")
 
-    dataset_dir = os.path.dirname(os.path.abspath(dataset))
     volume_bindings = {
         dataset_dir: {
             "bind": "/workspace/input_data",
@@ -93,7 +99,7 @@ async def run_evaluation_docker(
             logger.error(f"Cleanup failed: {str(e)}")
 
     try:
-        container = await asyncio.to_thread(
+        container: Container = await asyncio.to_thread(
             client.containers.run,
             cst.VALIDATOR_DOCKER_IMAGE,
             environment=environment,
@@ -102,7 +108,7 @@ async def run_evaluation_docker(
             device_requests=[docker.types.DeviceRequest(capabilities=[["gpu"]], device_ids=[str(gid) for gid in gpu_ids])],
             detach=True,
         )
-        log_task = asyncio.create_task(asyncio.to_thread(stream_logs, container))
+        log_task = asyncio.create_task(asyncio.to_thread(stream_container_logs, container, get_all_context_tags()))
         result = await asyncio.to_thread(container.wait)
         log_task.cancel()
 
@@ -150,11 +156,11 @@ async def run_evaluation_docker_diffusion(
     volume_bindings[dataset_dir] = {"bind": container_dataset_path, "mode": "ro"}
 
     environment = {
-            "DATASET": container_dataset_path,
-            "MODELS": ",".join(models),
-            "ORIGINAL_MODEL_REPO": original_model_repo,
-            "ORIGINAL_MODEL_FILENAME": original_model_filename
-        }
+        "DATASET": container_dataset_path,
+        "MODELS": ",".join(models),
+        "ORIGINAL_MODEL_REPO": original_model_repo,
+        "ORIGINAL_MODEL_FILENAME": original_model_filename,
+    }
 
     async def cleanup_resources():
         try:

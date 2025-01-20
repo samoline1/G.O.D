@@ -1,9 +1,8 @@
 import asyncio
 
-from fiber.logging_utils import get_logger
-
 from validator.synth.synth import generate_augmented_dataset
 from validator.synth.synth import load_and_sample_dataset
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)
