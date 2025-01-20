@@ -1,5 +1,6 @@
 import json
 import os
+from math import ceil
 from pathlib import Path
 from typing import Union
 
@@ -8,7 +9,6 @@ import torch.nn.functional as F
 import yaml
 from axolotl.utils.data import load_tokenized_prepared_datasets
 from axolotl.utils.dict import DictDefault
-from fiber.logging_utils import get_logger
 from peft import PeftModel
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
@@ -22,6 +22,7 @@ from core.models.utility_models import DatasetType
 from core.models.utility_models import FileFormat
 from validator.core import constants as cst
 from validator.evaluation.utils import model_is_a_finetune
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)
@@ -31,6 +32,7 @@ def _load_and_update_evaluation_config(
     dataset_name: str,
     dataset_type: Union[DatasetType, CustomDatasetType],
     file_format: FileFormat,
+    finetuned_model: AutoModelForCausalLM,
     config_path: str,
 ) -> DictDefault:
     with open(config_path, "r") as file:
@@ -42,6 +44,11 @@ def _load_and_update_evaluation_config(
         file_format=file_format,
     )
     config_dict["datasets"] = [dataset_entry]
+    if (
+        finetuned_model.config.max_position_embeddings
+        and finetuned_model.config.max_position_embeddings < 2 * config_dict["sequence_len"]
+    ):
+        config_dict["sequence_len"] = ceil(finetuned_model.config.max_position_embeddings / 2)
     return DictDefault(config_dict)
 
 
@@ -89,9 +96,12 @@ def _process_evaluation_batches(
     language_model: AutoModelForCausalLM,
     eval_dataloader: DataLoader,
     device: torch.device,
+    evaluation_config: DictDefault,
 ) -> tuple[list[float], int]:
     batch_losses = []
     num_batches = 0
+    consecutive_nans = 0
+    max_consecutive_nans = evaluation_config.get("max_consecutive_nans")
 
     language_model.eval()
     with torch.no_grad():
@@ -99,6 +109,15 @@ def _process_evaluation_batches(
             logger.info(f"Processing batch {batch_idx + 1}")
             batch_loss = _compute_batch_loss(language_model, batch, device)
             logger.info(f"Batch {batch_idx + 1} loss: {batch_loss}")
+
+            if torch.isnan(torch.tensor(batch_loss)):
+                consecutive_nans += 1
+                if consecutive_nans >= max_consecutive_nans:
+                    logger.error(f"Stopping evaluation early: {max_consecutive_nans} consecutive NaN losses detected")
+                    return [float("nan")], 1
+            else:
+                consecutive_nans = 0
+
             batch_losses.append(batch_loss)
             num_batches += 1
 
@@ -125,7 +144,11 @@ def _compute_batch_loss(language_model: AutoModelForCausalLM, batch: dict, devic
     return loss.item()
 
 
-def _calculate_evaluation_metrics(total_losses: list[float], num_batches: int) -> dict[str, float]:
+def _calculate_evaluation_metrics(
+    total_losses: list[float],
+    num_batches: int,
+    evaluation_config: DictDefault,
+) -> dict[str, float]:
     valid_losses = [loss for loss in total_losses if not torch.isnan(torch.tensor(loss))]
     nan_count = len(total_losses) - len(valid_losses)
     nan_percentage = (nan_count / num_batches) * 100 if num_batches > 0 else 0
@@ -137,7 +160,7 @@ def _calculate_evaluation_metrics(total_losses: list[float], num_batches: int) -
             "perplexity": float("inf"),
         }
 
-    if nan_percentage > 5:
+    if nan_percentage > evaluation_config.get("max_nan_percentage"):
         logger.error(f"Too many nan values ({nan_percentage:.2f}% of batches)")
         return {
             "eval_loss": float("inf"),
@@ -170,8 +193,8 @@ def evaluate_language_model_loss(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     language_model.to(device)
-    losses, num_batches = _process_evaluation_batches(language_model, eval_dataloader, device)
-    evaluation_results = _calculate_evaluation_metrics(losses, num_batches)
+    losses, num_batches = _process_evaluation_batches(language_model, eval_dataloader, device, evaluation_config)
+    evaluation_results = _calculate_evaluation_metrics(losses, num_batches, evaluation_config)
     logger.info(f"Final evaluation results: {evaluation_results}")
 
     return evaluation_results
@@ -184,7 +207,9 @@ def evaluate_finetuned_model(
     file_format: FileFormat,
     tokenizer: AutoTokenizer,
 ) -> dict[str, float]:
-    evaluation_config = _load_and_update_evaluation_config(dataset_name, dataset_type, file_format, cst.VALI_CONFIG_PATH)
+    evaluation_config = _load_and_update_evaluation_config(
+        dataset_name, dataset_type, file_format, finetuned_model, cst.VALI_CONFIG_PATH
+    )
     return evaluate_language_model_loss(evaluation_config, finetuned_model, tokenizer)
 
 

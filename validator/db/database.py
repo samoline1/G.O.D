@@ -6,7 +6,8 @@ import asyncpg
 from asyncpg import Pool
 from asyncpg.pool import PoolAcquireContext
 from dotenv import load_dotenv
-from fiber.logging_utils import get_logger
+
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)

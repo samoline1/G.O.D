@@ -1,8 +1,7 @@
-from fiber.logging_utils import get_logger
-
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from validator.evaluation.docker_evaluation import run_evaluation_docker
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)

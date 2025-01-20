@@ -12,7 +12,6 @@ import urllib3
 from fiber import Keypair
 from fiber.chain import chain_utils
 from fiber.chain.models import Node
-from fiber.logging_utils import get_logger
 from fiber.validator import client
 from tenacity import retry
 from tenacity import retry_if_exception_type
@@ -25,6 +24,7 @@ from validator.core.constants import IMAGE_GEN_ENDPOINT
 from validator.core.constants import NETUID
 from validator.core.constants import NINETEEN_API_KEY
 from validator.core.constants import PROMPT_GEN_ENDPOINT
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)

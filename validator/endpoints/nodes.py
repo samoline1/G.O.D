@@ -2,11 +2,11 @@ from fastapi import APIRouter
 from fastapi import Body
 from fastapi import Depends
 from fiber.chain.models import Node
-from fiber.logging_utils import get_logger
 
 from validator.core.config import Config
 from validator.core.dependencies import get_config
 from validator.db import sql
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)

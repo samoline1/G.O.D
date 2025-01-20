@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS text_tasks (
     synthetic_data TEXT,
     format TEXT,
     no_input_format TEXT,
-    system_format TEXT
+    system_format TEXT,
+    file_format TEXT NOT NULL DEFAULT 'hf'
 );
 
 CREATE TABLE IF NOT EXISTS image_tasks (
@@ -32,8 +33,30 @@ ALTER TABLE tasks RENAME COLUMN ds_id TO ds;
 
 ALTER TABLE tasks ALTER COLUMN task_type SET NOT NULL;
 
-INSERT INTO text_tasks (task_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format)
-SELECT task_id, field_system, field_instruction, field_input, field_output, synthetic_data, format, no_input_format, system_format FROM tasks;
+INSERT INTO text_tasks (
+    task_id,
+    field_system,
+    field_instruction,
+    field_input,
+    field_output,
+    synthetic_data,
+    format,
+    no_input_format,
+    system_format,
+    file_format
+)
+SELECT
+    task_id,
+    field_system,
+    field_instruction,
+    field_input,
+    field_output,
+    synthetic_data,
+    format,
+    no_input_format,
+    system_format,
+    file_format
+FROM tasks;
 
 ALTER TABLE tasks
 DROP COLUMN field_system,
@@ -43,7 +66,8 @@ DROP COLUMN field_output,
 DROP COLUMN synthetic_data,
 DROP COLUMN format,
 DROP COLUMN no_input_format,
-DROP COLUMN system_format;
+DROP COLUMN system_format,
+DROP COLUMN file_format;
 
 UPDATE tasks SET task_type = 'TextTask' WHERE task_id IN (SELECT task_id FROM text_tasks);
 
@@ -66,7 +90,8 @@ ADD COLUMN field_output TEXT,
 ADD COLUMN synthetic_data TEXT,
 ADD COLUMN format TEXT,
 ADD COLUMN no_input_format TEXT,
-ADD COLUMN system_format TEXT;
+ADD COLUMN system_format TEXT,
+ADD COLUMN file_format TEXT NOT NULL DEFAULT 'hf';
 
 ALTER TABLE tasks DROP COLUMN task_type;
 

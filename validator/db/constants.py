@@ -48,7 +48,8 @@ TERMINATION_AT = "termination_at"
 IS_ORGANIC = "is_organic"
 TIMES_DELAYED = "times_delayed"
 ASSIGNED_MINERS = "assigned_miners"
-TASK_TYPE="task_type"
+TASK_TYPE = "task_type"
+TRAINING_REPO_BACKUP = "training_repo_backup"
 
 # Text Tasks Table Columns
 FIELD_SYSTEM = "field_system"
@@ -58,9 +59,11 @@ FIELD_OUTPUT = "field_output"
 FORMAT = "format"
 NO_INPUT_FORMAT = "no_input_format"
 SYNTHETIC_DATA = "synthetic_data"
+FILE_FORMAT = "file_format"
 
 # Image Tasks Table Columns
 MODEL_FILENAME = "model_filename"
+
 
 # Submissions Table Columns
 SUBMISSION_ID = "submission_id"
@@ -70,6 +73,12 @@ CREATED_ON = "created_on"
 # Task Nodes Table Columns
 TASK_NODE_QUALITY_SCORE = "quality_score"
 
+EXPECTED_REPO_NAME = "expected_repo_name"
+
+TEST_LOSS = "test_loss"
+SYNTH_LOSS = "synth_loss"
+SCORE_REASON = "score_reason"
+
+
 # Common Column Names (shared between tables)
 QUALITY_SCORE = "quality_score"  # Used in both submissions and task_nodes
-

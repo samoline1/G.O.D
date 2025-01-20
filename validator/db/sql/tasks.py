@@ -1,12 +1,10 @@
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Union
 from uuid import UUID
 
 from asyncpg.connection import Connection
 from fiber.chain.models import Node
-from fiber.logging_utils import get_logger
 
 import validator.db.constants as cst
 from core.constants import NETUID
@@ -20,6 +18,7 @@ from validator.core.models import TaskType
 from validator.core.models import TextRawTask
 from validator.core.models import TextTask
 from validator.db.database import PSQLDB
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)
@@ -58,9 +57,8 @@ text_specific_fields = [
     cst.SYNTHETIC_DATA,
 ]
 
-image_specific_fields = [
-    cst.MODEL_FILENAME
-]
+image_specific_fields = [cst.MODEL_FILENAME]
+
 
 async def add_task(task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> RawTask:
     """Add a new task"""
@@ -103,8 +101,8 @@ async def add_task(task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> RawTask
                     INSERT INTO {cst.TEXT_TASKS_TABLE}
                     ({cst.TASK_ID}, {cst.FIELD_SYSTEM}, {cst.FIELD_INSTRUCTION},
                     {cst.FIELD_INPUT}, {cst.FIELD_OUTPUT}, {cst.FORMAT},
-                    {cst.NO_INPUT_FORMAT}, {cst.SYNTHETIC_DATA})
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    {cst.NO_INPUT_FORMAT}, {cst.SYNTHETIC_DATA}, {cst.FILE_FORMAT})
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 """
                 await connection.execute(
                     query_text_tasks,
@@ -116,6 +114,7 @@ async def add_task(task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> RawTask
                     specific_task.format,
                     specific_task.no_input_format,
                     specific_task.synthetic_data,
+                    specific_task.file_format,
                 )
             elif task.task_type.value == TaskType.IMAGETASK.value:
                 specific_task = ImageRawTask(**task.dict())
@@ -125,14 +124,10 @@ async def add_task(task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> RawTask
                     ({cst.TASK_ID}, {cst.MODEL_FILENAME})
                     VALUES ($1, $2)
                 """
-                await connection.execute(
-                    query_image_tasks,
-                    task_record["task_id"],
-                    specific_task.model_filename
-                )
+                await connection.execute(query_image_tasks, task_record["task_id"], specific_task.model_filename)
             else:
                 raise ValueError(f"Unsupported task type: {task.task_type}")
-                          
+
         return RawTask(**task_record)
 
 
@@ -210,10 +205,24 @@ async def assign_node_to_task(task_id: str, node: Node, psql_db: PSQLDB) -> None
     async with await psql_db.connection() as connection:
         connection: Connection
         query = f"""
-            INSERT INTO {cst.TASK_NODES_TABLE} ({cst.TASK_ID}, {cst.HOTKEY}, {cst.NETUID})
+            INSERT INTO {cst.TASK_NODES_TABLE}
+            ({cst.TASK_ID}, {cst.HOTKEY}, {cst.NETUID})
             VALUES ($1, $2, $3)
         """
         await connection.execute(query, task_id, node.hotkey, NETUID)
+
+
+async def set_expected_repo_name(task_id: str, node: Node, psql_db: PSQLDB, expected_repo_name: str) -> None:
+    async with await psql_db.connection() as connection:
+        connection: Connection
+        query = f"""
+            UPDATE {cst.TASK_NODES_TABLE}
+            SET {cst.EXPECTED_REPO_NAME} = $1
+            WHERE {cst.TASK_ID} = $2
+            AND {cst.HOTKEY} = $3
+            AND {cst.NETUID} = $4
+        """
+        await connection.execute(query, expected_repo_name, task_id, node.hotkey, NETUID)
 
 
 async def update_task(updated_task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> TextRawTask | ImageRawTask:
@@ -287,7 +296,6 @@ async def update_task(updated_task: TextRawTask | ImageRawTask, psql_db: PSQLDB)
                     await connection.execute(query, updated_task.task_id, updated_task.assigned_miners, NETUID)
 
     return await get_task(updated_task.task_id, psql_db)
-
 
 
 async def get_test_set_for_task(task_id: str, psql_db: PSQLDB):
@@ -466,7 +474,7 @@ async def get_winning_submissions_for_task(task_id: UUID, psql_db: PSQLDB) -> Li
         return [dict(row) for row in rows]
 
 
-async def get_task_by_id(task_id: UUID, psql_db: PSQLDB) -> Union[TextTask, ImageTask]:
+async def get_task_by_id(task_id: UUID, psql_db: PSQLDB) -> TextTask | ImageTask:
     """Get a task by ID along with its winning submissions and task-specific details"""
     async with await psql_db.connection() as connection:
         connection: Connection
@@ -500,7 +508,7 @@ async def get_task_by_id(task_id: UUID, psql_db: PSQLDB) -> Union[TextTask, Imag
                     tt.field_system,
                     tt.field_instruction, tt.field_input, tt.field_output,
                     tt.format, tt.no_input_format, tt.synthetic_data,
-                    victorious_repo.repo as trained_model_repository
+                    COALESCE(tasks.training_repo_backup, victorious_repo.repo) as trained_model_repository
                 FROM {cst.TASKS_TABLE} tasks
                 LEFT JOIN {cst.TEXT_TASKS_TABLE} tt ON tasks.{cst.TASK_ID} = tt.{cst.TASK_ID}
                 LEFT JOIN victorious_repo ON tasks.task_id = victorious_repo.task_id
@@ -560,7 +568,7 @@ async def get_tasks(psql_db: PSQLDB, limit: int = 100, offset: int = 0) -> List[
             )
             SELECT
                 tasks.*,
-                victorious_repo.{cst.REPO} as trained_model_repository
+                COALESCE(tasks.training_repo_backup, victorious_repo.{cst.REPO}) as trained_model_repository
             FROM {cst.TASKS_TABLE} tasks
             LEFT JOIN victorious_repo ON tasks.{cst.TASK_ID} = victorious_repo.{cst.TASK_ID}
             ORDER BY tasks.{cst.CREATED_AT} DESC
@@ -592,7 +600,7 @@ async def get_tasks_by_account_id(psql_db: PSQLDB, account_id: UUID, limit: int 
             )
             SELECT
                 tasks.*,
-                victorious_repo.{cst.REPO} AS trained_model_repository
+                COALESCE(tasks.training_repo_backup, victorious_repo.{cst.REPO}) AS trained_model_repository
             FROM {cst.TASKS_TABLE} tasks
             LEFT JOIN victorious_repo
                 ON tasks.{cst.TASK_ID} = victorious_repo.{cst.TASK_ID}
@@ -634,7 +642,7 @@ async def get_completed_organic_tasks(psql_db: PSQLDB, hours: int = 5) -> List[T
             )
             SELECT
                 tasks.*,
-                victorious_repo.{cst.REPO} as trained_model_repository
+                COALESCE(tasks.training_repo_backup, victorious_repo.{cst.REPO}) as trained_model_repository
             FROM {cst.TASKS_TABLE} tasks
             LEFT JOIN victorious_repo
                 ON tasks.{cst.TASK_ID} = victorious_repo.{cst.TASK_ID}
@@ -647,3 +655,13 @@ async def get_completed_organic_tasks(psql_db: PSQLDB, hours: int = 5) -> List[T
 
         rows = await connection.fetch(query, TaskStatus.SUCCESS.value, hours)
         return [Task(**dict(row)) for row in rows]
+
+
+async def get_expected_repo_name(task_id: UUID, hotkey: str, psql_db: PSQLDB) -> str | None:
+    async with await psql_db.connection() as connection:
+        query = f"""
+            SELECT {cst.EXPECTED_REPO_NAME}
+            FROM {cst.TASK_NODES_TABLE}
+            WHERE {cst.TASK_ID} = $1 AND {cst.HOTKEY} = $2 AND {cst.NETUID} = $3
+        """
+        return await connection.fetchval(query, task_id, hotkey, NETUID)

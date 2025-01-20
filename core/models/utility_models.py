@@ -56,6 +56,9 @@ class WinningSubmission(BaseModel):
 class MinerTaskResult(BaseModel):
     hotkey: str
     quality_score: float
+    test_loss: float | None
+    synth_loss: float | None
+    score_reason: str | None
 
 
 # NOTE: Confusing name with the class above
@@ -81,6 +84,7 @@ class Job(BaseModel):
     model: str
     status: JobStatus = JobStatus.QUEUED
     error_message: str | None = None
+    expected_repo_name: str | None = None
 
 
 class TextJob(Job):

@@ -8,7 +8,6 @@ from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Query
 from fastapi import Response
-from fiber.logging_utils import get_logger
 
 from core.models.payload_models import AllOfNodeResults
 from core.models.payload_models import ImageTaskDetails
@@ -16,9 +15,11 @@ from core.models.payload_models import LeaderboardRow
 from core.models.payload_models import NewTaskRequestImage
 from core.models.payload_models import NewTaskRequestText
 from core.models.payload_models import NewTaskResponse
+from core.models.payload_models import NewTaskWithFixedDatasetsRequest
 from core.models.payload_models import TaskDetails
 from core.models.payload_models import TaskResultResponse
 from core.models.payload_models import TextTaskDetails
+from core.models.utility_models import FileFormat
 from core.models.utility_models import MinerTaskResult
 from core.models.utility_models import TaskMinerResult
 from core.models.utility_models import TaskStatus
@@ -29,17 +30,21 @@ from validator.core.dependencies import get_config
 from validator.core.models import ImageTask
 from validator.core.models import NetworkStats
 from validator.core.models import TaskType
+from validator.core.models import TextRawTask
 from validator.core.models import TextTask
 from validator.db.sql import submissions_and_scoring as submissions_and_scoring_sql
 from validator.db.sql import tasks as task_sql
 from validator.db.sql.nodes import get_all_nodes
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)
 
 
-TASKS_CREATE_ENDPOINT_TEXT = "/v1/tasks/create_text"
+TASKS_CREATE_ENDPOINT_TEXT = "/v1/tasks/create"  # TODO: change to create_text after FE changes
 TASKS_CREATE_ENDPOINT_IMAGE = "/v1/tasks/create_image"
+TASKS_CREATE_ENDPOINT = "/v1/tasks/create"
+TASKS_CREATE_WITH_FIXED_DATASETS_ENDPOINT = "/v1/tasks/create_with_fixed_datasets"  # TODO: this is just for text tasks
 GET_TASKS_BY_ACCOUNT_ENDPOINT = "/v1/tasks/account/{account_id}"
 GET_TASK_DETAILS_ENDPOINT = "/v1/tasks/{task_id}"
 GET_TASKS_RESULTS_ENDPOINT = "/v1/tasks/breakdown/{task_id}"
@@ -48,6 +53,7 @@ GET_NODE_RESULTS_ENDPOINT = "/v1/tasks/node_results/{hotkey}"
 DELETE_TASK_ENDPOINT = "/v1/tasks/delete/{task_id}"
 LEADERBOARD_ENDPOINT = "/v1/leaderboard"
 COMPLETED_ORGANIC_TASKS_ENDPOINT = "/v1/tasks/organic/completed"
+UPDATE_TRAINING_REPO_BACKUP_ENDPOINT = "/v1/tasks/{task_id}/training_repo_backup"
 
 
 async def delete_task(
@@ -79,6 +85,7 @@ async def create_task_text(
     task = TextTask(
         model_id=request.model_repo,
         ds=request.ds_repo,
+        file_format=request.file_format,
         field_system=request.field_system,
         field_instruction=request.field_instruction,
         field_input=request.field_input,
@@ -127,6 +134,42 @@ async def create_task_image(
     )
 
     task = await task_sql.add_task(task, config.psql_db)
+
+    logger.info(task.task_id)
+    return NewTaskResponse(success=True, task_id=task.task_id, created_at=task.created_at, account_id=task.account_id)
+
+
+async def create_task_with_fixed_datasets(
+    request: NewTaskWithFixedDatasetsRequest,
+    config: Config = Depends(get_config),
+) -> NewTaskResponse:
+    current_time = datetime.utcnow()
+    end_timestamp = current_time + timedelta(hours=request.hours_to_complete)
+
+    task = TextRawTask(
+        model_id=request.model_repo,
+        ds=request.ds_repo or request.training_data,
+        file_format=request.file_format if request.ds_repo else FileFormat.S3,
+        field_system=request.field_system,
+        field_instruction=request.field_instruction,
+        field_input=request.field_input,
+        field_output=request.field_output,
+        format=request.format,
+        is_organic=True,
+        no_input_format=request.no_input_format,
+        status=TaskStatus.LOOKING_FOR_NODES,
+        created_at=current_time,
+        termination_at=end_timestamp,
+        hours_to_complete=request.hours_to_complete,
+        account_id=request.account_id,
+    )
+
+    # NOTE: feels weird to add the task and then update it immediately
+    await task_sql.add_task(task, config.psql_db)
+    task.training_data = request.training_data
+    task.synthetic_data = request.synthetic_data
+    task.test_data = request.test_data
+    await task_sql.update_task(task, config.psql_db)
 
     logger.info(task.task_id)
     return NewTaskResponse(success=True, task_id=task.task_id, created_at=task.created_at, account_id=task.account_id)
@@ -234,8 +277,8 @@ async def get_miner_breakdown(
     config: Config = Depends(get_config),
 ) -> TaskResultResponse:
     try:
-        scores = await submissions_and_scoring_sql.get_all_quality_scores_for_task(task_id, config.psql_db)
-        miner_results = [MinerTaskResult(hotkey=hotkey, quality_score=scores[hotkey]) for hotkey in scores]
+        results = await submissions_and_scoring_sql.get_all_scores_and_losses_for_task(task_id, config.psql_db)
+        miner_results = [MinerTaskResult(**result) for result in results]
     except Exception as e:
         logger.info(e)
         raise HTTPException(status_code=404, detail="Task not found.")
@@ -306,10 +349,26 @@ async def get_completed_organic_tasks(
     return task_details
 
 
+async def update_training_repo_backup(
+    task_id: UUID,
+    training_repo: str,
+    config: Config = Depends(get_config),
+) -> Response:
+    task = await task_sql.get_task(task_id, config.psql_db)
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+
+    task.training_repo_backup = training_repo
+    await task_sql.update_task(task, config.psql_db)
+    return Response(status_code=200)
+
+
 def factory_router() -> APIRouter:
     router = APIRouter(tags=["Gradients On Demand"], dependencies=[Depends(get_api_key)])
     router.add_api_route(TASKS_CREATE_ENDPOINT_TEXT, create_task_text, methods=["POST"])
     router.add_api_route(TASKS_CREATE_ENDPOINT_IMAGE, create_task_image, methods=["POST"])
+    router.add_api_route(TASKS_CREATE_WITH_FIXED_DATASETS_ENDPOINT, create_task_with_fixed_datasets, methods=["POST"])
     router.add_api_route(GET_TASK_DETAILS_ENDPOINT, get_task_details, methods=["GET"])
     router.add_api_route(DELETE_TASK_ENDPOINT, delete_task, methods=["DELETE"])
     router.add_api_route(GET_TASKS_RESULTS_ENDPOINT, get_miner_breakdown, methods=["GET"])
@@ -318,4 +377,5 @@ def factory_router() -> APIRouter:
     router.add_api_route(LEADERBOARD_ENDPOINT, get_leaderboard, methods=["GET"])
     router.add_api_route(GET_NETWORK_STATUS, get_network_status, methods=["GET"])
     router.add_api_route(COMPLETED_ORGANIC_TASKS_ENDPOINT, get_completed_organic_tasks, methods=["GET"])
+    router.add_api_route(UPDATE_TRAINING_REPO_BACKUP_ENDPOINT, update_training_repo_backup, methods=["PUT"])
     return router

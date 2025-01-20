@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from fiber.chain import fetch_nodes
 from fiber.chain import weights
 from fiber.chain.models import Node
-from fiber.logging_utils import get_logger
 
 from core import constants as ccst
 from validator.core.config import Config
@@ -23,6 +22,9 @@ from validator.utils.util import try_db_connections
 
 
 load_dotenv(os.getenv("ENV_FILE", ".vali.env"))
+
+
+from validator.utils.logging import get_logger
 
 
 logger = get_logger(__name__)

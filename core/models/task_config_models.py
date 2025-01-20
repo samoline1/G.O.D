@@ -1,6 +1,7 @@
+from enum import Enum
 from typing import Callable
 from typing import Union
-from enum import Enum
+
 from pydantic import BaseModel
 from pydantic import Field
 
