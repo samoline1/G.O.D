@@ -107,7 +107,7 @@ async def _add_new_task_to_network_if_not_enough(
     logger.info(f"There are {len(current_training_tasks)} running at the moment")
     if len(current_delayed_tasks) == 0 and len(current_training_tasks) < cst.HOW_MANY_TASKS_ALLOWED_AT_ONCE:
         logger.info("This is less than the minimal - creating a new task")
-        if random.random() > cst.PERCENTAGE_OF_TASKS_THAT_SHOULD_BE_TEXT:
+        if random.random() < cst.PERCENTAGE_OF_TASKS_THAT_SHOULD_BE_TEXT:
             await create_synthetic_text_task(config, models, datasets)
         else:
             await create_synthetic_image_task(config)

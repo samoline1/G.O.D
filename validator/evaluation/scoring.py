@@ -641,7 +641,7 @@ async def evaluate_and_score(task: Union[TextRawTask, ImageRawTask], gpu_ids: li
         dataset_type = None
 
     logger.info(f"Beginning evaluation for task {task.task_id} with {len(miner_pool)} miners")
-    task_results = await process_miners_pool(miner_pool, task, dataset_type, config, gpu_ids)
+    task_results = await process_miners_pool(miner_pool, task, config, gpu_ids, dataset_type)
 
     logger.info("Checking for duplicates ...")
     keep_submission = await handle_duplicate_submissions(task_results)
