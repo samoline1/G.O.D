@@ -27,6 +27,7 @@ from validator.core.models import PeriodScore
 from validator.core.models import Submission
 from validator.core.models import TaskNode
 from validator.core.models import TaskResults
+from validator.core.models import TaskType
 from validator.core.models import TextRawTask
 from validator.db.sql.submissions_and_scoring import add_submission
 from validator.db.sql.submissions_and_scoring import get_aggregate_scores_since
@@ -260,7 +261,7 @@ def add_raw_scores_to_miner_results(
         return miner_results
 
     scale_factor = compute_adaptive_scale_factor(finetuned_results)
-    logger.info(f"Using scale factor: {scale_factor} (calculated from {len(finetuned_results)} finetuned submissions)")
+    logger.info(f"Using scale factor: {scale_factor} " f"(calculated from {len(finetuned_results)} finetuned submissions)")
 
     for result in miner_results:
         with LogContext(miner_hotkey=result.hotkey):
@@ -326,8 +327,8 @@ def _calculate_weighted_loss_for_image_eval(eval_result: EvaluationResultImage) 
             else 0
         )
 
-        weighted_loss = (cts.DIFFUSION_TEXT_GUIDED_EVAL_WEIGHT * text_guided_avg) + (
-            (1 - cts.DIFFUSION_TEXT_GUIDED_EVAL_WEIGHT) * no_text_avg
+        weighted_loss = (
+            (cts.DIFFUSION_TEXT_GUIDED_EVAL_WEIGHT * text_guided_avg) + ((1 - cts.DIFFUSION_TEXT_GUIDED_EVAL_WEIGHT) * no_text_avg)
         )
         return weighted_loss
 
@@ -608,7 +609,7 @@ async def process_miners_pool(
             logger.info(f"Found repo {repo} for miner {miner.hotkey}")
 
     results = [
-        _create_failed_miner_result(miner.hotkey, reason="No repo submitted")
+        _create_failed_miner_result(miner.hotkey, reason="No repo submitted", task_type=task.task_type)
         for miner in miners
         if miner.hotkey not in miner_repos
     ]
@@ -629,7 +630,9 @@ async def process_miners_pool(
 
                     if isinstance(eval_result, Exception):
                         logger.error(f"Evaluation failed for miner {miner.hotkey}: {eval_result}")
-                        results.append(_create_failed_miner_result(miner.hotkey, reason="Evaluation failed"))
+                        results.append(
+                            _create_failed_miner_result(miner.hotkey, reason="Evaluation failed", task_type=task.task_type)
+                        )
                         continue
                     elif isinstance(task, TextRawTask):
                         synth_result, test_result = eval_result
