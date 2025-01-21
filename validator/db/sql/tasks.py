@@ -67,11 +67,17 @@ async def add_task(task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> RawTask
         async with connection.transaction():
             query_tasks = f"""
                 INSERT INTO {cst.TASKS_TABLE}
-                ({cst.ACCOUNT_ID}, {cst.MODEL_ID}, {cst.DS}, {cst.STATUS}, {cst.IS_ORGANIC},
-                {cst.TIMES_DELAYED}, {cst.HOURS_TO_COMPLETE}, {cst.TEST_DATA}, {cst.TRAINING_DATA},
-                {cst.CREATED_AT}, {cst.NEXT_DELAY_AT}, {cst.UPDATED_AT}, {cst.STARTED_AT},
-                {cst.TERMINATION_AT}, {cst.COMPLETED_AT}, {cst.TASK_TYPE})
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                ({cst.ACCOUNT_ID}, 
+                {cst.MODEL_ID}, 
+                {cst.DS}, 
+                {cst.STATUS}, 
+                {cst.IS_ORGANIC},
+                {cst.HOURS_TO_COMPLETE}, 
+                {cst.TEST_DATA}, 
+                {cst.TRAINING_DATA},
+                {cst.CREATED_AT}, 
+                {cst.TASK_TYPE})
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 RETURNING *
             """
             task_record = await connection.fetchrow(
@@ -81,16 +87,10 @@ async def add_task(task: TextRawTask | ImageRawTask, psql_db: PSQLDB) -> RawTask
                 task.ds,
                 task.status,
                 task.is_organic,
-                task.times_delayed,
                 task.hours_to_complete,
                 task.test_data,
                 task.training_data,
                 task.created_at,
-                task.next_delay_at,
-                task.updated_at,
-                task.started_at,
-                task.termination_at,
-                task.completed_at,
                 task.task_type.value,
             )
 
@@ -240,7 +240,7 @@ async def update_task(updated_task: TextRawTask | ImageRawTask, psql_db: PSQLDB)
         async with connection.transaction():
             base_updates = {k: v for k, v in updates.items() if k in base_task_fields}
             if base_updates:
-                set_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(base_updates.keys())])
+                set_clause = ", ".join([f"{column} = ${i + 2}" for i, column in enumerate(base_updates.keys())])
                 values = list(base_updates.values())
                 query = f"""
                     UPDATE {cst.TASKS_TABLE}
@@ -259,7 +259,7 @@ async def update_task(updated_task: TextRawTask | ImageRawTask, psql_db: PSQLDB)
             if updated_task.task_type == TaskType.TEXTTASK:
                 specific_updates = {k: v for k, v in updates.items() if k in text_specific_fields}
                 if specific_updates:
-                    specific_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(specific_updates.keys())])
+                    specific_clause = ", ".join([f"{column} = ${i + 2}" for i, column in enumerate(specific_updates.keys())])
                     specific_values = list(specific_updates.values())
                     query = f"""
                         UPDATE {cst.TEXT_TASKS_TABLE}
@@ -270,7 +270,7 @@ async def update_task(updated_task: TextRawTask | ImageRawTask, psql_db: PSQLDB)
             elif updated_task.task_type == TaskType.IMAGETASK:
                 specific_updates = {k: v for k, v in updates.items() if k in image_specific_fields}
                 if specific_updates:
-                    specific_clause = ", ".join([f"{column} = ${i+2}" for i, column in enumerate(specific_updates.keys())])
+                    specific_clause = ", ".join([f"{column} = ${i + 2}" for i, column in enumerate(specific_updates.keys())])
                     specific_values = list(specific_updates.values())
                     query = f"""
                         UPDATE {cst.IMAGE_TASKS_TABLE}
