@@ -1,21 +1,25 @@
-from urllib.parse import urlparse, unquote
 import re
+from urllib.parse import unquote
+from urllib.parse import urlparse
 
-from validator.tasks.task_prep import prepare_text_task
-from validator.tasks.task_prep import prepare_image_task
-from core.utils import download_s3_file
-from core.models.utility_models import TaskStatus
 from datasets import get_dataset_infos
 from fiber import Keypair
-from validator.core.models import ImageRawTask
-from validator.core.models import TextRawTask
+
 from core.models.payload_models import TrainRequestImage
 from core.models.payload_models import TrainRequestText
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
+from core.models.utility_models import TaskStatus
+from core.utils import download_s3_file
+from validator.core.models import ImageRawTask
+from validator.core.models import TextRawTask
+from validator.tasks.task_prep import prepare_image_task
+from validator.tasks.task_prep import prepare_text_task
 from validator.utils.logging import get_logger
 
+
 logger = get_logger(__name__)
+
 
 def get_image_dataset_length_from_url(url: str) -> int:
     parsed_url = urlparse(url)
@@ -28,6 +32,7 @@ def get_image_dataset_length_from_url(url: str) -> int:
 
 def get_total_text_dataset_size(repo_name: str) -> int:
     return int(sum(info.dataset_size for info in get_dataset_infos(repo_name).values() if info.dataset_size))
+
 
 # Using a naming convention of ds_{dataset_length}_{name}_{uuid}.zip while uploading the dataset
 # This helps us fetch the dataset length without actually downloading the dataset before its needed
@@ -46,6 +51,7 @@ async def run_image_task_prep(task: ImageRawTask) -> ImageRawTask:
     )
     return task
 
+
 async def run_text_task_prep(task: TextRawTask, keypair: Keypair) -> TextRawTask:
     columns_to_sample = [
         i for i in [task.field_system, task.field_instruction, task.field_input, task.field_output] if i is not None
@@ -57,10 +63,9 @@ async def run_text_task_prep(task: TextRawTask, keypair: Keypair) -> TextRawTask
     task.status = TaskStatus.LOOKING_FOR_NODES
     task.synthetic_data = synth_data
     task.test_data = test_data
-    logger.info(
-        "Data creation is complete - now time to find some miners"
-    )
+    logger.info("Data creation is complete - now time to find some miners")
     return task
+
 
 def prepare_text_task_request(task: TextRawTask) -> TrainRequestText:
     dataset_type = CustomDatasetType(
@@ -87,9 +92,5 @@ def prepare_text_task_request(task: TextRawTask) -> TrainRequestText:
 
 def prepare_image_task_request(task: ImageRawTask) -> TrainRequestImage:
     return TrainRequestImage(
-        model=task.model_id,
-        task_id=task.task_id,
-        hours_to_complete=task.hours_to_complete,
-        dataset_zip=task.training_data
+        model=task.model_id, task_id=str(task.task_id), hours_to_complete=task.hours_to_complete, dataset_zip=task.training_data
     )
-
