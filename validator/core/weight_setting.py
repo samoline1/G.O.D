@@ -85,7 +85,7 @@ async def get_node_weights_from_results(
     logger.info(f"Node ids: {all_node_ids}")
     logger.info(f"Node weights: {all_node_weights}")
     logger.info(f"Number of non zero node weights: {sum(1 for weight in all_node_weights if weight != 0)}")
-    logger.info(f"Everything going in is" f" {all_node_ids} {all_node_weights} {netuid} {ccst.VERSION_KEY}")
+    logger.info(f"Everything going in is {all_node_ids} {all_node_weights} {netuid} {ccst.VERSION_KEY}")
     return all_node_ids, all_node_weights
 
 
@@ -130,7 +130,7 @@ async def _get_and_set_weights(config: Config, validator_node_id: int) -> bool:
     logger.info("Weights calculated, about to set...")
 
     success = await set_weights(config, all_node_ids, all_node_weights, validator_node_id)
-    if success:
+    if success and task_results:
         url = await _upload_results_to_s3(config, task_results)
         logger.info(f"Uploaded the scores to s3 for auditing - url: {url}")
 

@@ -145,7 +145,7 @@ async def scoring_aggregation_from_date(psql_db: str) -> tuple[list[PeriodScore]
     logger.info(f"Got task results {task_results}")
     if not task_results:
         logger.info("There were not results to be scored")
-        return []
+        return [], []
 
     node_aggregations: dict[str, NodeAggregationResult] = {}
 

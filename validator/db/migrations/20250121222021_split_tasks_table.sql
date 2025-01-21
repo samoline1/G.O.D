@@ -31,6 +31,10 @@ CREATE INDEX IF NOT EXISTS idx_image_task_id ON image_tasks (task_id);
 ALTER TABLE tasks ADD COLUMN task_type tasktype;
 ALTER TABLE tasks RENAME COLUMN ds_id TO ds;
 
+
+UPDATE tasks SET task_type = 'TextTask';
+
+
 ALTER TABLE tasks ALTER COLUMN task_type SET NOT NULL;
 
 INSERT INTO text_tasks (
@@ -68,8 +72,6 @@ DROP COLUMN format,
 DROP COLUMN no_input_format,
 DROP COLUMN system_format,
 DROP COLUMN file_format;
-
-UPDATE tasks SET task_type = 'TextTask' WHERE task_id IN (SELECT task_id FROM text_tasks);
 
 
 -- migrate:down

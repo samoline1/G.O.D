@@ -127,7 +127,10 @@ async def schedule_synthetics_periodically(config: Config):
             await asyncio.sleep(cst.NUMBER_OF_MINUTES_BETWEEN_SYNTH_TASK_CHECK * 60)
         except Exception as e:
             if current_try < cst.NUM_SYNTH_RETRIES - 1:
-                logger.info(f"Synthetic task creation try {current_try + 1}/{cst.NUM_SYNTH_RETRIES} failed, retrying... {e}")
+                logger.info(
+                    f"Synthetic task creation try {current_try + 1}/{cst.NUM_SYNTH_RETRIES} failed, retrying. Error: {e}",
+                    exc_info=True,
+                )
                 current_try += 1
             else:
                 logger.info(f"Synthetic task creation failed after {cst.NUM_SYNTH_RETRIES} attempts, giving up for now. {e}")
