@@ -1,4 +1,3 @@
-import json
 import os
 import random
 import shutil
@@ -21,7 +20,8 @@ from validator.augmentation.augmentation import generate_augmented_text_dataset
 from validator.evaluation.utils import get_default_dataset_config
 from validator.utils.cache_clear import delete_dataset_from_cache
 from validator.utils.logging import get_logger
-from validator.utils.minio import async_minio_client
+from validator.utils.util import save_json_to_temp_file
+from validator.utils.util import upload_file_to_minio
 
 
 logger = get_logger(__name__)
@@ -40,14 +40,6 @@ def create_zip_for_image_dataset(split_keys: set, zip_name: str, entries: dict, 
     return zip_path
 
 
-async def save_json_to_temp_file(data: List[dict], prefix: str) -> tuple[str, int]:
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json", prefix=prefix)
-    with open(temp_file.name, "w") as f:
-        json.dump(data, f)
-    file_size = os.path.getsize(temp_file.name)
-    return temp_file.name, file_size
-
-
 def unzip_to_temp_path(zip_file_path: str) -> str:
     tmp_dir = cst.TEMP_PATH_FOR_IMAGES
     if not os.path.exists(tmp_dir):
@@ -56,17 +48,6 @@ def unzip_to_temp_path(zip_file_path: str) -> str:
         zip_ref.extractall(tmp_dir)
 
     return tmp_dir
-
-
-async def upload_file_to_minio(file_path: str, bucket_name: str, object_name: str) -> str | None:
-    """
-    Uploads a file to MinIO and returns the presigned URL for the uploaded file.
-    """
-    result = await async_minio_client.upload_file(bucket_name, object_name, file_path)
-    if result:
-        return await async_minio_client.get_presigned_url(bucket_name, object_name)
-    else:
-        return None
 
 
 async def load_dataset_from_s3(dataset_url: str) -> Dataset | DatasetDict:

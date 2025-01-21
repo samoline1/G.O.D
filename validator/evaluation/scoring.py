@@ -9,10 +9,9 @@ from fiber.chain.models import Node
 from scipy.stats import gmean
 
 import validator.core.constants as cts
-from core.models.payload_models import EvaluationResultText
-from core.models.payload_models import EvaluationResultImage
 from core.models.payload_models import DiffusionLosses
-from core.models.task_config_models import get_task_config
+from core.models.payload_models import EvaluationResultImage
+from core.models.payload_models import EvaluationResultText
 from core.models.utility_models import CustomDatasetType
 from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
@@ -21,6 +20,7 @@ from validator.core.config import Config
 from validator.core.models import ImageRawTask
 from validator.core.models import MinerResults
 from validator.core.models import MinerResultsText
+from validator.core.models import MiniTaskWithScoringOnly
 from validator.core.models import NodeAggregationResult
 from validator.core.models import PeriodScore
 from validator.core.models import RawTask
@@ -33,8 +33,8 @@ from validator.db.sql.submissions_and_scoring import get_aggregate_scores_since
 from validator.db.sql.submissions_and_scoring import set_task_node_quality_score
 from validator.db.sql.tasks import get_expected_repo_name
 from validator.db.sql.tasks import get_nodes_assigned_to_task
-from validator.evaluation.docker_evaluation import run_evaluation_docker_text
 from validator.evaluation.docker_evaluation import run_evaluation_docker_image
+from validator.evaluation.docker_evaluation import run_evaluation_docker_text
 from validator.utils.call_endpoint import process_non_stream_fiber_get
 from validator.utils.call_endpoint import process_non_stream_get
 from validator.utils.logging import LogContext
@@ -46,7 +46,7 @@ from validator.utils.minio import async_minio_client
 logger = get_logger(__name__)
 
 
-def get_task_work_score(task: Union[ImageRawTask, TextRawTask]) -> float:
+def get_task_work_score(task: MiniTaskWithScoringOnly | TextRawTask | ImageRawTask) -> float:
     """Calculate work score for a task based on hours and model size."""
     assert task.hours_to_complete > 0, "Hours to complete must be positive"
     assert task.model_id, "Model ID must be present"
@@ -55,6 +55,12 @@ def get_task_work_score(task: Union[ImageRawTask, TextRawTask]) -> float:
     model = task.model_id
     model_size = re.search(r"(\d+)(?=[bB])", model)
     model_size_value = min(8, int(model_size.group(1)) if model_size else 1)
+    if hours * model_size_value == 0:
+        logger.error(
+            f"Hours to complete: {hours} and model size value: {model_size_value} for task {task.task_id} and model id: {model}"
+            "\nReturning 1 regardless as a failsafe, but please look into this"
+        )
+        return 1
     return max(1, 2 * np.log(float(hours * model_size_value)))
 
 
@@ -132,7 +138,7 @@ def _normalise_scores(period_scores: list[PeriodScore]) -> list[PeriodScore]:
     return period_scores
 
 
-async def scoring_aggregation_from_date(psql_db: str) -> list[PeriodScore]:
+async def scoring_aggregation_from_date(psql_db: str) -> tuple[list[PeriodScore], list[TaskResults]]:
     """Aggregate and normalise scores across all nodes."""
     date = datetime.now() - timedelta(days=cts.SCORING_WINDOW)
     task_results: list[TaskResults] = await get_aggregate_scores_since(date, psql_db)
@@ -150,7 +156,7 @@ async def scoring_aggregation_from_date(psql_db: str) -> list[PeriodScore]:
 
     final_scores = calculate_node_quality_scores(node_aggregations)
     final_scores = _normalise_scores(final_scores)
-    return final_scores
+    return final_scores, task_results
 
 
 def calculate_weighted_loss(test_loss: float, synth_loss: float) -> float:
@@ -192,7 +198,9 @@ def compute_adaptive_scale_factor(miner_results: list[MinerResults | MinerResult
     return scale
 
 
-def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerResults | MinerResultsText]) -> list[MinerResults | MinerResultsText]:
+def adjust_miner_scores_to_be_relative_to_other_comps(
+    miner_results: list[MinerResults | MinerResultsText],
+) -> list[MinerResults | MinerResultsText]:
     """Adjusts scores to have geometric mean of 1.0 for finetuned submissions only."""
     valid_scores = [
         res.score
@@ -306,7 +314,10 @@ async def _get_submission_repo(miner: Node, task_id: str, config: Config) -> str
 
 
 async def _evaluate_submissions(
-    task: TextRawTask | ImageRawTask, submission_repos: list[str], gpu_ids: list[int], dataset_type: CustomDatasetType | None = None
+    task: TextRawTask | ImageRawTask,
+    submission_repos: list[str],
+    gpu_ids: list[int],
+    dataset_type: CustomDatasetType | None = None,
 ) -> dict[str, tuple[EvaluationResultText, EvaluationResultText] | EvaluationResultImage | Exception]:
     """Evaluate same task submissions within same docker container.
     Docker evaluations with an exception will return the Exception for the repo."""
@@ -344,7 +355,10 @@ async def _evaluate_submissions(
         logger.info("Starting synth evaluation")
         synthetic_data_filepath = await download_s3_file(task.synthetic_data)
         synth_eval_results = await run_evaluation_docker_text(dataset=synthetic_data_filepath, **evaluation_params)
-        os.remove(synthetic_data_filepath)
+        try:
+            os.remove(synthetic_data_filepath)
+        except Exception as e:
+            logger.warning(f"Failed to remove synthetic data file {synthetic_data_filepath}: {e}")
 
         finetuned_repos = []
         for repo in repos_to_evaluate:
@@ -363,9 +377,14 @@ async def _evaluate_submissions(
         if finetuned_repos:
             test_data_filepath = await download_s3_file(task.test_data)
             test_eval_results = await run_evaluation_docker_text(
-                dataset=test_data_filepath, models=finetuned_repos, **{k: v for k, v in evaluation_params.items() if k != "models"}
+                dataset=test_data_filepath,
+                models=finetuned_repos,
+                **{k: v for k, v in evaluation_params.items() if k != "models"},
             )
-            os.remove(test_data_filepath)
+            try:
+                os.remove(test_data_filepath)
+            except Exception as e:
+                logger.warning(f"Failed to remove test data file {test_data_filepath}: {e}")
 
             for repo in finetuned_repos:
                 if isinstance(test_eval_results.get(repo), Exception):
@@ -379,9 +398,7 @@ async def _evaluate_submissions(
         for repo in unique_repos:
             if repo == task.model_id:
                 logger.warning(f"Repository {repo} matches original model ID - marking as non-finetuned")
-                results[repo] = (
-                    EvaluationResultImage(eval_losses=DiffusionLosses(text_guided_losses=[0], no_text_losses=[0])),
-                )
+                results[repo] = (EvaluationResultImage(eval_losses=DiffusionLosses(text_guided_losses=[0], no_text_losses=[0])),)
             else:
                 repos_to_evaluate.append(repo)
 
@@ -401,11 +418,10 @@ async def _evaluate_submissions(
         image_eval_results = await run_evaluation_docker_image(**evaluation_params)
         for repo in repos_to_evaluate:
             results[repo] = image_eval_results[repo]
-            
+
     for repo in unique_repos:
         if repo not in results:
             results[repo] = Exception("Evaluation failed to complete")
-        
 
     return results
 
@@ -601,7 +617,7 @@ async def process_miners_pool(
                 )
 
         except Exception as e:
-            logger.error(f"Error during batch evaluation: {e}")
+            logger.error(f"Error during batch evaluation: {e}", exc_info=True)
             results.extend(
                 [
                     _create_failed_miner_result(miner.hotkey, reason="Evaluation failed")

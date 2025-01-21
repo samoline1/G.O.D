@@ -3,8 +3,6 @@ import datetime
 import random
 import uuid
 
-from datasets import get_dataset_infos
-from fiber import Keypair
 from fiber.chain.models import Node
 
 import validator.core.constants as cst
@@ -13,7 +11,6 @@ import validator.db.sql.tasks as tasks_sql
 from core.models.payload_models import MinerTaskOffer
 from core.models.payload_models import MinerTaskResponse
 from core.models.task_config_models import get_task_config
-from core.models.utility_models import FileFormat
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.models import ImageRawTask
@@ -24,7 +21,6 @@ from validator.utils.call_endpoint import process_non_stream_fiber
 from validator.utils.logging import LogContext
 from validator.utils.logging import add_context_tag
 from validator.utils.logging import get_logger
-from validator.utils.minio import async_minio_client
 
 
 logger = get_logger(__name__)
@@ -88,6 +84,9 @@ async def _select_miner_pool_and_add_to_task(
                 logger.info(f"We have made {i} offers so far for task {task.task_id}")
 
             offer_response = await _make_offer(node, task_request, config)
+
+            # Store offer response
+            await tasks_sql.store_offer_response(task.task_id, node.hotkey, offer_response.model_dump_json(), config.psql_db)
 
             if offer_response.accepted is True:
                 selected_miners.append(node.hotkey)
