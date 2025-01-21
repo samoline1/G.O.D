@@ -68,7 +68,7 @@ async def create_synthetic_text_task(
     models: AsyncGenerator[str, None],
     datasets: AsyncGenerator[str, None],
 ) -> RawTask:
-    number_of_hours = random.randint(cst.MIN_COMPETITION_HOURS, cst.MAX_COMPETITION_HOURS)
+    number_of_hours = random.randint(cst.MIN_TEXT_COMPETITION_HOURS, cst.MAX_TEXT_COMPETITION_HOURS)
     model_id = await anext(models)
     dataset_id = await anext(datasets)
     columns = await _get_columns_for_dataset(dataset_id, config.keypair)
@@ -110,7 +110,7 @@ async def _add_new_task_to_network_if_not_enough(
         if random.random() > cst.PERCENTAGE_OF_TASKS_THAT_SHOULD_BE_TEXT:
             await create_synthetic_text_task(config, models, datasets)
         else:
-            await create_synthetic_image_task(config, models, datasets)
+            await create_synthetic_image_task(config)
 
 
 async def schedule_synthetics_periodically(config: Config):
