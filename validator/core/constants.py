@@ -26,6 +26,7 @@ NULL_ACCOUNT_ID = "00000000-0000-0000-0000-000000000000"
 
 # api stuff should move this out to be shared by both miner and vali code?
 START_TRAINING_ENDPOINT = "/start_training/"
+START_TRAINING_IMAGE_ENDPOINT = "/start_training_image/"
 TASK_OFFER_ENDPOINT = "/task_offer/"
 SUBMISSION_ENDPOINT = "/get_latest_model_submission/"
 

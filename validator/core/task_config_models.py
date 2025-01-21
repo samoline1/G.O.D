@@ -5,6 +5,7 @@ from typing import Union
 from pydantic import BaseModel
 from pydantic import Field
 
+from validator.core import constants as cst
 from validator.core.models import ImageRawTask
 from validator.core.models import TextRawTask
 from validator.cycle.util_functions import get_total_image_dataset_size
@@ -13,8 +14,8 @@ from validator.cycle.util_functions import prepare_image_task_request
 from validator.cycle.util_functions import prepare_text_task_request
 from validator.cycle.util_functions import run_image_task_prep
 from validator.cycle.util_functions import run_text_task_prep
-from validator.evaluation.docker_evaluation import run_evaluation_docker_text
 from validator.evaluation.docker_evaluation import run_evaluation_docker_image
+from validator.evaluation.docker_evaluation import run_evaluation_docker_text
 from validator.tasks.task_prep import get_additional_synth_data
 
 
@@ -36,6 +37,7 @@ class TaskConfig(BaseModel):
     )
 
     task_request_prepare_function: Callable = Field(..., description="Namoray will come up with a better var name for sure")
+    start_training_endpoint: str = Field(..., description="The endpoint to start training")
 
 
 class ImageTaskConfig(TaskConfig):
@@ -45,6 +47,7 @@ class ImageTaskConfig(TaskConfig):
     data_size_function: Callable = get_total_image_dataset_size
     task_prep_function: Callable = run_image_task_prep
     task_request_prepare_function: Callable = prepare_image_task_request
+    start_training_endpoint: str = cst.START_TRAINING_IMAGE_ENDPOINT
 
 
 class TextTaskConfig(TaskConfig):
@@ -54,6 +57,7 @@ class TextTaskConfig(TaskConfig):
     data_size_function: Callable = get_total_text_dataset_size
     task_prep_function: Callable = run_text_task_prep
     task_request_prepare_function: Callable = prepare_text_task_request
+    start_training_endpoint: str = cst.START_TRAINING_ENDPOINT
 
 
 def get_task_config(task: Union[TextRawTask, ImageRawTask]) -> TaskConfig:

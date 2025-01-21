@@ -191,7 +191,7 @@ def factory_router() -> APIRouter:
         dependencies=[Depends(blacklist_low_stake), Depends(verify_request)],
     )
     router.add_api_route(
-        "/start_training_diffusion/",
+        "/start_training_image/",
         tune_model_diffusion,
         tags=["Subnet"],
         methods=["POST"],

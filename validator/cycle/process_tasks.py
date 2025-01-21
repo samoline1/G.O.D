@@ -10,11 +10,11 @@ import validator.db.sql.nodes as nodes_sql
 import validator.db.sql.tasks as tasks_sql
 from core.models.payload_models import MinerTaskOffer
 from core.models.payload_models import MinerTaskResponse
-from core.models.task_config_models import get_task_config
 from core.models.utility_models import TaskStatus
 from validator.core.config import Config
 from validator.core.models import ImageRawTask
 from validator.core.models import TextRawTask
+from validator.core.task_config_models import get_task_config
 from validator.evaluation.scoring import evaluate_and_score
 from validator.utils.cache_clear import clean_all_hf_datasets_cache
 from validator.utils.call_endpoint import process_non_stream_fiber
@@ -110,6 +110,7 @@ async def _select_miner_pool_and_add_to_task(
 
 async def _let_miners_know_to_start_training(task: ImageRawTask | TextRawTask, nodes: list[Node], config: Config):
     task_request_body = get_task_config(task).task_request_prepare_function(task)
+    miner_endpoint = get_task_config(task).start_training_endpoint
 
     logger.info(f"We are telling miners to start training, there are {len(nodes)}")
 
@@ -119,7 +120,7 @@ async def _let_miners_know_to_start_training(task: ImageRawTask | TextRawTask, n
             await tasks_sql.set_expected_repo_name(str(task.task_id), node, config.psql_db, expected_repo_name)
             task_request_body.expected_repo_name = expected_repo_name
 
-            response = await process_non_stream_fiber(cst.START_TRAINING_ENDPOINT, config, node, task_request_body.model_dump())
+            response = await process_non_stream_fiber(miner_endpoint, config, node, task_request_body.model_dump())
             logger.info(f"The response we got from {node.node_id} was {response}")
 
 
