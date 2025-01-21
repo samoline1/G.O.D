@@ -20,6 +20,7 @@ from core.utils import download_s3_file
 from validator.core.config import Config
 from validator.core.models import ImageRawTask
 from validator.core.models import MinerResults
+from validator.core.models import MinerResultsText
 from validator.core.models import NodeAggregationResult
 from validator.core.models import PeriodScore
 from validator.core.models import RawTask
@@ -167,7 +168,7 @@ def calculate_scaled_score(weighted_loss: float, scale_factor: float) -> float:
     return float(np.exp(-weighted_loss * scale_factor))
 
 
-def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
+def compute_adaptive_scale_factor(miner_results: list[MinerResults | MinerResultsText]) -> float:
     """Compute scale factor based only on finetuned submissions."""
     finetuned_results = [
         res for res in miner_results if res.is_finetune and not np.isnan(res.test_loss) and not np.isnan(res.synth_loss)
@@ -191,7 +192,7 @@ def compute_adaptive_scale_factor(miner_results: list[MinerResults]) -> float:
     return scale
 
 
-def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerResults]) -> list[MinerResults]:
+def adjust_miner_scores_to_be_relative_to_other_comps(miner_results: list[MinerResults | MinerResultsText]) -> list[MinerResults | MinerResultsText]:
     """Adjusts scores to have geometric mean of 1.0 for finetuned submissions only."""
     valid_scores = [
         res.score
@@ -526,9 +527,9 @@ def zero_duplicate_scores(task_results: list[MinerResults], keep_submission: dic
 async def process_miners_pool(
     miners: list[Node],
     task: ImageRawTask | TextRawTask,
-    dataset_type: CustomDatasetType | None,
     config: Config,
     gpu_ids: list[int],
+    dataset_type: CustomDatasetType | None = None,
 ) -> list[MinerResults]:
     """Process same task miners"""
     assert task.task_id is not None, "We should have a task id when processing miners"
@@ -562,7 +563,7 @@ async def process_miners_pool(
     if miner_repos:
         try:
             eval_results = await _evaluate_submissions(
-                task=task, submission_repos=list(miner_repos.values()), dataset_type=dataset_type, gpu_ids=gpu_ids
+                task=task, submission_repos=list(miner_repos.values()), gpu_ids=gpu_ids, dataset_type=dataset_type or None
             )
 
             for miner in miners:
@@ -577,8 +578,10 @@ async def process_miners_pool(
                         logger.error(f"Evaluation failed for miner {miner.hotkey}: {eval_result}")
                         results.append(_create_failed_miner_result(miner.hotkey, reason="Evaluation failed"))
                         continue
-
-                    synth_result, test_result = eval_result
+                    elif isinstance(eval_result, EvaluationResultText):
+                        synth_result, test_result = eval_result
+                    else:
+                        test_result = eval_result
                     submission = Submission(
                         task_id=task.task_id,
                         hotkey=miner.hotkey,

@@ -169,8 +169,14 @@ class Submission(BaseModel):
     created_on: datetime | None = None
     updated_on: datetime | None = None
 
-
 class MinerResults(BaseModel):
+    hotkey: str
+    test_loss: float
+    score: float | None = 0.0
+    submission: Submission | None = None
+    score_reason: str | None = None
+
+class MinerResultsText(BaseModel):
     hotkey: str
     test_loss: float
     synth_loss: float
@@ -178,7 +184,6 @@ class MinerResults(BaseModel):
     score: float | None = 0.0
     submission: Submission | None = None
     score_reason: str | None = None
-
 
 class QualityMetrics(BaseModel):
     total_score: float
