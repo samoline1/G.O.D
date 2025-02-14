@@ -3,7 +3,7 @@
 **Date:** 2025-02-14
 **Author:** Samoline
 ## Introduction
-Gradients.io is a decentralized AI training platform that allows you to finetune LLMs in a decentralized way. Users just need to pick any model and dataset from Hugging Face and Gradients.io will take care of the rest!
+Gradients.io is a decentralized AI training platform that allows you to finetune LLMs in a decentralized way. Users just need to pick any model and dataset from Hugging Face, and Gradients.io will take care of the rest!
 
 Miners provide GPU resources and AI expertise to train models in a competitive environment. They're incentivized to achieve the highest quality scores. The winning model within each training job is selected based on test losses and effortlessly made available to the user.
 
@@ -44,7 +44,7 @@ xychart-beta
     line [4.69, 1.01, 1.15, 0.95, 1.12, 1.01, 0.98]
     line [5.87, 5.87, 5.87, 5.87, 5.87, 5.87, 5.87]
 ```
-Our experiment show that:
+Our experiments show that:
 1. **Superior Performance**: Both models trained on Gradients.io instruction-tuned (shown as horizontal lines in the graphs).
 2. **User Friendly**: Gradients.io is easy to use and requires no specialized knowledge of AI, with just a browser and a few clicks you can finetune a model in an optimized way thanks to decentralization and the incentive mechanisms.
 3. **Competitive Results**: [SN9](https://www.macrocosmos.ai/sn9/dashboard?competition=2) decentralized pretrained model demonstrated performance competitive to that of Meta's LLaMA.
