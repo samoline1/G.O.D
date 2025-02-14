@@ -67,7 +67,7 @@ xychart-beta
     y-axis "Test Loss (Lower is Better)" 0.5 --> 1.125
     bar [1.125, 0.928, 0.886]
 ```
-This graphs demonstrates that Gradients.io is able to **outperform other platforms** in 0-click model training setups.
+This graph demonstrates that Gradients.io is able to **outperform other platforms** in 0-click model training setups.
 
 ## Conclusion
 We are confident that decentralized AI training through Gradients.io will become the standard for AI training in the future. By focusing on an efficient and competitive incentive mechanism, Gradients.io is able to attract a large number of skilled participants to the network, ensuring the best quality of the models rendered to the users.
