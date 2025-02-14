@@ -1,6 +1,7 @@
 # Gradients.ai makes decentralized AI training a reality: Outperforms Google and TogetherAI on 0 click Model Finetuning
 
 **Date:** 2025-02-14
+
 **Author:** Samoline
 ## Introduction
 Gradients.io is a decentralized AI training platform that allows you to finetune LLMs in a decentralized way. Users just need to pick any model and dataset from Hugging Face, and Gradients.io will take care of the rest!
@@ -71,10 +72,12 @@ This graph demonstrates that Gradients.io is able to **outperform other platform
 
 ## Conclusion
 We are confident that decentralized AI training through Gradients.io will become the standard for AI training in the future. By focusing on an efficient and competitive incentive mechanism, Gradients.io is able to attract a large number of skilled participants to the network, ensuring the best quality of the models rendered to the users.
+
 This way, AI skills and large amounts of GPU resources are all left up to specialized participants, while the users can focus on their own use case.
 
 ### Future Work
 We are constantly working on improving the platform and adding new features.
+
 **Bonus:** Support for vision models should be available **SOON**, stay tuned!
 
 
